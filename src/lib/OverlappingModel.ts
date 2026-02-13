@@ -1,6 +1,6 @@
 import { DX, DY, makeWFCModel } from './WFCModel.ts'
 
-export const makeOverlappingModel = (
+export type OverlappingModelOptions = {
   data: Uint8Array | Uint8ClampedArray,
   dataWidth: number,
   dataHeight: number,
@@ -10,7 +10,21 @@ export const makeOverlappingModel = (
   periodicInput: boolean,
   periodicOutput: boolean,
   symmetry: number,
-  ground: number = 0,
+  ground: number
+}
+export const makeOverlappingModel = (
+  {
+    data,
+    dataWidth,
+    dataHeight,
+    N,
+    width,
+    height,
+    periodicInput,
+    periodicOutput,
+    symmetry,
+    ground,
+  }: OverlappingModelOptions,
 ) => {
   // -- Pre-processing --
 
@@ -275,6 +289,7 @@ export const makeOverlappingModel = (
 
   const graphicsIncomplete = (array: Uint8Array | Uint8ClampedArray) => {
     const wave = model.getWave()
+    const T = model.T // Use the model's T
 
     for (let i = 0; i < width * height; i++) {
       const x = i % width
@@ -286,10 +301,15 @@ export const makeOverlappingModel = (
       for (let dy = 0; dy < N; dy++) {
         for (let dx = 0; dx < N; dx++) {
           let sx = x - dx
-          if (sx < 0) sx += width
           let sy = y - dy
-          if (sy < 0) sy += height
 
+          // Handle periodicity wrapping
+          if (sx < 0) sx += width
+          else if (sx >= width) sx -= width
+          if (sy < 0) sy += height
+          else if (sy >= height) sy -= height
+
+          // If not periodic and still out of bounds, skip
           if (model.onBoundary(sx, sy)) continue
 
           const s = sx + sy * width
@@ -297,6 +317,7 @@ export const makeOverlappingModel = (
           for (let t = 0; t < T; t++) {
             if (wave[s * T + t] === 1) {
               contributors++
+              // index into patterns: patternIndex * patternLen + offset
               const colorId = patterns[t * patternLen + (dx + dy * N)]!
               const color = colors[colorId]!
 
@@ -308,6 +329,7 @@ export const makeOverlappingModel = (
           }
         }
       }
+      // ... rest of logic
 
       const px = i * 4
       if (contributors > 0) {

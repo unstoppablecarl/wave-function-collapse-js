@@ -2,6 +2,7 @@
 import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
+import type { WfCWorkerOptions } from '../lib/wfc.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
 import SymmetryInput from './SymmetryInput.vue'
@@ -16,7 +17,9 @@ const autoRun = ref(false)
 const running = ref(false)
 const currentWorkerStatus = ref('')
 
-const settings = reactive({
+type Settings = WfCWorkerOptions['settings']
+
+const settings = reactive<Settings>({
   N: 2,
   width: 60,
   height: 60,
@@ -26,6 +29,7 @@ const settings = reactive({
   symmetry: 2,
   seed: 1,
   maxTries: 10,
+  maxRepairsPerAttempt: 10,
 })
 
 const hasResult = ref(true)
@@ -45,10 +49,24 @@ watch(settings, () => {
   }
 })
 
-// Inside <script setup>
 let wfcWorker: Worker | null = null
 
+let pendingImageData: ImageDataArray | null = null
+
+function updateCanvas() {
+  if (!pendingImageData || !canvasRef.value) return
+  draw(pendingImageData)
+  pendingImageData = null
+}
+
+function draw(data: ImageDataArray) {
+  const ctx = canvasRef.value!.getContext('2d')!
+  const imgData = new ImageData(data, settings.width, settings.height)
+  ctx.putImageData(imgData, 0, 0)
+}
+
 async function generate() {
+
   errorMessage.value = ''
   const imageData = imageDataSource.value
   if (!imageData) {
@@ -72,24 +90,35 @@ async function generate() {
     settings: { ...settings },
   })
 
-  // Handle messages back from worker
+  let currentAttempt: number
+  let startTime: number
 
   wfcWorker.onmessage = (e) => {
     const { type, result, attempt } = e.data
 
     if (type === 'attempt_start') {
-      console.time('attempt_' + attempt)
+      currentAttempt = attempt
+      startTime = performance.now()
+      console.log('attempt start: ', attempt)
       currentWorkerStatus.value = 'Attempt ' + attempt
     }
 
     if (type === 'attempt_end') {
-      console.timeEnd('attempt_' + attempt)
+      if (currentAttempt !== attempt) {
+        console.error({ currentAttempt, attempt })
+        throw new Error('attempt sequence failure')
+      }
+      const elapsedTime = performance.now() - startTime
+      console.log('attempt end: ', attempt, elapsedTime)
+    }
+
+    if (type === 'preview') {
+      pendingImageData = new Uint8ClampedArray(result.buffer)
+      requestAnimationFrame(updateCanvas)
     }
 
     if (type === 'success') {
-      const canvas = canvasRef.value!
-      const ctx = canvas.getContext('2d')!
-      ctx.putImageData(result, 0, 0)
+      draw(new Uint8ClampedArray(result.buffer))
       cleanupWorker()
     }
 
