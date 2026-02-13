@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { markRaw, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { generateOverlapping } from '../lib/generator.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import ImageFileInput from './ImageFileInput.vue'
@@ -11,25 +11,35 @@ const canvasRef = useTemplateRef('canvasRef')
 const imageDataSource = shallowRef<ImageData | null>(null)
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
 
-const N = ref(3)
-const width = ref(60)
-const height = ref(60)
 const scale = ref(4)
-const periodicInput = ref(true)
-const periodicOutput = ref(true)
-const ground = ref(0)
-const symmetry = ref(2)
-const seed = ref(1)
+const autoRun = ref(false)
+
+const settings = reactive({
+  N: 2,
+  width: 60,
+  height: 60,
+  periodicInput: true,
+  periodicOutput: true,
+  ground: -1,
+  symmetry: 2,
+  seed: 1,
+})
 
 const hasResult = ref(true)
-
 const errorMessage = ref('')
+
 watch(imageDataSource, () => {
   if (!imageDataSource.value) {
     imageDataSourceUrlImage.value = null
     return
   }
   imageDataSourceUrlImage.value = imageDataToUrlImage(imageDataSource.value)
+})
+
+watch(settings, () => {
+  if (autoRun.value) {
+    generate()
+  }
 })
 
 async function generate() {
@@ -42,14 +52,9 @@ async function generate() {
 
   const result = generateOverlapping({
     imageData,
-    destWidth: width.value,
-    destHeight: height.value,
-    N: N.value,
-    periodicInput: periodicInput.value,
-    periodicOutput: periodicOutput.value,
-    ground: ground.value,
-    symmetry: symmetry.value,
-    seed: seed.value,
+    ...settings,
+    destWidth: settings.width,
+    destHeight: settings.height,
   })
   hasResult.value = !!result
   if (!result) {
@@ -57,8 +62,8 @@ async function generate() {
   }
 
   const canvas = canvasRef.value!
-  canvas.width = width.value
-  canvas.height = height.value
+  canvas.width = settings.width
+  canvas.height = settings.height
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingEnabled = false
 
@@ -73,20 +78,35 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   const imageData = await getImgElementImageData(target as HTMLImageElement)
   imageDataSource.value = markRaw(imageData)
 }
+
+const images = [
+  '/flowers.png',
+  '/ex1.png',
+  '/ex2.png',
+  '/ex3.png',
+  '/ex4.png',
+  '/ex5.png',
+  '/ex6.png',
+]
+
 </script>
 <template>
   <article class="card">
 
     <div class="row">
       <div class="col-2">
-        <PixelImg
-          src="/flowers.png"
-          :scale="scale"
-          @img-click="setImageDataFromElement($event)"
-        />
+        <p>Examples</p>
+        <template v-for="image in images" :key="image">
+          <div class="mb-2">
 
-        <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
-
+            <PixelImg
+              :src="image"
+              class="img-target"
+              :scale="scale"
+              @img-click="setImageDataFromElement($event)"
+            />
+          </div>
+        </template>
       </div>
       <div class="col-5">
         <div class="row input-section">
@@ -94,55 +114,71 @@ async function setImageDataFromElement(target: HTMLImageElement) {
             <fieldset class="group input-section"
                       title="In the Wave Function Collapse (WFC) algorithm, N represents the pattern size (or 'kernel size'). It is the dimension of the small squares the algorithm extracts from your input image to use as its 'building blocks.'">
               <legend>N</legend>
-              <input type="number" min="1" v-model="N" />
+              <input type="number" min="1" v-model="settings.N" />
             </fieldset>
           </div>
           <div class="col-4">
             <fieldset class="group input-section"
                       title="Forces the bottom row of the output to match a specific pattern from the input. -1 will disable ground">
               <legend>Ground</legend>
-              <input type="number" min="-1" v-model="ground" />
+              <input type="number" min="-1" v-model="settings.ground" />
             </fieldset>
           </div>
 
           <div class="col-4">
             <fieldset class="group input-section">
               <legend>Seed</legend>
-              <input type="number" v-model="seed" />
+              <input type="number" v-model="settings.seed" />
             </fieldset>
           </div>
         </div>
 
         <fieldset class="group input-section">
           <legend>Output Width/Height</legend>
-          <input type="number" v-model="width" />
-          <input type="number" v-model="height" />
+          <input type="number" v-model="settings.width" />
+          <input type="number" v-model="settings.height" />
         </fieldset>
 
         <div class="row input-section periodic">
-          <div class="col-6">
-            <label data-field title="The algorithm treats the input image like a seamless texture">
-              <input type="checkbox" v-model="periodicInput" /> Periodic Input
+          <div class="col">
+            <label
+              data-field
+              class="checkbox-label"
+              title="The algorithm treats the input image like a seamless texture"
+            >
+              <input type="checkbox" v-model="settings.periodicInput" /> Periodic Input
             </label>
           </div>
-          <div class="col-6">
-            <label data-field title="Outputs a seamless texture">
-              <input type="checkbox" v-model="periodicOutput" /> Periodic Output
+          <div class="col">
+            <label
+              data-field
+              class="checkbox-label"
+              title="Outputs a seamless texture"
+            >
+              <input type="checkbox" v-model="settings.periodicOutput" /> Periodic Output
             </label>
           </div>
         </div>
 
         <div class="input-section">
-          <SymmetryInput v-model="symmetry" />
+          <SymmetryInput v-model="settings.symmetry" />
         </div>
+
 
         <div class="hstack">
-          <div v-if="imageDataSourceUrlImage">
-            Target Image:
+
+          <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
+          <div class="ms-auto">
+            <label data-field class="checkbox-label" title="Auto Run when settings change">
+              <input type="checkbox" v-model="autoRun" /> Auto Run
+            </label>
           </div>
-          <button @click="generate()" class="ms-auto">Generate</button>
+          <button @click="generate()" class="">Generate</button>
         </div>
 
+        <p v-if="imageDataSourceUrlImage">
+          Target Image:
+        </p>
         <div v-if="imageDataSourceUrlImage">
           <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
 
@@ -162,19 +198,17 @@ async function setImageDataFromElement(target: HTMLImageElement) {
           <strong>No Result Generated</strong> - The current settings did not generate a result.
         </div>
         <div class="canvas-container" v-show="hasResult && !errorMessage"
-             :style="`width: ${width * scale}px; height: ${height * scale}px;`">
+             :style="`width: ${settings.width * scale}px; height: ${settings.height * scale}px;`">
           <canvas
             ref="canvasRef"
             class="canvas-output"
-            :width="width"
-            :height="height"
+            :width="settings.width"
+            :height="settings.height"
             :style="`transform: scale(${scale})`"
           ></canvas>
         </div>
       </div>
     </div>
-
-
   </article>
 </template>
 <style lang="scss">
@@ -191,5 +225,14 @@ async function setImageDataFromElement(target: HTMLImageElement) {
 
 .periodic {
   padding-left: 0.5rem;
+}
+
+.checkbox-label {
+  padding: 0.5rem 0;
+  margin-block-end: 0;
+}
+
+.img-target {
+  cursor: pointer;
 }
 </style>
