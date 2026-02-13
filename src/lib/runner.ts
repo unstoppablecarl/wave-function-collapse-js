@@ -2,6 +2,7 @@ import { makeMulberry32 } from './mulberry32.ts'
 import { makeOverlappingModel } from './OverlappingModel.ts'
 
 export type Runner = ReturnType<typeof makeRunner>
+
 export function makeRunner(
   {
     imageData,
@@ -31,15 +32,16 @@ export function makeRunner(
   const model = makeOverlappingModel(data, width, height, N, destWidth, destHeight, periodicInput, periodicOutput, symmetry, ground)
   const mulberry32 = makeMulberry32(seed)
 
-  return (): ImageData | undefined => {
+  return (): ImageData | null => {
+    model.clear()
     const success = model.generate(mulberry32)
-    if (success) {
-      const result = model.graphics()
+    if (!success) return null
 
-      const outImgData = new ImageData(destWidth, destHeight)
-      outImgData.data.set(result)
+    const result = model.graphics()
 
-      return outImgData
-    }
+    const outImgData = new ImageData(destWidth, destHeight)
+    outImgData.data.set(result)
+
+    return outImgData
   }
 }

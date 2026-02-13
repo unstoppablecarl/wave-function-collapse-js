@@ -73,11 +73,17 @@ async function generate() {
   })
 
   // Handle messages back from worker
+
   wfcWorker.onmessage = (e) => {
     const { type, result, attempt } = e.data
 
-    if (type === 'attempt') {
+    if (type === 'attempt_start') {
+      console.time('attempt_' + attempt)
       currentWorkerStatus.value = 'Attempt ' + attempt
+    }
+
+    if (type === 'attempt_end') {
+      console.timeEnd('attempt_' + attempt)
     }
 
     if (type === 'success') {

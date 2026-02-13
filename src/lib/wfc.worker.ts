@@ -1,32 +1,28 @@
-// src/workers/wfc.worker.ts
+import { makeRunner } from './runner.ts'
 
-// Explicitly type 'self' to get the correct postMessage signature
-import { makeRunner } from './generator.ts'
-
-const ctx: DedicatedWorkerGlobalScope = self as any;
-
+const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e) => {
-  const { imageData, settings } = e.data
-  const { maxTries, ...wfcParams } = settings
+  try {
+    const { imageData, settings } = e.data
+    const runner = makeRunner({
+      imageData,
+      ...settings,
+      destWidth: settings.width,
+      destHeight: settings.height,
+    })
 
-  const runner = makeRunner({
-    imageData,
-    ...wfcParams,
-    destWidth: settings.width,
-    destHeight: settings.height,
-  })
+    for (let i = 0; i < settings.maxTries; i++) {
+      ctx.postMessage({ type: 'attempt_start', attempt: i + 1 })
+      const result = runner()
+      ctx.postMessage({ type: 'attempt_end', attempt: i + 1 })
 
-  for (let i = 0; i < maxTries; i++) {
-    ctx.postMessage({ type: 'attempt', attempt: i + 1 })
-
-    const result = runner()
-    if (result) {
-      // Transfer the underlying ArrayBuffer to the main thread (zero-copy)
-      // This uses the signature: postMessage(message, transfer)
-      ctx.postMessage({ type: 'success', result }, [result.data.buffer])
-      return
+      if (result) {
+        ctx.postMessage({ type: 'success', result }, [result.data.buffer])
+        return
+      }
     }
+    ctx.postMessage({ type: 'failure' })
+  } catch (err) {
+    ctx.postMessage({ type: 'error', message: (err as any).message })
   }
-
-  ctx.postMessage({ type: 'failure' })
 }
