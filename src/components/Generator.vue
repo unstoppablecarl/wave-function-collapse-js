@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { generateOverlapping } from '../lib/generator.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import ImageFileInput from './ImageFileInput.vue'
@@ -79,16 +80,7 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   imageDataSource.value = markRaw(imageData)
 }
 
-const images = [
-  '/flowers.png',
-  '/ex1.png',
-  '/ex2.png',
-  '/ex3.png',
-  '/ex4.png',
-  '/ex5.png',
-  '/ex6.png',
-]
-
+const images = EXAMPLE_IMAGES
 </script>
 <template>
   <article class="card">
