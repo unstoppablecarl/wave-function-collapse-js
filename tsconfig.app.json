@@ -18,7 +18,8 @@
     "target": "ESNext",
     "lib": [
       "DOM",
-      "ESNext"
+      "ESNext",
+      "WebWorker"
     ],
     "esModuleInterop": true,
     "jsx": "preserve",

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
-import { generateOverlapping } from '../lib/generator.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
@@ -14,6 +13,8 @@ const imageDataSourceUrlImage = shallowRef<string | null>(null)
 
 const scale = ref(4)
 const autoRun = ref(false)
+const running = ref(false)
+const currentWorkerStatus = ref('')
 
 const settings = reactive({
   N: 2,
@@ -24,6 +25,7 @@ const settings = reactive({
   ground: -1,
   symmetry: 2,
   seed: 1,
+  maxTries: 10,
 })
 
 const hasResult = ref(true)
@@ -43,6 +45,9 @@ watch(settings, () => {
   }
 })
 
+// Inside <script setup>
+let wfcWorker: Worker | null = null
+
 async function generate() {
   errorMessage.value = ''
   const imageData = imageDataSource.value
@@ -50,25 +55,51 @@ async function generate() {
     errorMessage.value = 'No Target Image'
     return
   }
+  running.value = true
+  currentWorkerStatus.value = 'Building Model'
 
-  const result = generateOverlapping({
-    imageData,
-    ...settings,
-    destWidth: settings.width,
-    destHeight: settings.height,
+  // Clean up previous worker if it's still running
+  if (wfcWorker) wfcWorker.terminate()
+
+  // Initialize Worker
+  wfcWorker = new Worker(new URL('../lib/wfc.worker.ts', import.meta.url), {
+    type: 'module',
   })
-  hasResult.value = !!result
-  if (!result) {
-    return
+
+  // Send data to worker
+  wfcWorker.postMessage({
+    imageData: imageDataSource.value,
+    settings: { ...settings },
+  })
+
+  // Handle messages back from worker
+  wfcWorker.onmessage = (e) => {
+    const { type, result, attempt } = e.data
+
+    if (type === 'attempt') {
+      currentWorkerStatus.value = 'Attempt ' + attempt
+    }
+
+    if (type === 'success') {
+      const canvas = canvasRef.value!
+      const ctx = canvas.getContext('2d')!
+      ctx.putImageData(result, 0, 0)
+      cleanupWorker()
+    }
+
+    if (type === 'failure') {
+      hasResult.value = false
+      cleanupWorker()
+    }
   }
+}
 
-  const canvas = canvasRef.value!
-  canvas.width = settings.width
-  canvas.height = settings.height
-  const ctx = canvas.getContext('2d')!
-  ctx.imageSmoothingEnabled = false
-
-  ctx.putImageData(result, 0, 0)
+function cleanupWorker() {
+  running.value = false
+  if (wfcWorker) {
+    wfcWorker.terminate()
+    wfcWorker = null
+  }
 }
 
 function setImageDataFromFileInput(val: ImageData) {
@@ -87,6 +118,14 @@ const images = EXAMPLE_IMAGES
 
     <div class="row">
       <div class="col-2">
+        <div class="flex gap-1">
+          <small style="white-space: nowrap">
+            Scale {{ scale }}
+          </small>
+          <label data-field>
+            <input type="range" min="1" max="10" step="1" v-model.number="scale">
+          </label>
+        </div>
         <p>Examples</p>
         <template v-for="image in images" :key="image">
           <div class="mb-2">
@@ -132,7 +171,7 @@ const images = EXAMPLE_IMAGES
         </fieldset>
 
         <div class="row input-section periodic">
-          <div class="col">
+          <div class="col-4">
             <label
               data-field
               class="checkbox-label"
@@ -141,7 +180,7 @@ const images = EXAMPLE_IMAGES
               <input type="checkbox" v-model="settings.periodicInput" /> Periodic Input
             </label>
           </div>
-          <div class="col">
+          <div class="col-4">
             <label
               data-field
               class="checkbox-label"
@@ -150,22 +189,29 @@ const images = EXAMPLE_IMAGES
               <input type="checkbox" v-model="settings.periodicOutput" /> Periodic Output
             </label>
           </div>
+
+          <div class="col-4">
+            <fieldset class="group input-section">
+              <legend>Tries</legend>
+              <input type="number" v-model="settings.maxTries" />
+            </fieldset>
+          </div>
         </div>
 
         <div class="input-section">
           <SymmetryInput v-model="settings.symmetry" />
         </div>
 
-
         <div class="hstack">
-
           <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
           <div class="ms-auto">
             <label data-field class="checkbox-label" title="Auto Run when settings change">
               <input type="checkbox" v-model="autoRun" /> Auto Run
             </label>
           </div>
-          <button @click="generate()" class="">Generate</button>
+          <button @click="generate()" :disabled="running">
+            Generate
+          </button>
         </div>
 
         <p v-if="imageDataSourceUrlImage">
@@ -177,12 +223,16 @@ const images = EXAMPLE_IMAGES
         </div>
       </div>
       <div class="col-5">
-        <div class="flex gap-2">
-          Scale {{ scale }}
-          <label data-field>
-            <input type="range" min="1" max="10" step="1" v-model.number="scale">
-          </label>
-        </div>
+        <p>
+          <span v-if="running" role="status" class="spinner small" style="display: inline-block"></span>
+          <strong v-if="running">
+            Generating:
+          </strong>
+          <strong v-else>
+            Ready
+          </strong>
+          <span v-if="running"> {{ currentWorkerStatus }}</span>
+        </p>
         <div v-if="errorMessage" role="alert" data-variant="warning">
           {{ errorMessage }}
         </div>

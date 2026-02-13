@@ -1,4 +1,4 @@
-type RNG = () => number
+export type RNG = () => number
 export const DX = new Int32Array([-1, 0, 1, 0])
 export const DY = new Int32Array([0, 1, 0, -1])
 export const OPPOSITE = new Int32Array([2, 3, 0, 1])
@@ -288,19 +288,6 @@ export const makeWFCModel = (
     }
   }
 
-  function generateWithRetry(rng: RNG = Math.random, maxTries = 10) {
-    console.log('try')
-    for (let i = 0; i < maxTries; i++) {
-      const success = generate(rng)
-      if (success) {
-        console.log(`Generated successfully on try ${i + 1}`)
-        return true
-      }
-    }
-    console.error('Failed to generate after max retries')
-    return false
-  }
-
   const isGenerationComplete = () => generationComplete
 
   // Expose internals for OverlappingModel to use in graphics
@@ -310,7 +297,6 @@ export const makeWFCModel = (
   return {
     iterate,
     generate,
-    generateWithRetry,
     isGenerationComplete,
     clear,
     getObserved,
