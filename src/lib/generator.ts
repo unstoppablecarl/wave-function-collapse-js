@@ -29,10 +29,6 @@ export function generateOverlapping(
   const width = imageData.width
   const height = imageData.height
 
-  console.log({
-    width, height, N, destWidth, destHeight, periodicInput, periodicOutput, symmetry, ground
-  })
-
   const model = makeOverlappingModel(data, width, height, N, destWidth, destHeight, periodicInput, periodicOutput, symmetry, ground)
 
   const mulberry32 = makeMulberry32(seed)
