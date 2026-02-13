@@ -10,7 +10,9 @@ export function generateOverlapping(
     periodicInput = true,
     periodicOutput = true,
     symmetry = 2,
-    ground = 102,
+    ground = 0,
+    seed = 1,
+    maxTries = 10
   }: {
     imageData: ImageData,
     destWidth: number,
@@ -19,16 +21,22 @@ export function generateOverlapping(
     periodicInput?: boolean,
     periodicOutput?: boolean,
     symmetry?: number,
-    ground?: number
+    ground?: number,
+    seed?: number,
+    maxTries?: number,
   }) {
   const data = new Uint8ClampedArray(imageData.data)
   const width = imageData.width
   const height = imageData.height
 
+  console.log({
+    width, height, N, destWidth, destHeight, periodicInput, periodicOutput, symmetry, ground
+  })
+
   const model = makeOverlappingModel(data, width, height, N, destWidth, destHeight, periodicInput, periodicOutput, symmetry, ground)
 
-  const mulberry32 = makeMulberry32(3)
-  const finished = model.generate(mulberry32)
+  const mulberry32 = makeMulberry32(seed)
+  const finished = model.generateWithRetry(mulberry32, maxTries)
 
   if (finished) {
     const result = model.graphics()

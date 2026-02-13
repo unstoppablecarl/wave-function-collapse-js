@@ -1,4 +1,3 @@
-
 type RNG = () => number
 export const DX = new Int32Array([-1, 0, 1, 0])
 export const DY = new Int32Array([0, 1, 0, -1])
@@ -38,7 +37,7 @@ export const makeWFCModel = (
   propagatorData: Int32Array,
   propagatorOffsets: Int32Array,
   propagatorLengths: Int32Array,
-  initialGround: number
+  initialGround: number,
 ) => {
   const N_CELLS = FMX * FMY
   const N_STATES = N_CELLS * T
@@ -151,15 +150,17 @@ export const makeWFCModel = (
     generationComplete = false
 
     // Apply ground constraint if needed
-    if (initialGround !== 0) {
+    if (initialGround !== -1) {
+      const groundIndex = (initialGround + T) % T
+
       for (let x = 0; x < FMX; x++) {
         for (let t = 0; t < T; t++) {
-          if (t !== initialGround) {
+          if (t !== groundIndex) {
             ban(x + (FMY - 1) * FMX, t)
           }
         }
         for (let y = 0; y < FMY - 1; y++) {
-          ban(x + y * FMX, initialGround)
+          ban(x + y * FMX, groundIndex)
         }
       }
       propagate()
@@ -287,6 +288,19 @@ export const makeWFCModel = (
     }
   }
 
+  function generateWithRetry(rng: RNG = Math.random, maxTries = 10) {
+    console.log('try')
+    for (let i = 0; i < maxTries; i++) {
+      const success = generate(rng)
+      if (success) {
+        console.log(`Generated successfully on try ${i + 1}`)
+        return true
+      }
+    }
+    console.error('Failed to generate after max retries')
+    return false
+  }
+
   const isGenerationComplete = () => generationComplete
 
   // Expose internals for OverlappingModel to use in graphics
@@ -296,12 +310,13 @@ export const makeWFCModel = (
   return {
     iterate,
     generate,
+    generateWithRetry,
     isGenerationComplete,
     clear,
     getObserved,
     getWave,
     // Helper to check boundaries for graphics
     onBoundary,
-    FMX, FMXxFMY: N_CELLS, T, N_STATES
+    FMX, FMXxFMY: N_CELLS, T, N_STATES,
   }
 }

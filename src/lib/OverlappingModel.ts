@@ -10,7 +10,7 @@ export const makeOverlappingModel = (
   periodicInput: boolean,
   periodicOutput: boolean,
   symmetry: number,
-  ground: number = 0
+  ground: number = 0,
 ) => {
   // -- Pre-processing --
 
@@ -157,9 +157,6 @@ export const makeOverlappingModel = (
     }
   }
 
-  // Calculate ground index
-  const groundIndex = (ground + T) % T
-
   const agrees = (p1Idx: number, p2Idx: number, dx: number, dy: number) => {
     const xmin = dx < 0 ? 0 : dx
     const xmax = dx < 0 ? dx + N : N
@@ -237,7 +234,7 @@ export const makeOverlappingModel = (
     propagatorData,
     propagatorOffsets,
     propagatorLengths,
-    groundIndex
+    ground,
   )
 
   // -- Graphics --
@@ -320,7 +317,10 @@ export const makeOverlappingModel = (
         array[px + 3] = a / contributors
       } else {
         // Should not happen if algorithm is running correctly
-        array[px] = 0; array[px+1] = 0; array[px+2] = 0; array[px+3] = 0
+        array[px] = 0
+        array[px + 1] = 0
+        array[px + 2] = 0
+        array[px + 3] = 0
       }
     }
   }
@@ -328,6 +328,6 @@ export const makeOverlappingModel = (
   // Return Composite Interface
   return {
     ...model,
-    graphics
+    graphics,
   }
 }
