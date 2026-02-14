@@ -2,7 +2,7 @@
 import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
-import type { WfCWorkerOptions } from '../lib/wfc.worker.ts'
+import { WFC_WORKER_ID, type WfCWorkerOptions, WorkerMsg, type WorkerResponse } from '../lib/wfc.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
 import SymmetryInput from './SymmetryInput.vue'
@@ -30,7 +30,20 @@ const settings = reactive<Settings>({
   seed: 1,
   maxTries: 10,
   maxRepairsPerAttempt: 10,
+  previewInterval: 100,
+  repairRadius: 2,
+  drawRepairHeatmap: true,
 })
+
+type Attempt = {
+  encoded: string,
+  repairs: number,
+  attempt: number,
+  elapsedTime: number,
+  filledPercent: number,
+}
+
+const attempts = ref<Attempt[]>([])
 
 const hasResult = ref(true)
 const errorMessage = ref('')
@@ -53,6 +66,13 @@ let wfcWorker: Worker | null = null
 
 let pendingImageData: ImageDataArray | null = null
 
+function terminateWorker() {
+  if (!wfcWorker) return
+  wfcWorker.terminate()
+  running.value = false
+  hasResult.value = false
+}
+
 function updateCanvas() {
   if (!pendingImageData || !canvasRef.value) return
   draw(pendingImageData)
@@ -66,7 +86,7 @@ function draw(data: ImageDataArray) {
 }
 
 async function generate() {
-
+  attempts.value = []
   errorMessage.value = ''
   const imageData = imageDataSource.value
   if (!imageData) {
@@ -86,45 +106,62 @@ async function generate() {
 
   // Send data to worker
   wfcWorker.postMessage({
+    id: WFC_WORKER_ID,
     imageData: imageDataSource.value,
     settings: { ...settings },
   })
 
-  let currentAttempt: number
-  let startTime: number
-
   wfcWorker.onmessage = (e) => {
-    const { type, result, attempt } = e.data
+    const response = e.data as WorkerResponse
+    const { type } = response
 
-    if (type === 'attempt_start') {
-      currentAttempt = attempt
-      startTime = performance.now()
-      console.log('attempt start: ', attempt)
+    if (type === WorkerMsg.ATTEMPT_START) {
+      const { attempt } = response
       currentWorkerStatus.value = 'Attempt ' + attempt
     }
 
-    if (type === 'attempt_end') {
-      if (currentAttempt !== attempt) {
-        console.error({ currentAttempt, attempt })
-        throw new Error('attempt sequence failure')
-      }
-      const elapsedTime = performance.now() - startTime
-      console.log('attempt end: ', attempt, elapsedTime)
+    if (type === WorkerMsg.ATTEMPT_END) {
+
     }
 
-    if (type === 'preview') {
+    if (type === WorkerMsg.PREVIEW) {
+      const { result } = response
       pendingImageData = new Uint8ClampedArray(result.buffer)
       requestAnimationFrame(updateCanvas)
     }
 
-    if (type === 'success') {
+    if (type === WorkerMsg.ATTEMPT_FAILURE) {
+      const { result, attempt, repairs, elapsedTime, filledPercent } = response
+      if (result.byteLength === 0) {
+        console.error(`Attempt ${attempt} received an empty buffer!`)
+        return
+      }
+
+      attempts.value.push({
+        encoded: canvasRef.value!.toDataURL(),
+        attempt,
+        repairs,
+        elapsedTime,
+        filledPercent,
+      })
+    }
+
+    if (type === WorkerMsg.SUCCESS) {
+      const { result } = response
       draw(new Uint8ClampedArray(result.buffer))
       cleanupWorker()
     }
 
-    if (type === 'failure') {
+    if (type === WorkerMsg.FAILURE) {
       hasResult.value = false
       cleanupWorker()
+    }
+
+    if (type === WorkerMsg.ERROR) {
+      const { message } = response
+      hasResult.value = false
+      cleanupWorker()
+      throw new Error(message)
     }
   }
 }
@@ -244,6 +281,7 @@ const images = EXAMPLE_IMAGES
               <input type="checkbox" v-model="autoRun" /> Auto Run
             </label>
           </div>
+
           <button @click="generate()" :disabled="running">
             Generate
           </button>
@@ -258,7 +296,7 @@ const images = EXAMPLE_IMAGES
         </div>
       </div>
       <div class="col-5">
-        <p>
+        <p class="hstack">
           <span v-if="running" role="status" class="spinner small" style="display: inline-block"></span>
           <strong v-if="running">
             Generating:
@@ -267,6 +305,8 @@ const images = EXAMPLE_IMAGES
             Ready
           </strong>
           <span v-if="running"> {{ currentWorkerStatus }}</span>
+
+          <button v-if="running" data-variant="danger" @click="terminateWorker">Terminate</button>
         </p>
         <div v-if="errorMessage" role="alert" data-variant="warning">
           {{ errorMessage }}
@@ -283,6 +323,13 @@ const images = EXAMPLE_IMAGES
             :height="settings.height"
             :style="`transform: scale(${scale})`"
           ></canvas>
+        </div>
+        <div class="attempt-log" v-for="item in attempts" :key="item.attempt">
+          <div>Attempt: {{ item.attempt }}</div>
+          <div>Time: {{ item.elapsedTime.toFixed() }}ms</div>
+          <div>Progress: {{ (item.filledPercent * 100).toFixed(1) }}%</div>
+          <div v-if="item.repairs">Repairs: {{ item.repairs }}</div>
+          <PixelImg :src="item.encoded" :scale="scale" />
         </div>
       </div>
     </div>
@@ -311,5 +358,13 @@ const images = EXAMPLE_IMAGES
 
 .img-target {
   cursor: pointer;
+}
+
+.card {
+  overflow: visible;
+}
+
+.attempt-log {
+  font-size: 0.7rem;
 }
 </style>

@@ -1,74 +1,158 @@
 import { makeMulberry32 } from './mulberry32.ts'
 import { makeOverlappingModel, type OverlappingModelOptions } from './OverlappingModel.ts'
+import { IterationResult } from './WFCModel.ts'
 
-export type WfCWorkerOptions = {
-  imageData: ImageData,
-  settings: Omit<OverlappingModelOptions, 'data' | 'dataWidth' | 'dataHeight'> & {
-    seed: number,
-    maxTries: number,
-    maxRepairsPerAttempt: number
-  }
+export const WFC_WORKER_ID = 'WFC_WORKER'
+
+export enum WorkerMsg {
+  ATTEMPT_START = 'ATTEMPT_START',
+  ATTEMPT_END = 'ATTEMPT_END',
+  ATTEMPT_FAILURE = 'ATTEMPT_FAILURE',
+  FAILURE = 'FAILURE',
+  SUCCESS = 'SUCCESS',
+  PREVIEW = 'PREVIEW',
+  ERROR = 'ERROR',
 }
 
+type MsgAttemptStart = { type: WorkerMsg.ATTEMPT_START; attempt: number }
+type MsgAttemptEnd = { type: WorkerMsg.ATTEMPT_END; attempt: number, elapsedTime: number }
+type MsgSuccess = { type: WorkerMsg.SUCCESS; attempt: number; repairs: number; result: Uint8ClampedArray<ArrayBuffer> }
+type MsgPreview = { type: WorkerMsg.PREVIEW; attempt: number; result: Uint8ClampedArray<ArrayBuffer> }
+type MsgAttemptFailure = {
+  type: WorkerMsg.ATTEMPT_FAILURE;
+  attempt: number;
+  repairs: number,
+  result: Uint8ClampedArray<ArrayBuffer>,
+  elapsedTime: number,
+  filledPercent: number,
+}
+
+type MsgFailure = {
+  type: WorkerMsg.FAILURE;
+  totalAttempts: number;
+  totalRepairs: number,
+  result: Uint8ClampedArray<ArrayBuffer>
+}
+type MsgError = { type: WorkerMsg.ERROR; message: string }
+
+export type WorkerResponse =
+  | MsgAttemptStart
+  | MsgAttemptEnd
+  | MsgAttemptFailure
+  | MsgSuccess
+  | MsgPreview
+  | MsgFailure
+  | MsgError
+
+export type WfCWorkerOptions = {
+  id: string,
+  imageData: ImageData,
+  settings: Omit<OverlappingModelOptions, 'imageData'> & {
+    seed: number,
+    maxTries: number,
+    maxRepairsPerAttempt: number,
+    previewInterval: number,
+  }
+}
 const ctx: DedicatedWorkerGlobalScope = self as any
-let repairs = 0
-ctx.onmessage = async (e: any) => {
+
+ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
   try {
-    const { imageData, settings } = e.data as WfCWorkerOptions
+    if (e.data.id !== WFC_WORKER_ID) return
+    const { imageData, settings } = e.data
+    const { maxRepairsPerAttempt, seed, maxTries, previewInterval } = settings
 
-    const { maxRepairsPerAttempt, seed, maxTries } = settings
-
-    const model = makeOverlappingModel(
-      {
-        data: imageData.data,
-        dataWidth: imageData.width,
-        dataHeight: imageData.height,
-        ...settings,
-      })
+    const model = makeOverlappingModel({
+      imageData,
+      ...settings,
+    })
 
     const mulberry32 = makeMulberry32(seed)
+    let totalRepairsAcrossAllTries = 0
 
     for (let i = 0; i < maxTries; i++) {
-      ctx.postMessage({ type: 'attempt_start', attempt: i + 1 })
-      model.clear()
-
-      let finished = false
+      const currentAttempt = i + 1
+      let repairsInThisAttempt = 0
       let stepCount = 0
 
-      while (!finished) {
-        // Run one unit of work
+      ctx.postMessage({ type: WorkerMsg.ATTEMPT_START, attempt: currentAttempt })
+      model.clear()
+
+      let attemptFinished = false
+      const startTime = performance.now()
+
+      while (!attemptFinished) {
         const result = model.singleIteration(mulberry32)
 
-        if (result === 'repair') {
-          repairs++
-          if (repairs > maxRepairsPerAttempt) {
-            console.warn('Max repairs reached for this attempt. Restarting...')
-            finished = true // This exits the while loop, failing this attempt
-            continue
+        if (result === IterationResult.REPAIR) {
+          repairsInThisAttempt++
+          totalRepairsAcrossAllTries++
+
+          if (repairsInThisAttempt > maxRepairsPerAttempt) {
+            const currentData = model.graphics()
+            const msg: MsgAttemptFailure = {
+              type: WorkerMsg.ATTEMPT_FAILURE,
+              attempt: currentAttempt,
+              repairs: repairsInThisAttempt,
+              result: currentData,
+              elapsedTime: performance.now() - startTime,
+              filledPercent: model.filledPercent(),
+            }
+
+            ctx.postMessage(msg)
+            attemptFinished = true
           }
-          continue // Continue to the next singleIteration
+          continue
         }
 
-        if (result !== null) {
-          finished = true
-          if (result === true) {
-            // Success! Send final image
-            const finalData = model.graphics()
-            ctx.postMessage({ type: 'success', result: finalData }, [finalData.buffer])
-            return
+        if (result === IterationResult.SUCCESS) {
+          const finalImage = model.graphics()
+          const msg: MsgSuccess = {
+            type: WorkerMsg.SUCCESS,
+            attempt: currentAttempt,
+            repairs: repairsInThisAttempt,
+            result: finalImage,
           }
+          ctx.postMessage(msg, [finalImage.buffer])
+          return
         }
 
-        stepCount++
-        if (stepCount % 50 === 0) {
-          const previewData = model.graphics()
-          ctx.postMessage({ type: 'preview', result: previewData })
+        if (result === IterationResult.STEP) {
+          stepCount++
+          if (stepCount % previewInterval === 0) {
+            const msg: MsgPreview = {
+              type: WorkerMsg.PREVIEW,
+              attempt: currentAttempt,
+              result: model.graphics(),
+            }
+            ctx.postMessage(msg)
+          }
         }
       }
-      ctx.postMessage({ type: 'attempt_end', attempt: i + 1 })
+
+      const msg: MsgAttemptEnd = {
+        type: WorkerMsg.ATTEMPT_END,
+        attempt: currentAttempt,
+        elapsedTime: performance.now() - startTime,
+      }
+      ctx.postMessage(msg)
     }
-    ctx.postMessage({ type: 'failure' })
+
+    // 5. Final Failure (Ran out of tries)
+    const finalImage = model.graphics()
+    const msg: MsgFailure = {
+      type: WorkerMsg.FAILURE,
+      totalAttempts: maxTries,
+      totalRepairs: totalRepairsAcrossAllTries,
+      result: finalImage,
+    }
+    ctx.postMessage(msg, [finalImage.buffer])
+
   } catch (err) {
-    ctx.postMessage({ type: 'error', message: (err as any).message })
+    const msg: MsgError = {
+      type: WorkerMsg.ERROR,
+      message: err instanceof Error ? err.message : String(err),
+    }
+    ctx.postMessage(msg)
   }
 }

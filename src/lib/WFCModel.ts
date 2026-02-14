@@ -3,31 +3,13 @@ export const DX = new Int32Array([-1, 0, 1, 0])
 export const DY = new Int32Array([0, 1, 0, -1])
 export const OPPOSITE = new Int32Array([2, 3, 0, 1])
 
-const randomIndice = (array: Float64Array, r: number): number => {
-  let sum = 0
-  let x = 0
-  let i = 0
-
-  for (; i < array.length; i++) {
-    sum += array[i]!
-  }
-
-  i = 0
-  x = r * sum
-
-  for (; i < array.length; i++) {
-    x -= array[i]!
-    if (x <= 0) return i
-  }
-
-  return 0
+export enum IterationResult {
+  REPAIR = 'REPAIR',
+  SUCCESS = 'SUCCESS',
+  STEP = 'STEP'
 }
 
-/**
- * Core WaveFunctionCollapse Algorithm
- * Optimized with flat TypedArrays and zero allocation loops
- */
-export const makeWFCModel = (
+export type WFCModelOptions = {
   FMX: number,
   FMY: number,
   T: number,
@@ -37,11 +19,26 @@ export const makeWFCModel = (
   propagatorOffsets: Int32Array,
   propagatorLengths: Int32Array,
   initialGround: number,
+  repairRadius: number,
+}
+
+export const makeWFCModel = (
+  {
+    FMX,
+    FMY,
+    T,
+    periodic,
+    weights,
+    propagatorData,
+    propagatorOffsets,
+    propagatorLengths,
+    initialGround,
+    repairRadius,
+  }: WFCModelOptions,
 ) => {
   const N_CELLS = FMX * FMY
   const N_STATES = N_CELLS * T
 
-  // -- State --
   const wave = new Uint8Array(N_STATES)
   const compatible = new Int32Array(N_STATES * 4)
   const observed = new Int32Array(N_CELLS)
@@ -50,9 +47,9 @@ export const makeWFCModel = (
   const sumsOfWeightLogWeights = new Float64Array(N_CELLS)
   const entropies = new Float64Array(N_CELLS)
   const stack = new Int32Array(N_STATES * 2)
+  const repairCounts = new Uint32Array(N_CELLS)
   let stackSize = 0
 
-  // -- Static Weights --
   const weightLogWeights = new Float64Array(T)
   let sumOfWeights = 0
   let sumOfWeightLogWeights = 0
@@ -65,14 +62,13 @@ export const makeWFCModel = (
   const startingEntropy = Math.log(sumOfWeights) - sumOfWeightLogWeights / sumOfWeights
 
   let generationComplete = false
-  let initializedField = false
   const distribution = new Float64Array(T)
 
   const onBoundary = (x: number, y: number): boolean => {
     return !periodic && (x < 0 || y < 0 || x >= FMX || y >= FMY)
   }
 
-  // -- Internal Logic --
+  // -- Core WFC Logic --
 
   const ban = (i: number, t: number) => {
     if (wave[i * T + t] === 0) return
@@ -92,8 +88,10 @@ export const makeWFCModel = (
     sumsOfWeights[i]! -= weights[t]!
     sumsOfWeightLogWeights[i]! -= weightLogWeights[t]!
 
-    const sum = sumsOfWeights[i]!
-    entropies[i] = Math.log(sum) - sumsOfWeightLogWeights[i]! / sum
+    // Prevent negative entropy due to floating point precision errors
+    const sum = Math.max(sumsOfWeights[i]!, 1e-10)
+    const val = Math.log(sum) - sumsOfWeightLogWeights[i]! / sum
+    entropies[i] = Math.max(0, val)
   }
 
   const rebuildStack = () => {
@@ -121,6 +119,7 @@ export const makeWFCModel = (
         } else if (x < 0 || y < 0 || x >= FMX || y >= FMY) continue
 
         const i = x + y * FMX
+        repairCounts[i]!++
         observed[i] = -1
         sumsOfOnes[i] = T
         sumsOfWeights[i] = sumOfWeights
@@ -155,9 +154,9 @@ export const makeWFCModel = (
       sumsOfWeightLogWeights[i] = sumOfWeightLogWeights
       entropies[i] = startingEntropy
       observed[i] = -1
+      repairCounts[i] = 0
     }
 
-    initializedField = true
     generationComplete = false
 
     if (initialGround >= 0 && initialGround < T) {
@@ -198,7 +197,7 @@ export const makeWFCModel = (
         for (let l = 0; l < len; l++) {
           const t2 = propagatorData[offset + l]!
           const compIndex = (i2 * T + t2) * 4 + d
-          if (compatible[compIndex] === 0) continue // Skip if already 0
+          if (compatible[compIndex] === 0) continue
 
           compatible[compIndex]!--
           if (compatible[compIndex] === 0) ban(i2, t2)
@@ -208,25 +207,26 @@ export const makeWFCModel = (
   }
 
   const observe = (rng: RNG): boolean | number | null => {
-    let min = 1000
+    let minEntropy = 1000
     let argmin = -1
 
     for (let i = 0; i < N_CELLS; i++) {
       if (onBoundary(i % FMX, (i / FMX) | 0)) continue
 
       const amount = sumsOfOnes[i]!
-      if (amount === 0) return i // FAILURE: return index for repair
+      if (amount === 0) return i // Contradiction found
 
-      const entropy = entropies[i]!
-      if (amount > 1 && entropy <= min) {
+      if (amount > 1) {
+        const entropy = entropies[i]!
         const noise = 0.000001 * rng()
-        if (entropy + noise < min) {
-          min = entropy + noise
+        if (argmin === -1 || (entropy + noise) < minEntropy) {
+          minEntropy = entropy + noise
           argmin = i
         }
       }
     }
 
+    // Final Validation: No cells with entropy > 1 found
     if (argmin === -1) {
       for (let i = 0; i < N_CELLS; i++) {
         for (let t = 0; t < T; t++) {
@@ -239,11 +239,12 @@ export const makeWFCModel = (
       return true
     }
 
+    // Collapse a cell
     for (let t = 0; t < T; t++) {
       distribution[t] = wave[argmin * T + t] === 1 ? weights[t]! : 0
     }
 
-    const chosenT = randomIndice(distribution, rng())
+    const chosenT = randomIndex(distribution, rng())
     for (let t = 0; t < T; t++) {
       if (wave[argmin * T + t] === 1 && t !== chosenT) ban(argmin, t)
     }
@@ -251,23 +252,33 @@ export const makeWFCModel = (
     return null
   }
 
-  const singleIteration = (rng: RNG): boolean | 'repair' | null => {
+  const singleIteration = (rng: RNG): IterationResult => {
     const result = observe(rng)
 
     if (typeof result === 'number') {
       const x = result % FMX
       const y = (result / FMX) | 0
-      clearRadius(x, y, 2) // Repair 5x5 area
-      return 'repair'
+      clearRadius(x, y, repairRadius)
+      return IterationResult.REPAIR
     }
 
     if (result === true) {
+      // Final propagation sweep before declaring SUCCESS
+      propagate()
       generationComplete = true
-      return true
+      return IterationResult.SUCCESS
     }
 
     propagate()
-    return null
+    return IterationResult.STEP
+  }
+
+  const getFilledCount = () => {
+    let count = 0
+    for (let i = 0; i < N_CELLS; i++) {
+      if (sumsOfOnes[i] === 1) count++
+    }
+    return count
   }
 
   return {
@@ -277,6 +288,24 @@ export const makeWFCModel = (
     getObserved: () => observed,
     getWave: () => wave,
     onBoundary,
-    T, FMX, FMY
+    getRepairCounts: () => repairCounts,
+    getFilledCount,
+    getTotalCells: () => N_CELLS,
+    filledPercent: () => getFilledCount() / N_CELLS,
+    T, FMX, FMY,
   }
+}
+
+function randomIndex(array: Float64Array, r: number): number {
+  let sum = 0
+  for (let i = 0; i < array.length; i++) sum += array[i]!
+
+  if (sum === 0) return 0
+
+  let x = r * sum
+  for (let i = 0; i < array.length; i++) {
+    x -= array[i]!
+    if (x <= 0) return i
+  }
+  return 0
 }

@@ -1,22 +1,20 @@
 import { DX, DY, makeWFCModel } from './WFCModel.ts'
 
 export type OverlappingModelOptions = {
-  data: Uint8Array | Uint8ClampedArray,
-  dataWidth: number,
-  dataHeight: number,
+  imageData: ImageData,
   N: number,
   width: number,
   height: number,
   periodicInput: boolean,
   periodicOutput: boolean,
   symmetry: number,
-  ground: number
+  ground: number,
+  repairRadius: number,
+  drawRepairHeatmap: boolean,
 }
 export const makeOverlappingModel = (
   {
-    data,
-    dataWidth,
-    dataHeight,
+    imageData,
     N,
     width,
     height,
@@ -24,9 +22,12 @@ export const makeOverlappingModel = (
     periodicOutput,
     symmetry,
     ground,
+    repairRadius,
+    drawRepairHeatmap,
   }: OverlappingModelOptions,
 ) => {
   // -- Pre-processing --
+  const { data, width: dataWidth, height: dataHeight } = imageData
 
   const sample = new Int32Array(dataWidth * dataHeight)
   const colors: number[][] = []
@@ -237,24 +238,24 @@ export const makeOverlappingModel = (
     }
   }
 
-  // -- Instantiate Core Model --
-
-  const model = makeWFCModel(
-    width,
-    height,
+  const model = makeWFCModel({
+    FMX: width,
+    FMY: height,
     T,
-    periodicOutput,
+    periodic: periodicOutput,
     weights,
     propagatorData,
     propagatorOffsets,
     propagatorLengths,
-    ground,
-  )
+    initialGround: ground,
+    repairRadius,
+  })
 
   // -- Graphics --
 
-  const graphics = (array?: Uint8Array | Uint8ClampedArray) => {
+  const graphics = (array?: Uint8Array | Uint8ClampedArray): Uint8ClampedArray<ArrayBuffer> => {
     const out = array || new Uint8Array(width * height * 4)
+    const repairCounts = model.getRepairCounts()
 
     if (model.isGenerationComplete()) {
       graphicsComplete(out)
@@ -262,7 +263,22 @@ export const makeOverlappingModel = (
       graphicsIncomplete(out)
     }
 
-    return out
+    if (drawRepairHeatmap) {
+      for (let i = 0; i < width * height; i++) {
+        const heat = repairCounts[i]!
+        if (heat > 0) {
+          const px = i * 4
+          // Blend red into the existing pixel based on heat intensity
+          // Adjust the '50' to make the heat more or less sensitive
+          const intensity = Math.min(heat * 40, 200)
+          out[px] = Math.min(out[px]! + intensity, 255)     // Boost Red
+          out[px + 1] = Math.max(out[px + 1]! - intensity, 0) // Drop Green
+          out[px + 2] = Math.max(out[px + 2]! - intensity, 0) // Drop Blue
+        }
+      }
+    }
+
+    return out as Uint8ClampedArray<ArrayBuffer>
   }
 
   const graphicsComplete = (array: Uint8Array | Uint8ClampedArray) => {
@@ -289,7 +305,7 @@ export const makeOverlappingModel = (
 
   const graphicsIncomplete = (array: Uint8Array | Uint8ClampedArray) => {
     const wave = model.getWave()
-    const T = model.T // Use the model's T
+    const T = model.T
 
     for (let i = 0; i < width * height; i++) {
       const x = i % width
@@ -303,24 +319,19 @@ export const makeOverlappingModel = (
           let sx = x - dx
           let sy = y - dy
 
-          // Handle periodicity wrapping
-          if (sx < 0) sx += width
-          else if (sx >= width) sx -= width
-          if (sy < 0) sy += height
-          else if (sy >= height) sy -= height
+          if (sx < 0) sx = periodicOutput ? sx + width : sx
+          if (sy < 0) sy = periodicOutput ? sy + height : sy
 
-          // If not periodic and still out of bounds, skip
-          if (model.onBoundary(sx, sy)) continue
+          if (sx < 0 || sy < 0 || sx >= width || sy >= height) continue
 
           const s = sx + sy * width
+          const waveOffset = s * T
 
           for (let t = 0; t < T; t++) {
-            if (wave[s * T + t] === 1) {
+            if (wave[waveOffset + t] === 1) {
               contributors++
-              // index into patterns: patternIndex * patternLen + offset
-              const colorId = patterns[t * patternLen + (dx + dy * N)]!
+              const colorId = patterns[t * (N * N) + (dx + dy * N)]!
               const color = colors[colorId]!
-
               r += color[0]!
               g += color[1]!
               b += color[2]!
@@ -329,24 +340,24 @@ export const makeOverlappingModel = (
           }
         }
       }
-      // ... rest of logic
 
       const px = i * 4
       if (contributors > 0) {
         array[px] = r / contributors
         array[px + 1] = g / contributors
         array[px + 2] = b / contributors
-        array[px + 3] = a / contributors
+        array[px + 3] = 255 // Always use full alpha for logs
       } else {
-        // Should not happen if algorithm is running correctly
-        array[px] = 0
-        array[px + 1] = 0
-        array[px + 2] = 0
-        array[px + 3] = 0
+        // If we are here, this pixel is "impossible"
+        // Let's paint it a dark grey instead of bright magenta so you can
+        // see if there is ANY other data around it.
+        array[px] = 40
+        array[px + 1] = 40
+        array[px + 2] = 45
+        array[px + 3] = 255
       }
     }
   }
-
   // Return Composite Interface
   return {
     ...model,
