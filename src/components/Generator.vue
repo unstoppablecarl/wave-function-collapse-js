@@ -1,39 +1,24 @@
 <script setup lang="ts">
-import { markRaw, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
-import { WFC_WORKER_ID, type WfCWorkerOptions, WorkerMsg, type WorkerResponse } from '../lib/wfc.worker.ts'
+import { useStore } from '../lib/store.ts'
+import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
 import SymmetryInput from './SymmetryInput.vue'
+
+const store = useStore()
+const { settings, autoRun, scale } = storeToRefs(store)
 
 const canvasRef = useTemplateRef('canvasRef')
 
 const imageDataSource = shallowRef<ImageData | null>(null)
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
 
-const scale = ref(4)
-const autoRun = ref(false)
 const running = ref(false)
 const currentWorkerStatus = ref('')
-
-type Settings = WfCWorkerOptions['settings']
-
-const settings = reactive<Settings>({
-  N: 2,
-  width: 60,
-  height: 60,
-  periodicInput: true,
-  periodicOutput: true,
-  ground: -1,
-  symmetry: 2,
-  seed: 1,
-  maxTries: 10,
-  maxRepairsPerAttempt: 10,
-  previewInterval: 100,
-  repairRadius: 2,
-  drawRepairHeatmap: true,
-})
 
 type Attempt = {
   encoded: string,
@@ -81,7 +66,7 @@ function updateCanvas() {
 
 function draw(data: ImageDataArray) {
   const ctx = canvasRef.value!.getContext('2d')!
-  const imgData = new ImageData(data, settings.width, settings.height)
+  const imgData = new ImageData(data, settings.value.width, settings.value.height)
   ctx.putImageData(imgData, 0, 0)
 }
 
@@ -108,7 +93,7 @@ async function generate() {
   wfcWorker.postMessage({
     id: WFC_WORKER_ID,
     imageData: imageDataSource.value,
-    settings: { ...settings },
+    settings: { ...toValue(settings) },
   })
 
   wfcWorker.onmessage = (e) => {
