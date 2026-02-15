@@ -239,7 +239,7 @@ const images = EXAMPLE_IMAGES
             <fieldset class="group input-section"
                       title="Forces the bottom row of the output to match a specific pattern from the input. -1 will disable ground">
               <legend>Ground</legend>
-              <input type="number" min="-1" v-model="settings.ground" />
+              <input type="number" min="-1" v-model="settings.initialGround" />
             </fieldset>
           </div>
 
