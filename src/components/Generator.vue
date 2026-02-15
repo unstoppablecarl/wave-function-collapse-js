@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
 import { type Attempt, makeAttempt, resetAttempt } from '../lib/_types.ts'
-import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import { useStore } from '../lib/store.ts'
 import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/WFCOverlappingModelImageData.worker.ts'
@@ -170,7 +169,8 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   imageDataSource.value = markRaw(imageData)
 }
 
-const images = EXAMPLE_IMAGES
+const imageModules = import.meta.glob('../assets/*.png', { eager: true })
+const images = Object.values(imageModules).map((m) => (m as any).default)
 </script>
 <template>
   <article class="card">
