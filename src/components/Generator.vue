@@ -230,7 +230,7 @@ const images = EXAMPLE_IMAGES
         <div class="hstack">
           <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
           <div class="ms-auto">
-            <label data-field class="checkbox-label" title="Auto Run when settings change">
+            <label data-field class="form-label" title="Auto Run when settings change">
               <input type="checkbox" v-model="autoRun" /> Auto Run
             </label>
           </div>
@@ -323,11 +323,6 @@ const images = EXAMPLE_IMAGES
 
 .periodic {
   padding-left: 0.5rem;
-}
-
-.checkbox-label {
-  padding: 0.5rem 0;
-  margin-block-end: 0;
 }
 
 .img-target {

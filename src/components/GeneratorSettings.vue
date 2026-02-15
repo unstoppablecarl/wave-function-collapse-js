@@ -38,11 +38,32 @@ const { settings } = storeToRefs(store)
     <input type="number" v-model="settings.height" />
   </fieldset>
 
+  <div class="row input-section">
+    <div class="col-4">
+      <label data-field class="form-label">
+        Repair
+      </label>
+    </div>
+    <div class="col-4">
+      <fieldset class="group input-section" title="Max repairs per attempt">
+        <legend>Max</legend>
+        <input type="number" min="0" v-model="settings.maxRepairsPerAttempt" />
+      </fieldset>
+    </div>
+    <div class="col-4">
+      <fieldset class="group input-section" title="Pixel radius of a repair">
+        <legend>Radius</legend>
+        <input type="number" min="0" v-model="settings.repairRadius" />
+      </fieldset>
+    </div>
+  </div>
+
+
   <div class="row input-section periodic">
     <div class="col-4">
       <label
         data-field
-        class="checkbox-label"
+        class="form-label"
         title="The algorithm treats the input image like a seamless texture"
       >
         <input type="checkbox" v-model="settings.periodicInput" /> Periodic Input
@@ -51,7 +72,7 @@ const { settings } = storeToRefs(store)
     <div class="col-4">
       <label
         data-field
-        class="checkbox-label"
+        class="form-label"
         title="Outputs a seamless texture"
       >
         <input type="checkbox" v-model="settings.periodicOutput" /> Periodic Output
