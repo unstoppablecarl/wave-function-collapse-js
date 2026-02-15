@@ -73,7 +73,7 @@ export type WfCWorkerOptions = {
   imageData: ImageData,
   settings: Omit<OverlappingModelOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
     seed: number,
-    maxTries: number,
+    maxAttempts: number,
     maxRepairsPerAttempt: number,
     previewInterval: number,
   }
@@ -85,7 +85,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
     const startedAt = performance.now()
 
     const { imageData, settings } = e.data
-    const { maxRepairsPerAttempt, seed, maxTries, previewInterval } = settings
+    const { maxRepairsPerAttempt, seed, maxAttempts, previewInterval } = settings
 
     // 1. Convert source image to IDs and a flat Palette
     const { sample, palette, avgColor } = colorToIdMap(imageData.data)
@@ -113,7 +113,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
     const mulberry32 = makeMulberry32(seed)
     let totalRepairsAcrossAllTries = 0
 
-    for (let i = 0; i < maxTries; i++) {
+    for (let i = 0; i < maxAttempts; i++) {
       const currentAttempt = i + 1
       let repairsInThisAttempt = 0
       let stepCount = 0
@@ -197,7 +197,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
     const finalImage = buffer.getVisualBuffer()
     const msg: MsgFailure = {
       type: WorkerMsg.FAILURE,
-      totalAttempts: maxTries,
+      totalAttempts: maxAttempts,
       totalRepairs: totalRepairsAcrossAllTries,
       result: finalImage,
       totalElapsedTime: performance.now() - startedAt,

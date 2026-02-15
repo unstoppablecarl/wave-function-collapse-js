@@ -24,7 +24,7 @@ export const useStore = defineStore('wfc', () => {
     initialGround: -1,
     symmetry: 2,
     seed: 1,
-    maxTries: 10,
+    maxAttempts: 10,
     maxRepairsPerAttempt: 10,
     previewInterval: 100,
     repairRadius: 2,
