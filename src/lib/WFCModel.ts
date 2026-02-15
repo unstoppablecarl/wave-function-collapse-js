@@ -1,3 +1,5 @@
+import { makeFastLog } from './fastLog.ts'
+
 export type RNG = () => number
 export const DX = new Int32Array([-1, 0, 1, 0])
 export const DY = new Int32Array([0, 1, 0, -1])
