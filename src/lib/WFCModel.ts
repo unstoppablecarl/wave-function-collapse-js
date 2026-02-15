@@ -152,6 +152,15 @@ export const makeWFCModel = (
   let generationComplete = false
   const distribution = new Float64Array(T)
 
+  const changedCells = new Int32Array(N_CELLS)
+  let changedCount = 0
+
+  const markDirty = (i: number) => {
+    // We only add to the list if it's not already there
+    // This is a simple way to track "needs an update"
+    changedCells[changedCount++] = i
+  }
+
   const onBoundary = (x: number, y: number): boolean => {
     return !periodicOutput && (x < 0 || y < 0 || x >= width || y >= height)
   }
@@ -174,6 +183,7 @@ export const makeWFCModel = (
     sumsOfWeights[i]! -= weights[t]!
     sumsOfWeightLogWeights[i]! -= weightLogWeights[t]!
 
+    markDirty(i)
     // Incremental Shannon Entropy calculation:
     // This avoids looping over all patterns in the cell (T) every time one is banned.
     // We use a small epsilon (1e-10) to prevent Math.log(0), which would return NaN.
@@ -430,7 +440,15 @@ export const makeWFCModel = (
     getFilledCount: () => N_CELLS - uncollapsedCount,
     getTotalCells: () => N_CELLS,
     filledPercent: () => (N_CELLS - uncollapsedCount) / N_CELLS,
-    T, FMX: width, FMY: height,
+    getChanges: () => {
+      const slice = changedCells.slice(0, changedCount)
+      changedCount = 0
+      return slice
+    },
+    T,
+    width,
+    height,
+    weights,
   }
 }
 

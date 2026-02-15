@@ -5,7 +5,7 @@ import { markRaw, reactive, ref, shallowRef, toValue, useTemplateRef, watch } fr
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import { useStore } from '../lib/store.ts'
-import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc.worker.ts'
+import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/WFCOverlappingModelImageData.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
 import SymmetryInput from './SymmetryInput.vue'
@@ -17,11 +17,12 @@ type Attempt = {
   elapsedTime: number,
   filledPercent: number,
 }
+
 type Result = {
   attempt: number,
   startedAt: number,
-  filledPercent: number,
   elapsedTime: number,
+  filledPercent: number,
 }
 
 const store = useStore()
@@ -109,7 +110,7 @@ async function generate() {
   currentWorkerStatus.value = 'Building Model'
 
   // Initialize Worker
-  wfcWorker = new Worker(new URL('../lib/wfc.worker.ts', import.meta.url), {
+  wfcWorker = new Worker(new URL('../lib/WFCOverlappingModelImageData.worker.ts', import.meta.url), {
     type: 'module',
   })
 

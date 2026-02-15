@@ -1,6 +1,7 @@
 import { makeMulberry32 } from './mulberry32.ts'
 import { makeOverlappingModel, type OverlappingModelOptions } from './OverlappingModel.ts'
 import { IterationResult } from './WFCModel.ts'
+import { colorToIdMap, makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
 
 export const WFC_WORKER_ID = 'WFC_WORKER'
 
@@ -75,21 +76,38 @@ export type WfCWorkerOptions = {
     maxTries: number,
     maxRepairsPerAttempt: number,
     previewInterval: number,
+    drawRepairHeatmap: boolean,
   }
 }
 const ctx: DedicatedWorkerGlobalScope = self as any
-
 ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
   try {
     if (e.data.id !== WFC_WORKER_ID) return
     const startedAt = performance.now()
 
     const { imageData, settings } = e.data
-    const { maxRepairsPerAttempt, seed, maxTries, previewInterval } = settings
+    const { maxRepairsPerAttempt, seed, maxTries, previewInterval, drawRepairHeatmap } = settings
 
+    // 1. Convert source image to IDs and a flat Palette
+    const { sample, palette } = colorToIdMap(imageData.data)
+
+    // 2. Init Logical Model
     const model = makeOverlappingModel({
-      imageData,
       ...settings,
+      sample,
+      sampleWidth: imageData.width,
+      sampleHeight: imageData.height,
+    })
+
+    // 3. Init Rendering Buffer (Bridging Palette + Patterns)
+    const buffer = makeWFCPixelBuffer({
+      palette,
+      T: model.T,
+      N: settings.N,
+      width: settings.width,
+      height: settings.height,
+      weights: model.weights,
+      patterns: model.patterns,
     })
 
     const mulberry32 = makeMulberry32(seed)
@@ -101,7 +119,11 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
       let stepCount = 0
 
       ctx.postMessage({ type: WorkerMsg.ATTEMPT_START, attempt: currentAttempt })
+
       model.clear()
+      buffer.clear()
+      // Initial sync for the blank state
+      buffer.updateCells(model.getWave(), model.getChanges())
 
       let attemptFinished = false
       const startTime = performance.now()
@@ -109,12 +131,15 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
       while (!attemptFinished) {
         const result = model.singleIteration(mulberry32)
 
+        // 4. Update the visual buffer only for changed cells
+        buffer.updateCells(model.getWave(), model.getChanges())
+
         if (result === IterationResult.REPAIR) {
           repairsInThisAttempt++
           totalRepairsAcrossAllTries++
 
           if (repairsInThisAttempt > maxRepairsPerAttempt) {
-            const currentData = model.graphics()
+            const currentData = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
             const msg: MsgAttemptFailure = {
               type: WorkerMsg.ATTEMPT_FAILURE,
               attempt: currentAttempt,
@@ -124,14 +149,14 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               filledPercent: model.filledPercent(),
             }
 
-            ctx.postMessage(msg)
+            ctx.postMessage(msg, [currentData.buffer])
             attemptFinished = true
           }
           continue
         }
 
         if (result === IterationResult.SUCCESS) {
-          const finalImage = model.graphics()
+          const finalImage = buffer.getVisualBuffer()
           const msg: MsgSuccess = {
             type: WorkerMsg.SUCCESS,
             attempt: currentAttempt,
@@ -146,13 +171,15 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
         if (result === IterationResult.STEP) {
           stepCount++
           if (stepCount % previewInterval === 0) {
+            const previewData = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
             const msg: MsgPreview = {
               type: WorkerMsg.PREVIEW,
               attempt: currentAttempt,
-              result: model.graphics(),
+              result: previewData,
               filledPercent: model.filledPercent(),
             }
-            ctx.postMessage(msg)
+            // Use transferable objects for high performance
+            ctx.postMessage(msg, [previewData.buffer])
           }
         }
       }
@@ -161,13 +188,13 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
         type: WorkerMsg.ATTEMPT_END,
         attempt: currentAttempt,
         elapsedTime: performance.now() - startTime,
-        filledPercent: model.filledPercent()
+        filledPercent: model.filledPercent(),
       }
       ctx.postMessage(msg)
     }
 
     // 5. Final Failure (Ran out of tries)
-    const finalImage = model.graphics()
+    const finalImage = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
     const msg: MsgFailure = {
       type: WorkerMsg.FAILURE,
       totalAttempts: maxTries,

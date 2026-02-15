@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { reactive, ref, toRaw } from 'vue'
-import type { WfCWorkerOptions } from './wfc.worker.ts'
+import type { WfCWorkerOptions } from './WFCOverlappingModelImageData.worker.ts'
 
 type Settings = WfCWorkerOptions['settings']
 
