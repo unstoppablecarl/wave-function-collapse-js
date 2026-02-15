@@ -36,7 +36,6 @@ export const makeOverlappingModel = (
   }: OverlappingModelOptions) => {
   const patternLen = N * N
 
-  // 1. Pattern Extraction Logic (Working with IDs)
   const getPatternFromSample = (x: number, y: number): Int32Array => {
     const p = new Int32Array(patternLen)
     for (let dy = 0; dy < N; dy++) {
@@ -49,7 +48,6 @@ export const makeOverlappingModel = (
     return p
   }
 
-  // Transformation Helpers
   const rotate = (p: Int32Array) => {
     const res = new Int32Array(patternLen)
     for (let y = 0; y < N; y++) {
@@ -66,10 +64,8 @@ export const makeOverlappingModel = (
     return res
   }
 
-  // 2. Map patterns to unique Weights and Indices
   const weightsMap = new Map<string, number>()
   const patternsList: Int32Array[] = []
-
   const yMax = periodicInput ? sampleHeight : sampleHeight - N + 1
   const xMax = periodicInput ? sampleWidth : sampleWidth - N + 1
 
@@ -84,9 +80,8 @@ export const makeOverlappingModel = (
       ps[5] = reflect(ps[4])
       ps[6] = rotate(ps[4])
       ps[7] = reflect(ps[6])
-
       for (let k = 0; k < symmetry; k++) {
-        const key = ps[k]!.toString() // ID-based string key
+        const key = ps[k]!.toString()
         const w = weightsMap.get(key)
         if (w !== undefined) {
           weightsMap.set(key, w + 1)
@@ -101,13 +96,10 @@ export const makeOverlappingModel = (
   const T = patternsList.length
   const patterns = new Int32Array(T * patternLen)
   const weights = new Float64Array(T)
-
   for (let t = 0; t < T; t++) {
     const pat = patternsList[t]!
     weights[t] = weightsMap.get(pat.toString())!
-    for (let k = 0; k < patternLen; k++) {
-      patterns[t * patternLen + k] = pat[k]!
-    }
+    patterns.set(pat, t * patternLen)
   }
 
   const agrees = (p1Idx: number, p2Idx: number, dx: number, dy: number) => {
@@ -127,7 +119,6 @@ export const makeOverlappingModel = (
 
   const propagatorLengths = new Int32Array(4 * T)
   let totalPropagatorSize = 0
-
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
       let count = 0
@@ -141,27 +132,18 @@ export const makeOverlappingModel = (
     }
   }
 
-  // 2. Allocate and Fill (Second Pass)
   const propagatorData = new Int32Array(totalPropagatorSize)
   const propagatorOffsets = new Int32Array(4 * T)
   let propCursor = 0
-
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
       const idx = d * T + t1
       propagatorOffsets[idx] = propCursor
-
-      const len = propagatorLengths[idx]!
-      let found = 0
-
-      // We re-run the check to fill the data without storing temporary arrays
       for (let t2 = 0; t2 < T; t2++) {
         if (agrees(t1, t2, DX[d]!, DY[d]!)) {
-          propagatorData[propCursor + found] = t2
-          found++
+          propagatorData[propCursor++] = t2
         }
       }
-      propCursor += len
     }
   }
 

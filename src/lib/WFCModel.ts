@@ -127,18 +127,18 @@ export const makeWFCModel = (
   const weightLogWeights = new Float64Array(T)
 
   // The total sum of weights of all patterns in the source tileset.
-  let sumOfWeights = 0
+  let sumOfWeightsTotal = 0
 
   // The total sum of weightLogWeights for the entire source tileset.
-  let sumOfWeightLogWeights = 0
+  let sumOfWeightLogWeightsTotal = 0
 
   for (let t = 0; t < T; t++) {
     const w = weights[t]!
     weightLogWeights[t] = w * Math.log(w)
-    sumOfWeights += w
-    sumOfWeightLogWeights += weightLogWeights[t]!
+    sumOfWeightsTotal += w
+    sumOfWeightLogWeightsTotal += weightLogWeights[t]!
   }
-  const startingEntropy = Math.log(sumOfWeights) - sumOfWeightLogWeights / sumOfWeights
+  const startingEntropy = Math.log(sumOfWeightsTotal) - sumOfWeightLogWeightsTotal / sumOfWeightsTotal
 
   // Initialize Spatial Bias (Center-out growth)
   const centerX = (width * startCoordX) | 0
@@ -158,10 +158,13 @@ export const makeWFCModel = (
 
   const changedCells = new Int32Array(N_CELLS)
   let changedCount = 0
+  const dirtyFlags = new Uint8Array(N_CELLS)
 
   const markDirty = (i: number) => {
-    // We only add to the list if it's not already there
-    // This is a simple way to track "needs an update"
+    if (dirtyFlags[i] === 0) {
+      dirtyFlags[i] = 1
+      changedCells[changedCount++] = i
+    }
     changedCells[changedCount++] = i
   }
 
@@ -189,11 +192,20 @@ export const makeWFCModel = (
 
     markDirty(i)
     // Incremental Shannon Entropy calculation:
-    // This avoids looping over all patterns in the cell (T) every time one is banned.
-    // We use a small epsilon (1e-10) to prevent Math.log(0), which would return NaN.
-    const sum = Math.max(sumsOfWeights[i]!, 1e-10)
-    const val = Math.log(sum) - sumsOfWeightLogWeights[i]! / sum
-    entropies[i] = Math.max(0, val)
+    const sum = sumsOfWeights[i]!
+    if (sum <= 1e-10 || sumsOfOnes[i]! <= 1) {
+      entropies[i] = 0
+      // Update observed immediately if the cell is collapsed
+      if (sumsOfOnes[i] === 1) {
+        for (let t2 = 0; t2 < T; t2++) if (wave[i * T + t2] === 1) {
+          observed[i] = t2
+          break
+        }
+      }
+    } else {
+      const val = Math.log(sum) - (sumsOfWeightLogWeights[i]! / sum)
+      entropies[i] = Math.max(0, val)
+    }
   }
 
   const refreshUncollapsed = () => {
@@ -211,20 +223,31 @@ export const makeWFCModel = (
       for (let t = 0; t < T; t++) {
         wave[i * T + t] = 1
         for (let d = 0; d < 4; d++) {
-          const opp = OPPOSITE[d]!
-          compatible[(i * T + t) * 4 + d] = propagatorLengths[opp * T + t]!
+          // Initialize with propagatorLengths of the direction WE are looking (d)
+          compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
         }
       }
       sumsOfOnes[i] = T
-      sumsOfWeights[i] = sumOfWeights
-      sumsOfWeightLogWeights[i] = sumOfWeightLogWeights
+      sumsOfWeights[i] = sumOfWeightsTotal
+      sumsOfWeightLogWeights[i] = sumOfWeightLogWeightsTotal
       entropies[i] = startingEntropy
       observed[i] = -1
       repairCounts[i] = 0
     }
 
-    refreshUncollapsed()
     generationComplete = false
+
+    // If a pattern has 0 valid neighbors in any direction, it is impossible even in an empty grid.
+    for (let i = 0; i < N_CELLS; i++) {
+      for (let t = 0; t < T; t++) {
+        for (let d = 0; d < 4; d++) {
+          if (compatible[(i * T + t) * 4 + d] === 0) {
+            ban(i, t)
+            break
+          }
+        }
+      }
+    }
 
     if (initialGround >= 0 && initialGround < T) {
       const groundY = height - 1
@@ -235,8 +258,10 @@ export const makeWFCModel = (
         }
         for (let y = 0; y < groundY; y++) ban(x + y * width, initialGround)
       }
-      propagate()
     }
+
+    propagate()
+    refreshUncollapsed()
   }
 
   const propagate = () => {
@@ -262,12 +287,12 @@ export const makeWFCModel = (
         const propIndex = d * T + t1
         const offset = propagatorOffsets[propIndex]!
         const len = propagatorLengths[propIndex]!
+        const opp = OPPOSITE[d]!
 
         for (let l = 0; l < len; l++) {
           const t2 = propagatorData[offset + l]!
-          const compIndex = (i2 * T + t2) * 4 + d
+          const compIndex = (i2 * T + t2) * 4 + opp
           if (compatible[compIndex] === 0) continue
-
           compatible[compIndex]!--
           if (compatible[compIndex] === 0) ban(i2, t2)
         }
@@ -278,38 +303,30 @@ export const makeWFCModel = (
   const observe = (rng: RNG): boolean | number | null => {
     let minScore = 1e10
     let argmin = -1
-    let argminIdx = -1
 
-    // Scan only the active uncollapsed cells from our frontier
     for (let idx = 0; idx < uncollapsedCount; idx++) {
       const i = uncollapsedIndices[idx]!
       const amount = sumsOfOnes[i]!
 
-      // CONTRADICTION: A cell has 0 possible patterns.
-      // We return the index so clearRadius can "heal" this area.
       if (amount === 0) return i
 
       if (amount > 1) {
-        // THE HEURISTIC SCORE:
-        // 1. entropies[i]: The Shannon Entropy (prioritize highly constrained cells).
-        // 2. spatialPriority[i]: The distance from center (prioritize crystal-like growth).
-        // 3. noise: A tiny random tie-breaker to prevent "scanline" artifacts and rigid patterns.
         const score = entropies[i]! + spatialPriority[i]! + (0.000001 * rng())
-
         if (argmin === -1 || score < minScore) {
           minScore = score
           argmin = i
-          argminIdx = idx
         }
       }
     }
 
-    // SUCCESS: All cells have exactly 1 or 0 patterns left.
     if (argmin === -1) {
       for (let i = 0; i < N_CELLS; i++) {
-        for (let t = 0; t < T; t++) {
-          if (wave[i * T + t] === 1) {
-            observed[i] = t // Finalize the visual result
+        const amount = sumsOfOnes[i]!
+        if (amount === 0) return i
+        if (amount > 1) return null
+        if (observed[i] === -1) {
+          for (let t = 0; t < T; t++) if (wave[i * T + t] === 1) {
+            observed[i] = t
             break
           }
         }
@@ -317,27 +334,17 @@ export const makeWFCModel = (
       return true
     }
 
-    // COLLAPSE: Force the selected cell into a single state based on pattern weights.
     for (let t = 0; t < T; t++) {
       distribution[t] = wave[argmin * T + t] === 1 ? weights[t]! : 0
     }
 
     const chosenT = randomIndex(distribution, rng())
+    if (chosenT === -1) return argmin // Safety fallback for bad distribution
 
-    // Ban all other patterns in this cell except for the chosen one.
-    for (let t = 0; t < T; t++) {
-      if (wave[argmin * T + t] === 1 && t !== chosenT) ban(argmin, t)
-    }
-
-    // FRONTIER MANAGEMENT (Swap-and-Pop):
-    // Since this cell is now collapsed (sumsOfOnes == 1), move it out of the active list.
-    // We swap it with the last element in the array to keep the list contiguous.
-    if (sumsOfOnes[argmin] === 1) {
-      uncollapsedIndices[argminIdx] = uncollapsedIndices[--uncollapsedCount]!
-    }
-
+    for (let t = 0; t < T; t++) if (wave[argmin * T + t] === 1 && t !== chosenT) ban(argmin, t)
     return null
   }
+
   const singleIteration = (rng: RNG): IterationResult => {
     const result = observe(rng)
 
@@ -345,33 +352,26 @@ export const makeWFCModel = (
       const x = result % width
       const y = (result / width) | 0
       clearRadius(x, y, repairRadius)
-      refreshUncollapsed() // Full refresh after repair
+      refreshUncollapsed()
       return IterationResult.REPAIR
-    }
-
-    if (result === true) {
-      propagate()
-      generationComplete = true
-      return IterationResult.SUCCESS
     }
 
     propagate()
 
-    // Clean up frontier: Remove cells collapsed by propagation
     let i = 0
     while (i < uncollapsedCount) {
-      if (sumsOfOnes[uncollapsedIndices[i]!]! <= 1) {
-        uncollapsedIndices[i] = uncollapsedIndices[--uncollapsedCount]!
-      } else {
-        i++
-      }
+      if (sumsOfOnes[uncollapsedIndices[i]!]! <= 1) uncollapsedIndices[i] = uncollapsedIndices[--uncollapsedCount]!
+      else i++
     }
 
+    if (result === true) {
+      generationComplete = true
+      return IterationResult.SUCCESS
+    }
     return IterationResult.STEP
   }
 
   const clearRadius = (targetX: number, targetY: number, radius: number) => {
-    // 1. Clear the hole
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         let x = targetX + dx
@@ -382,45 +382,34 @@ export const makeWFCModel = (
         } else if (x < 0 || y < 0 || x >= width || y >= height) continue
 
         const i = x + y * width
-
-        // Reset cell to original "superposition" state
         repairCounts[i]!++
         observed[i] = -1
         sumsOfOnes[i] = T
-        sumsOfWeights[i] = sumOfWeights
-        sumsOfWeightLogWeights[i] = sumOfWeightLogWeights
+        sumsOfWeights[i] = sumOfWeightsTotal
+        sumsOfWeightLogWeights[i] = sumOfWeightLogWeightsTotal
         entropies[i] = startingEntropy
 
         for (let t = 0; t < T; t++) {
           wave[i * T + t] = 1
           for (let d = 0; d < 4; d++) {
-            const opp = OPPOSITE[d]!
-            compatible[(i * T + t) * 4 + d] = propagatorLengths[opp * T + t]!
+            compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
           }
         }
       }
     }
 
-    // 2. Optimized Stack Rebuild: Only push neighbors on the "rim" of the hole.
-    // We only need to re-propagate constraints from the static cells
-    // immediately surrounding the cleared radius.
     stackSize = 0
     const rim = radius + 1
     for (let dy = -rim; dy <= rim; dy++) {
       for (let dx = -rim; dx <= rim; dx++) {
-        // Only process the outer shell (the rim)
         if (Math.abs(dx) !== rim && Math.abs(dy) !== rim) continue
-
         let x = targetX + dx
         let y = targetY + dy
         if (periodicOutput) {
           x = (x + width) % width
           y = (y + height) % height
         } else if (x < 0 || y < 0 || x >= width || y >= height) continue
-
         const i = x + y * width
-        // Push every pattern that is ALREADY BANNED in this neighbor
-        // so it can propagate that ban into the newly cleared area.
         for (let t = 0; t < T; t++) {
           if (wave[i * T + t] === 0) {
             stack[stackSize * 2] = i
@@ -431,6 +420,16 @@ export const makeWFCModel = (
       }
     }
     propagate()
+  }
+
+  const getChanges = () => {
+    const slice = changedCells.slice(0, changedCount)
+    // Clear dirty flags
+    for (let idx = 0; idx < changedCount; idx++) {
+      dirtyFlags[changedCells[idx]!] = 0
+    }
+    changedCount = 0
+    return slice
   }
 
   return {
@@ -444,11 +443,7 @@ export const makeWFCModel = (
     getFilledCount: () => N_CELLS - uncollapsedCount,
     getTotalCells: () => N_CELLS,
     filledPercent: () => (N_CELLS - uncollapsedCount) / N_CELLS,
-    getChanges: () => {
-      const slice = changedCells.slice(0, changedCount)
-      changedCount = 0
-      return slice
-    },
+    getChanges,
     T,
     width,
     height,
@@ -459,11 +454,11 @@ export const makeWFCModel = (
 function randomIndex(array: Float64Array, r: number): number {
   let sum = 0
   for (let i = 0; i < array.length; i++) sum += array[i]!
-  if (sum === 0) return 0
+  if (sum <= 0) return -1
   let x = r * sum
   for (let i = 0; i < array.length; i++) {
     x -= array[i]!
     if (x <= 0) return i
   }
-  return 0
+  return array.length - 1
 }
