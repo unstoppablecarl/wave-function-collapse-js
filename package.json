@@ -12,7 +12,8 @@
   "dependencies": {
     "@knadh/oat": "^0.2.0",
     "pinia": "^3.0.4",
-    "pinia-simple-persist": "^0.0.5",
+    "pinia-simple-persist": "^0.0.8",
+    "pretty-ms": "^9.3.0",
     "vue": "^3.5.25"
   },
   "devDependencies": {

@@ -14,26 +14,49 @@ export enum WorkerMsg {
   ERROR = 'ERROR',
 }
 
-type MsgAttemptStart = { type: WorkerMsg.ATTEMPT_START; attempt: number }
-type MsgAttemptEnd = { type: WorkerMsg.ATTEMPT_END; attempt: number, elapsedTime: number }
-type MsgSuccess = { type: WorkerMsg.SUCCESS; attempt: number; repairs: number; result: Uint8ClampedArray<ArrayBuffer> }
-type MsgPreview = { type: WorkerMsg.PREVIEW; attempt: number; result: Uint8ClampedArray<ArrayBuffer> }
-type MsgAttemptFailure = {
-  type: WorkerMsg.ATTEMPT_FAILURE;
-  attempt: number;
-  repairs: number,
-  result: Uint8ClampedArray<ArrayBuffer>,
-  elapsedTime: number,
+type MsgAttemptStart = {
+  type: WorkerMsg.ATTEMPT_START
+  attempt: number
+}
+type MsgAttemptEnd = {
+  type: WorkerMsg.ATTEMPT_END
+  attempt: number
+  elapsedTime: number
   filledPercent: number,
 }
-
-type MsgFailure = {
-  type: WorkerMsg.FAILURE;
-  totalAttempts: number;
-  totalRepairs: number,
+type MsgSuccess = {
+  type: WorkerMsg.SUCCESS
+  attempt: number
+  repairs: number
   result: Uint8ClampedArray<ArrayBuffer>
+  totalElapsedTime: number
 }
-type MsgError = { type: WorkerMsg.ERROR; message: string }
+type MsgPreview = {
+  type: WorkerMsg.PREVIEW
+  attempt: number
+  result: Uint8ClampedArray<ArrayBuffer>
+  filledPercent: number
+}
+type MsgAttemptFailure = {
+  type: WorkerMsg.ATTEMPT_FAILURE
+  attempt: number
+  repairs: number
+  result: Uint8ClampedArray<ArrayBuffer>
+  elapsedTime: number
+  filledPercent: number
+}
+type MsgFailure = {
+  type: WorkerMsg.FAILURE
+  totalAttempts: number
+  totalRepairs: number
+  totalElapsedTime: number
+  result: Uint8ClampedArray<ArrayBuffer>
+  filledPercent: number
+}
+type MsgError = {
+  type: WorkerMsg.ERROR
+  message: string
+}
 
 export type WorkerResponse =
   | MsgAttemptStart
@@ -59,6 +82,8 @@ const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
   try {
     if (e.data.id !== WFC_WORKER_ID) return
+    const startedAt = performance.now()
+
     const { imageData, settings } = e.data
     const { maxRepairsPerAttempt, seed, maxTries, previewInterval } = settings
 
@@ -112,6 +137,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
             attempt: currentAttempt,
             repairs: repairsInThisAttempt,
             result: finalImage,
+            totalElapsedTime: performance.now() - startedAt,
           }
           ctx.postMessage(msg, [finalImage.buffer])
           return
@@ -124,6 +150,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               type: WorkerMsg.PREVIEW,
               attempt: currentAttempt,
               result: model.graphics(),
+              filledPercent: model.filledPercent(),
             }
             ctx.postMessage(msg)
           }
@@ -134,6 +161,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
         type: WorkerMsg.ATTEMPT_END,
         attempt: currentAttempt,
         elapsedTime: performance.now() - startTime,
+        filledPercent: model.filledPercent()
       }
       ctx.postMessage(msg)
     }
@@ -145,6 +173,8 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
       totalAttempts: maxTries,
       totalRepairs: totalRepairsAcrossAllTries,
       result: finalImage,
+      totalElapsedTime: performance.now() - startedAt,
+      filledPercent: model.filledPercent(),
     }
     ctx.postMessage(msg, [finalImage.buffer])
 

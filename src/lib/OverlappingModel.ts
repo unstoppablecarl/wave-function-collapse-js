@@ -8,9 +8,10 @@ export type OverlappingModelOptions = {
   periodicInput: boolean,
   periodicOutput: boolean,
   symmetry: number,
-  ground: number,
+  initialGround: number,
   repairRadius: number,
   drawRepairHeatmap: boolean,
+  centerBias: number,
 }
 export const makeOverlappingModel = (
   {
@@ -21,9 +22,10 @@ export const makeOverlappingModel = (
     periodicInput,
     periodicOutput,
     symmetry,
-    ground,
+    initialGround,
     repairRadius,
     drawRepairHeatmap,
+    centerBias,
   }: OverlappingModelOptions,
 ) => {
   // -- Pre-processing --
@@ -239,16 +241,17 @@ export const makeOverlappingModel = (
   }
 
   const model = makeWFCModel({
-    FMX: width,
-    FMY: height,
+    width,
+    height,
     T,
-    periodic: periodicOutput,
+    periodicOutput,
     weights,
     propagatorData,
     propagatorOffsets,
     propagatorLengths,
-    initialGround: ground,
+    initialGround,
     repairRadius,
+    centerBias,
   })
 
   // -- Graphics --

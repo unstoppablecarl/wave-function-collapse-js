@@ -21,7 +21,7 @@ export const useStore = defineStore('wfc', () => {
     height: 60,
     periodicInput: true,
     periodicOutput: true,
-    ground: -1,
+    initialGround: -1,
     symmetry: 2,
     seed: 1,
     maxTries: 10,
@@ -29,6 +29,7 @@ export const useStore = defineStore('wfc', () => {
     previewInterval: 100,
     repairRadius: 2,
     drawRepairHeatmap: true,
+    centerBias: 0.05,
   })
 
   const state = {
