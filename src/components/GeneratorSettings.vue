@@ -61,7 +61,7 @@ const { settings } = storeToRefs(store)
     <div class="col-4">
       <fieldset class="group input-section">
         <legend>Tries</legend>
-        <input type="number" v-model="settings.maxTries" />
+        <input type="number" v-model="settings.maxAttempts" />
       </fieldset>
     </div>
   </div>
