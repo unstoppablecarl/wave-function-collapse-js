@@ -215,15 +215,12 @@ const images = EXAMPLE_IMAGES
         </div>
         <p>Examples</p>
         <template v-for="image in images" :key="image">
-          <div class="mb-2">
-
             <PixelImg
               :src="image"
               class="img-target"
               :scale="scale"
               @img-click="setImageDataFromElement($event)"
             />
-          </div>
         </template>
       </div>
       <div class="col-5">
@@ -397,6 +394,7 @@ const images = EXAMPLE_IMAGES
 
 .img-target {
   cursor: pointer;
+  margin: 0.5rem 0.5rem 0 0;
 }
 
 .card {
@@ -406,8 +404,8 @@ const images = EXAMPLE_IMAGES
 .attempt-log {
   font-size: 0.7rem;
 }
+
 .attempt-log-info {
   margin: 0.5rem 0 0.25rem;
 }
-
 </style>
