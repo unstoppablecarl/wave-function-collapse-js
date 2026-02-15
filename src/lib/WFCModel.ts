@@ -1,4 +1,4 @@
-import { makeFastLog } from './fastLog.ts'
+// import { makeFastLog } from './fastLog.ts'
 
 export type RNG = () => number
 export const DX = new Int32Array([-1, 0, 1, 0])
@@ -142,11 +142,11 @@ export const makeWFCModel = (
   }
   const startingEntropy = Math.log(sumOfWeightsTotal) - sumOfWeightLogWeightsTotal / sumOfWeightsTotal
 
-  const fastLog = makeFastLog({
-    minValue: 0.001,                    // Slightly below minimum possible sum
-    maxValue: sumOfWeightsTotal * 2,    // Well above maximum possible sum
-    tableSize: 4096,                     // Good balance of memory vs speed
-  })
+  // const fastLog = makeFastLog({
+  //   minValue: 0.001,                    // Slightly below minimum possible sum
+  //   maxValue: sumOfWeightsTotal * 2,    // Well above maximum possible sum
+  //   tableSize: 4096,                     // Good balance of memory vs speed
+  // })
 
   // Initialize Spatial Bias (Center-out growth)
   const centerX = (width * startCoordX) | 0
@@ -173,7 +173,6 @@ export const makeWFCModel = (
       dirtyFlags[i] = 1
       changedCells[changedCount++] = i
     }
-    changedCells[changedCount++] = i
   }
 
   const onBoundary = (x: number, y: number): boolean => {
@@ -211,7 +210,8 @@ export const makeWFCModel = (
         }
       }
     } else {
-      const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
+      const val = Math.log(sum) - (sumsOfWeightLogWeights[i]! / sum)
+      // const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
       entropies[i] = Math.max(0, val)
     }
   }
@@ -346,6 +346,26 @@ export const makeWFCModel = (
       distribution[t] = wave[argmin * T + t] === 1 ? weights[t]! : 0
     }
 
+    // // find random index (chosenT)
+    // const sumWeights = sumsOfWeights[argmin]!
+    // if (sumWeights <= 0) return argmin
+    //
+    // let x = rng() * sumWeights
+    // let chosenT = -1
+    //
+    // for (let t = 0; t < T; t++) {
+    //   if (wave[argmin * T + t] === 1) {
+    //     x -= weights[t]!
+    //     if (x <= 0) {
+    //       chosenT = t
+    //       break
+    //     }
+    //   }
+    // }
+    //
+    // if (chosenT === -1) chosenT = T - 1
+
+
     const chosenT = randomIndex(distribution, rng())
     if (chosenT === -1) return argmin // Safety fallback for bad distribution
 
@@ -373,7 +393,8 @@ export const makeWFCModel = (
 
     let i = 0
     while (i < uncollapsedCount) {
-      if (sumsOfOnes[uncollapsedIndices[i]!]! <= 1) uncollapsedIndices[i] = uncollapsedIndices[--uncollapsedCount]!
+      if (sumsOfOnes[uncollapsedIndices[i]!]! <= 1)
+        uncollapsedIndices[i] = uncollapsedIndices[--uncollapsedCount]!
       else i++
     }
 

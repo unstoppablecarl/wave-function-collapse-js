@@ -2,28 +2,13 @@
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { markRaw, reactive, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
+import type { Attempt, Result } from '../lib/_types.ts'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import { useStore } from '../lib/store.ts'
 import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/WFCOverlappingModelImageData.worker.ts'
-import GeneratorSettings from './GeneratorSettings.vue'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
-
-type Attempt = {
-  encoded: string,
-  repairs: number,
-  attempt: number,
-  elapsedTime: number,
-  filledPercent: number,
-}
-
-type Result = {
-  attempt: number,
-  startedAt: number,
-  elapsedTime: number,
-  filledPercent: number,
-}
 
 const store = useStore()
 const { settings, autoRun, scale } = storeToRefs(store)
@@ -45,6 +30,7 @@ const currentResult = reactive<Result>({
   startedAt: 0,
   filledPercent: 0,
   elapsedTime: 0,
+  repairs: 0,
 })
 
 const finalResult = reactive<Result>({
@@ -52,6 +38,7 @@ const finalResult = reactive<Result>({
   startedAt: 0,
   filledPercent: 0,
   elapsedTime: 0,
+  repairs: 0,
 })
 
 watch(imageDataSource, () => {
@@ -129,11 +116,12 @@ async function generate() {
 
     if (type === WorkerMsg.ATTEMPT_START) {
       const { attempt } = response
-      currentWorkerStatus.value = 'Attempt ' + attempt
+      currentWorkerStatus.value = 'Attempt: ' + attempt
+      currentResult.attempt = attempt
       currentResult.filledPercent = 0
       currentResult.startedAt = performance.now()
       currentResult.elapsedTime = 0
-      currentResult.attempt = attempt
+      currentResult.repairs = 0
     }
 
     if (type === WorkerMsg.ATTEMPT_END) {
@@ -146,7 +134,6 @@ async function generate() {
       currentResult.filledPercent = filledPercent
 
       requestAnimationFrame(() => {
-
         if (running.value) {
           updateCanvas()
         }
@@ -174,6 +161,7 @@ async function generate() {
       draw(new Uint8ClampedArray(result.buffer))
       completeWorker()
       Object.assign(finalResult, currentResult)
+      finalResult.filledPercent = 1
     }
 
     if (type === WorkerMsg.FAILURE) {
@@ -224,9 +212,6 @@ const images = EXAMPLE_IMAGES
         </template>
       </div>
       <div class="col-5">
-
-        <GeneratorSettings />
-
         <div class="hstack">
           <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
           <div class="ms-auto">
@@ -278,14 +263,23 @@ const images = EXAMPLE_IMAGES
           <div class="col-4">
             <strong>Elapsed: </strong> {{ prettyMilliseconds(currentResult.elapsedTime) }}
           </div>
+          <div class="col-3">
+            <strong>Repairs: </strong> {{ currentResult.repairs }}
+          </div>
         </div>
 
         <div v-if="!running && hasResult" class="row mb-1">
-          <div class="col">
+          <div class="col-3">
+            <strong>Attempt: </strong> {{ finalResult.attempt }}
+          </div>
+          <div class="col-3">
             <strong>Progress: </strong> {{ (finalResult.filledPercent * 100).toFixed(1) }}%
           </div>
-          <div class="col">
+          <div class="col-3">
             <strong>Elapsed: </strong> {{ prettyMilliseconds(finalResult.elapsedTime) }}
+          </div>
+          <div class="col-3">
+            <strong>Repairs: </strong> {{ finalResult.repairs }}
           </div>
         </div>
 

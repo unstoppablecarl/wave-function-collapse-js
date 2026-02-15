@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@knadh/oat": "^0.2.0",
+    "@tweakpane/core": "^2.0.5",
+    "@tweakpane/plugin-essentials": "^0.2.1",
     "pinia": "^3.0.4",
     "pinia-simple-persist": "^0.0.8",
     "pretty-ms": "^9.3.0",
+    "tweakpane": "^4.0.5",
+    "tweakpane-plugin-infodump": "^4.0.2",
     "vue": "^3.5.25"
   },
   "devDependencies": {

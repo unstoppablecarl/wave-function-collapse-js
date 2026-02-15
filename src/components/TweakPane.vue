@@ -1,0 +1,141 @@
+<script setup lang="ts">
+import { BindingApi } from '@tweakpane/core'
+import { Pane } from 'tweakpane'
+import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
+import { onMounted, useTemplateRef, watchEffect } from 'vue'
+import { useStore } from '../lib/store.ts'
+import { SYMMETRY_DROPDOWN } from '../lib/symmetry-options.ts'
+
+const store = useStore()
+
+const paneRef = useTemplateRef('paneRef')
+
+function addInfo(target: BindingApi, message: string) {
+  const labelEl = target.controller.view.element.querySelector('.tp-lblv_l') as HTMLElement
+  labelEl.title = message
+}
+
+onMounted(() => {
+  const pane = new Pane({
+    container: paneRef.value!,
+    title: 'Config',
+  })
+  pane.registerPlugin(InfodumpPlugin)
+
+  const displayFolder = pane.addFolder({
+    title: 'Display',
+  })
+
+  displayFolder.addBinding(store, 'scale', {
+    min: 0,
+    max: 10,
+    step: 1,
+  })
+
+  const settingsFolder = pane.addFolder({
+    title: 'Settings',
+  })
+
+  const N = settingsFolder.addBinding(store.settings, 'N', {
+    min: 0,
+    max: 10,
+    step: 1,
+  })
+  addInfo(N, 'In the Wave Function Collapse (WFC) algorithm, N represents the pattern size (or "kernel size"). It is the dimension of the small squares the algorithm extracts from your input image to use as its "building blocks."')
+
+  const initialGround = settingsFolder.addBinding(store.settings, 'initialGround', {
+    min: -1,
+    step: 1,
+    label: 'ground',
+  })
+  addInfo(initialGround, 'Forces the bottom row of the output to match a specific pattern from the input. -1 will disable ground')
+
+  settingsFolder.addBinding(store.settings, 'seed', {
+    min: 0,
+    step: 1,
+  })
+
+  const repairsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRepairsPerAttempt', {
+    min: 0,
+    step: 1,
+    label: 'max repairs',
+  })
+  addInfo(repairsPerAttempt, 'When encountering a contradiction, pixels will be cleared and filled again. This limits the number of times an attempt can repair before failing.')
+
+  const repairRadius = settingsFolder.addBinding(store.settings, 'repairRadius', {
+    min: 0,
+    step: 1,
+    label: 'repair radius',
+  })
+  addInfo(repairRadius, 'Radius of pixels that will be removed around the contradiction')
+
+  const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
+    min: 0,
+    step: 1,
+    label: 'periodic input',
+  })
+  addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
+
+  const periodicOutput = settingsFolder.addBinding(store.settings, 'periodicOutput', {
+    min: 0,
+    step: 1,
+    label: 'periodic output',
+  })
+  addInfo(periodicOutput, 'Outputs a seamless texture')
+
+  settingsFolder.addBinding(store.settings, 'width', {
+    min: 0,
+    step: 1,
+  })
+
+  settingsFolder.addBinding(store.settings, 'height', {
+    min: 0,
+    step: 1,
+  })
+
+  settingsFolder.addBinding(store.settings, 'maxAttempts', {
+    min: 0,
+    step: 1,
+    label: 'max attempts',
+  })
+
+  settingsFolder.addBinding(store.settings, 'maxAttempts', {
+    min: 0,
+    step: 1,
+    label: 'max attempts',
+  })
+
+  settingsFolder.addBinding(store.settings, 'symmetry', {
+    options: SYMMETRY_DROPDOWN,
+  })
+
+  const symmetryDesc = pane.addBlade({
+    view: 'infodump',
+    content: 'adfs',
+    markdown: false,
+  })
+
+  watchEffect(() => {
+    symmetryDesc.element.innerText = store.currentSymmetryDescription
+  })
+})
+</script>
+<template>
+  <div ref="paneRef" class="sidebar-container"></div>
+</template>
+<style lang="scss">
+.sidebar-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+}
+
+.tp-lblv_l[title] {
+  white-space: nowrap;
+
+  &::after {
+    content: ' ⓘ';
+  }
+}
+</style>

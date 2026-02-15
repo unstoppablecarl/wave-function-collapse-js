@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { reactive, ref, toRaw } from 'vue'
+import { computed, reactive, ref, toRaw } from 'vue'
+import { SYMMETRY_OPTIONS } from './symmetry-options.ts'
 import type { WfCWorkerOptions } from './WFCOverlappingModelImageData.worker.ts'
 
 type Settings = WfCWorkerOptions['settings']
@@ -66,6 +67,10 @@ export const useStore = defineStore('wfc', () => {
     mapper.$restoreState(data)
   }
 
+  const currentSymmetryDescription = computed(() => {
+    return SYMMETRY_OPTIONS[settings.symmetry]?.description || ''
+  })
+
   return {
     $reset,
     $serializeState,
@@ -73,6 +78,7 @@ export const useStore = defineStore('wfc', () => {
     scale,
     autoRun,
     settings,
+    currentSymmetryDescription,
   }
 }, {
   persist: true,
