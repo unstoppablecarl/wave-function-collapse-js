@@ -6,17 +6,19 @@ export type WFCPixelBufferOptions = {
   height: number
   patterns: Int32Array
   palette: Uint8Array
+  bgColor: number
 }
 
 export const makeWFCPixelBuffer = (
   {
-    palette,
     T,
     N,
-    patterns,
     weights,
     width,
     height,
+    patterns,
+    palette,
+    bgColor,
   }: WFCPixelBufferOptions) => {
   const pixelBuffer = new Uint32Array(width * height)
 
@@ -24,7 +26,7 @@ export const makeWFCPixelBuffer = (
   const patternColors = extractPatternColors(patterns, palette, T, N)
 
   const clear = () => {
-    pixelBuffer.fill(0xFF000000) // Opaque Black
+    pixelBuffer.fill(bgColor)
   }
 
   clear()
@@ -48,39 +50,27 @@ export const makeWFCPixelBuffer = (
       }
 
       if (totalW === 0) {
-        pixelBuffer[i] = 0xFF2D2828 // Contradiction dark grey
+        pixelBuffer[i] = 0xFF2D2828
       } else {
         const invW = 1 / totalW
-        // Optimization: Use bitwise OR for truncation instead of Math.floor
-        pixelBuffer[i] = (255 << 24) |
-          (((b * invW) | 0) << 16) |
-          (((g * invW) | 0) << 8) |
-          ((r * invW) | 0)
+
+        // We use bitwise OR with 0 to truncate to integer (faster than Math.floor)
+        const finalR = (r * invW) | 0
+        const finalG = (g * invW) | 0
+        const finalB = (b * invW) | 0
+
+        // Pack ABGR (Little-Endian)
+        pixelBuffer[i] = 0xFF000000 | (finalB << 16) | (finalG << 8) | finalR
       }
     }
   }
 
   const getVisualBuffer = (
-    repairCounts?: Uint32Array,
-    showHeatmap?: boolean,
+
   ): Uint8ClampedArray<ArrayBuffer> => {
     // .slice() is necessary because postMessage transfers ownership of the buffer.
     // If we didn't slice, the Worker would lose access to pixelBuffer.buffer!
-    const out = new Uint8ClampedArray(pixelBuffer.buffer).slice()
-
-    if (showHeatmap && repairCounts) {
-      for (let i = 0; i < width * height; i++) {
-        const heat = repairCounts[i]!
-        if (heat > 0) {
-          const px = i * 4
-          const intensity = Math.min(heat * 40, 200)
-          out[px] = Math.min(out[px]! + intensity, 255)
-          out[px + 1] = Math.max(out[px + 1]! - intensity, 0)
-          out[px + 2] = Math.max(out[px + 2]! - intensity, 0)
-        }
-      }
-    }
-    return out
+    return new Uint8ClampedArray(pixelBuffer.buffer).slice()
   }
 
   return { updateCells, getVisualBuffer, clear, pixelBuffer }
@@ -129,14 +119,19 @@ export const extractPatternColors = (
 export const colorToIdMap = (data: Uint8ClampedArray) => {
   const sample = new Int32Array(data.length / 4)
   const colorMap = new Map<string, number>()
-
-  // Temporary array to collect unique colors
   const tempPalette: number[] = []
+
+  // Track sums for the average background color
+  let rSum = 0, gSum = 0, bSum = 0
 
   for (let i = 0; i < sample.length; i++) {
     const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!, a = data[i * 4 + 3]!
-    const key = `${r},${g},${b},${a}`
 
+    rSum += r
+    gSum += g
+    bSum += b
+
+    const key = `${r},${g},${b},${a}`
     let id = colorMap.get(key)
     if (id === undefined) {
       id = colorMap.size
@@ -146,6 +141,16 @@ export const colorToIdMap = (data: Uint8ClampedArray) => {
     sample[i] = id
   }
 
-  const palette = new Uint8Array(tempPalette)
-  return { sample, palette }
+  const count = sample.length
+  // Pack the average color into an ABGR Uint32 for the buffer
+  const avgColor = 0xFF000000 |
+    (((bSum / count) | 0) << 16) |
+    (((gSum / count) | 0) << 8) |
+    ((rSum / count) | 0)
+
+  return {
+    sample,
+    palette: new Uint8Array(tempPalette),
+    avgColor,
+  }
 }

@@ -71,12 +71,11 @@ export type WorkerResponse =
 export type WfCWorkerOptions = {
   id: string,
   imageData: ImageData,
-  settings: Omit<OverlappingModelOptions, 'imageData'> & {
+  settings: Omit<OverlappingModelOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
     seed: number,
     maxTries: number,
     maxRepairsPerAttempt: number,
     previewInterval: number,
-    drawRepairHeatmap: boolean,
   }
 }
 const ctx: DedicatedWorkerGlobalScope = self as any
@@ -86,10 +85,10 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
     const startedAt = performance.now()
 
     const { imageData, settings } = e.data
-    const { maxRepairsPerAttempt, seed, maxTries, previewInterval, drawRepairHeatmap } = settings
+    const { maxRepairsPerAttempt, seed, maxTries, previewInterval } = settings
 
     // 1. Convert source image to IDs and a flat Palette
-    const { sample, palette } = colorToIdMap(imageData.data)
+    const { sample, palette, avgColor } = colorToIdMap(imageData.data)
 
     // 2. Init Logical Model
     const model = makeOverlappingModel({
@@ -108,6 +107,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
       height: settings.height,
       weights: model.weights,
       patterns: model.patterns,
+      bgColor: avgColor,
     })
 
     const mulberry32 = makeMulberry32(seed)
@@ -139,7 +139,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
           totalRepairsAcrossAllTries++
 
           if (repairsInThisAttempt > maxRepairsPerAttempt) {
-            const currentData = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
+            const currentData = buffer.getVisualBuffer()
             const msg: MsgAttemptFailure = {
               type: WorkerMsg.ATTEMPT_FAILURE,
               attempt: currentAttempt,
@@ -171,7 +171,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
         if (result === IterationResult.STEP) {
           stepCount++
           if (stepCount % previewInterval === 0) {
-            const previewData = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
+            const previewData = buffer.getVisualBuffer()
             const msg: MsgPreview = {
               type: WorkerMsg.PREVIEW,
               attempt: currentAttempt,
@@ -194,7 +194,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
     }
 
     // 5. Final Failure (Ran out of tries)
-    const finalImage = buffer.getVisualBuffer(model.getRepairCounts(), drawRepairHeatmap)
+    const finalImage = buffer.getVisualBuffer()
     const msg: MsgFailure = {
       type: WorkerMsg.FAILURE,
       totalAttempts: maxTries,
