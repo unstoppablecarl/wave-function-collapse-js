@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { markRaw, reactive, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
-import type { Attempt, Result } from '../lib/_types.ts'
+import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
+import { type Attempt, makeAttempt, resetAttempt } from '../lib/_types.ts'
 import { EXAMPLE_IMAGES } from '../lib/example-images.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/ImageData.ts'
 import { useStore } from '../lib/store.ts'
 import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/WFCOverlappingModelImageData.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
+import TweakPane from './TweakPane.vue'
+import WorkerAttemptRow from './WorkerAttemptRow.vue'
 
 const store = useStore()
 const { settings, autoRun, scale } = storeToRefs(store)
@@ -19,27 +21,13 @@ const imageDataSource = shallowRef<ImageData | null>(null)
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
 
 const running = ref(false)
-const currentWorkerStatus = ref('')
 const attempts = ref<Attempt[]>([])
 
 const hasResult = ref(false)
 const errorMessage = shallowRef<{ title: string, message: string } | null>(null)
 
-const currentResult = reactive<Result>({
-  attempt: 0,
-  startedAt: 0,
-  filledPercent: 0,
-  elapsedTime: 0,
-  repairs: 0,
-})
-
-const finalResult = reactive<Result>({
-  attempt: 0,
-  startedAt: 0,
-  filledPercent: 0,
-  elapsedTime: 0,
-  repairs: 0,
-})
+const currentAttempt = makeAttempt()
+const finalAttempt = makeAttempt()
 
 watch(imageDataSource, () => {
   if (!imageDataSource.value) {
@@ -94,7 +82,6 @@ async function generate() {
   }
   terminateWorker()
   running.value = true
-  currentWorkerStatus.value = 'Building Model'
 
   // Initialize Worker
   wfcWorker = new Worker(new URL('../lib/WFCOverlappingModelImageData.worker.ts', import.meta.url), {
@@ -112,16 +99,12 @@ async function generate() {
     const response = e.data as WorkerResponse
     const { type } = response
 
-    currentResult.elapsedTime = performance.now() - currentResult.startedAt
+    currentAttempt.elapsedTime = performance.now() - currentAttempt.startedAt
 
     if (type === WorkerMsg.ATTEMPT_START) {
       const { attempt } = response
-      currentWorkerStatus.value = 'Attempt: ' + attempt
-      currentResult.attempt = attempt
-      currentResult.filledPercent = 0
-      currentResult.startedAt = performance.now()
-      currentResult.elapsedTime = 0
-      currentResult.repairs = 0
+
+      resetAttempt(currentAttempt, attempt)
     }
 
     if (type === WorkerMsg.ATTEMPT_END) {
@@ -131,7 +114,7 @@ async function generate() {
     if (type === WorkerMsg.PREVIEW) {
       const { result, filledPercent } = response
       pendingImageData = new Uint8ClampedArray(result.buffer)
-      currentResult.filledPercent = filledPercent
+      currentAttempt.filledPercent = filledPercent
 
       requestAnimationFrame(() => {
         if (running.value) {
@@ -160,8 +143,8 @@ async function generate() {
       const { result } = response
       draw(new Uint8ClampedArray(result.buffer))
       completeWorker()
-      Object.assign(finalResult, currentResult)
-      finalResult.filledPercent = 1
+      Object.assign(finalAttempt, currentAttempt)
+      finalAttempt.filledPercent = 1
     }
 
     if (type === WorkerMsg.FAILURE) {
@@ -201,6 +184,9 @@ const images = EXAMPLE_IMAGES
             <input type="range" min="1" max="10" step="1" v-model.number="scale">
           </label>
         </div>
+        <div class="mb-1">
+          <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
+        </div>
         <p>Examples</p>
         <template v-for="image in images" :key="image">
           <PixelImg
@@ -211,16 +197,20 @@ const images = EXAMPLE_IMAGES
           />
         </template>
       </div>
-      <div class="col-5">
+      <div class="col-3">
+        <fieldset class="group input-section">
+          <legend>Preview Interval</legend>
+          <input type="number" v-model="settings.previewInterval" />
+        </fieldset>
+        <TweakPane />
         <div class="hstack">
-          <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
-          <div class="ms-auto">
+          <div class="">
             <label data-field class="form-label" title="Auto Run when settings change">
               <input type="checkbox" v-model="autoRun" /> Auto Run
             </label>
           </div>
 
-          <button @click="generate()" :disabled="running">
+          <button @click="generate()" :disabled="running" class="ms-auto">
             Generate
           </button>
         </div>
@@ -232,22 +222,16 @@ const images = EXAMPLE_IMAGES
           <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
         </div>
       </div>
-      <div class="col-5">
-
-        <fieldset class="group input-section">
-          <legend>Preview Interval</legend>
-          <input type="number" v-model="settings.previewInterval" />
-        </fieldset>
-
+      <div class="col-7">
         <p class="hstack">
-          <span v-if="running" role="status" class="spinner small" style="display: inline-block"></span>
           <strong v-if="running">
             Generating:
+            <span role="status" class="spinner small" style="display: inline-block"></span>
           </strong>
           <strong v-else>
             Ready
           </strong>
-          <button v-if="running" data-variant="danger" @click="terminateWorker">Terminate</button>
+          <button v-if="running" data-variant="danger" class="small" @click="terminateWorker">Terminate</button>
         </p>
         <div v-if="errorMessage" role="alert" data-variant="warning">
           <strong>
@@ -255,33 +239,16 @@ const images = EXAMPLE_IMAGES
           </strong>
           {{ errorMessage.message }}
         </div>
-        <div v-if="running" class="row mb-1">
-          <div class="col-4"> {{ currentWorkerStatus }}</div>
-          <div class="col-4">
-            <strong>Progress: </strong> {{ (currentResult.filledPercent * 100).toFixed(1) }}%
-          </div>
-          <div class="col-4">
-            <strong>Elapsed: </strong> {{ prettyMilliseconds(currentResult.elapsedTime) }}
-          </div>
-          <div class="col-3">
-            <strong>Repairs: </strong> {{ currentResult.repairs }}
-          </div>
-        </div>
 
-        <div v-if="!running && hasResult" class="row mb-1">
-          <div class="col-3">
-            <strong>Attempt: </strong> {{ finalResult.attempt }}
-          </div>
-          <div class="col-3">
-            <strong>Progress: </strong> {{ (finalResult.filledPercent * 100).toFixed(1) }}%
-          </div>
-          <div class="col-3">
-            <strong>Elapsed: </strong> {{ prettyMilliseconds(finalResult.elapsedTime) }}
-          </div>
-          <div class="col-3">
-            <strong>Repairs: </strong> {{ finalResult.repairs }}
-          </div>
-        </div>
+        <WorkerAttemptRow
+          v-if="running"
+          :attempt="currentAttempt"
+        />
+
+        <WorkerAttemptRow
+          v-if="!running && hasResult"
+          :attempt="finalAttempt"
+        />
 
         <div class="canvas-container" v-show="hasResult && !errorMessage"
              :style="`width: ${settings.width * scale}px; height: ${settings.height * scale}px;`">
@@ -322,10 +289,6 @@ const images = EXAMPLE_IMAGES
 .img-target {
   cursor: pointer;
   margin: 0.5rem 0.5rem 0 0;
-}
-
-.card {
-  overflow: visible;
 }
 
 .attempt-log {

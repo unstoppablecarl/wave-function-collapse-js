@@ -121,14 +121,11 @@ onMounted(() => {
 })
 </script>
 <template>
-  <div ref="paneRef" class="sidebar-container"></div>
+  <div ref="paneRef" class="pane-container"></div>
 </template>
 <style lang="scss">
-.sidebar-container {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 300px;
+.pane-container {
+  margin-bottom: 1rem;
 }
 
 .tp-lblv_l[title] {
