@@ -140,6 +140,12 @@ export const makeWFCModel = (
   }
   const startingEntropy = Math.log(sumOfWeightsTotal) - sumOfWeightLogWeightsTotal / sumOfWeightsTotal
 
+  const fastLog = makeFastLog({
+    minValue: 0.001,                    // Slightly below minimum possible sum
+    maxValue: sumOfWeightsTotal * 2,    // Well above maximum possible sum
+    tableSize: 4096,                     // Good balance of memory vs speed
+  })
+
   // Initialize Spatial Bias (Center-out growth)
   const centerX = (width * startCoordX) | 0
   const centerY = (height * startCoordY) | 0
@@ -203,7 +209,7 @@ export const makeWFCModel = (
         }
       }
     } else {
-      const val = Math.log(sum) - (sumsOfWeightLogWeights[i]! / sum)
+      const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
       entropies[i] = Math.max(0, val)
     }
   }
@@ -341,7 +347,12 @@ export const makeWFCModel = (
     const chosenT = randomIndex(distribution, rng())
     if (chosenT === -1) return argmin // Safety fallback for bad distribution
 
-    for (let t = 0; t < T; t++) if (wave[argmin * T + t] === 1 && t !== chosenT) ban(argmin, t)
+
+    for (let t = 0; t < T; t++) {
+      if (wave[argmin * T + t] === 1 && t !== chosenT) {
+        ban(argmin, t)
+      }
+    }
     return null
   }
 
