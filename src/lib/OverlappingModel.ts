@@ -107,8 +107,10 @@ export const makeOverlappingModel = (
   }
 
   const agrees = (p1Idx: number, p2Idx: number, dx: number, dy: number) => {
-    const xmin = dx < 0 ? 0 : dx, xmax = dx < 0 ? dx + N : N
-    const ymin = dy < 0 ? 0 : dy, ymax = dy < 0 ? dy + N : N
+    const xmin = dx < 0 ? 0 : dx
+    const xmax = dx < 0 ? dx + N : N
+    const ymin = dy < 0 ? 0 : dy
+    const ymax = dy < 0 ? dy + N : N
 
     for (let y = ymin; y < ymax; y++) {
       for (let x = xmin; x < xmax; x++) {
@@ -119,33 +121,43 @@ export const makeOverlappingModel = (
     return true
   }
 
-  const tempPropagator: number[][][] = Array.from({ length: 4 }, () => Array.from({ length: T }, () => []))
+  const propagatorLengths = new Int32Array(4 * T)
   let totalPropagatorSize = 0
 
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
+      let count = 0
       for (let t2 = 0; t2 < T; t2++) {
         if (agrees(t1, t2, DX[d]!, DY[d]!)) {
-          tempPropagator[d]![t1]!.push(t2)
-          totalPropagatorSize++
+          count++
         }
       }
+      propagatorLengths[d * T + t1] = count
+      totalPropagatorSize += count
     }
   }
 
-  // Flattening Propagator for WFCModel
+  // 2. Allocate and Fill (Second Pass)
   const propagatorData = new Int32Array(totalPropagatorSize)
   const propagatorOffsets = new Int32Array(4 * T)
-  const propagatorLengths = new Int32Array(4 * T)
   let propCursor = 0
 
   for (let d = 0; d < 4; d++) {
-    for (let t = 0; t < T; t++) {
-      const idx = d * T + t
-      const list = tempPropagator[d]![t]!
+    for (let t1 = 0; t1 < T; t1++) {
+      const idx = d * T + t1
       propagatorOffsets[idx] = propCursor
-      propagatorLengths[idx] = list.length
-      for (const t2 of list) propagatorData[propCursor++] = t2
+
+      const len = propagatorLengths[idx]!
+      let found = 0
+
+      // We re-run the check to fill the data without storing temporary arrays
+      for (let t2 = 0; t2 < T; t2++) {
+        if (agrees(t1, t2, DX[d]!, DY[d]!)) {
+          propagatorData[propCursor + found] = t2
+          found++
+        }
+      }
+      propCursor += len
     }
   }
 
