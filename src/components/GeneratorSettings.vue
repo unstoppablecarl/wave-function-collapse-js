@@ -40,7 +40,9 @@ const { settings } = storeToRefs(store)
 
   <div class="row input-section">
     <div class="col-4">
-      <label data-field class="form-label">
+      <label
+        data-field class="form-label"
+        title="When encountering a contradiction, pixels will be cleared and filled again">
         Repair
       </label>
     </div>
@@ -57,7 +59,6 @@ const { settings } = storeToRefs(store)
       </fieldset>
     </div>
   </div>
-
 
   <div class="row input-section periodic">
     <div class="col-4">

@@ -20,7 +20,9 @@ export type WFCModelOptions = {
   propagatorLengths: Int32Array,
   initialGround: number,
   repairRadius: number,
-  centerBias: number,
+  startCoordBias: number,
+  startCoordX: number,
+  startCoordY: number,
 }
 
 export const makeWFCModel = (
@@ -36,7 +38,9 @@ export const makeWFCModel = (
     propagatorLengths,
     initialGround,
     repairRadius,
-    centerBias,
+    startCoordBias,
+    startCoordX,
+    startCoordY,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -137,8 +141,8 @@ export const makeWFCModel = (
   const startingEntropy = Math.log(sumOfWeights) - sumOfWeightLogWeights / sumOfWeights
 
   // Initialize Spatial Bias (Center-out growth)
-  const centerX = (width / 2) | 0
-  const centerY = (height / 2) | 0
+  const centerX = (width * startCoordX) | 0
+  const centerY = (height * startCoordY) | 0
   for (let i = 0; i < N_CELLS; i++) {
     const x = i % width
     const y = (i / width) | 0
@@ -146,7 +150,7 @@ export const makeWFCModel = (
     const dy = y - centerY
     // Lower value = higher priority.
     // We scale the distance so it influences choice without totally overriding entropy.
-    spatialPriority[i] = Math.sqrt(dx * dx + dy * dy) * centerBias
+    spatialPriority[i] = Math.sqrt(dx * dx + dy * dy) * startCoordBias
   }
 
   let generationComplete = false

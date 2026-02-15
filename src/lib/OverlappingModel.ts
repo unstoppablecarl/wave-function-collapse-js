@@ -12,7 +12,9 @@ export type OverlappingModelOptions = {
   symmetry: number,
   initialGround: number,
   repairRadius: number,
-  centerBias: number,
+  startCoordBias: number,
+  startCoordX: number,
+  startCoordY: number,
 }
 
 export const makeOverlappingModel = (
@@ -28,7 +30,9 @@ export const makeOverlappingModel = (
     symmetry,
     initialGround,
     repairRadius,
-    centerBias,
+    startCoordBias,
+    startCoordX,
+    startCoordY,
   }: OverlappingModelOptions) => {
   const patternLen = N * N
 
@@ -172,7 +176,9 @@ export const makeOverlappingModel = (
     propagatorLengths,
     initialGround,
     repairRadius,
-    centerBias,
+    startCoordBias,
+    startCoordX,
+    startCoordY,
   })
 
   return {
