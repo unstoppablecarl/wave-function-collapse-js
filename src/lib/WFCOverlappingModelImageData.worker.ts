@@ -149,7 +149,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               filledPercent: model.filledPercent(),
             }
 
-            ctx.postMessage(msg, [currentData.buffer])
+            ctx.postMessage(msg)
             attemptFinished = true
           }
           continue
@@ -179,7 +179,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               filledPercent: model.filledPercent(),
             }
             // Use transferable objects for high performance
-            ctx.postMessage(msg, [previewData.buffer])
+            ctx.postMessage(msg)
           }
         }
       }
