@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import OverlappingGenerator from './components/OverlappingGenerator.vue'
+import OverlappingGenerator from './components/pages/Overlapping/OverlappingGenerator.vue'
 
 const routes = [
   { path: '/', component: OverlappingGenerator },

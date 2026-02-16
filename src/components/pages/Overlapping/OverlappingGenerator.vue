@@ -2,18 +2,18 @@
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
-import { type Attempt, makeAttempt, resetAttempt } from '../lib/_types.ts'
-import { useStore } from '../lib/store.ts'
-import { getImgElementImageData, imageDataToUrlImage } from '../lib/util/ImageData.ts'
-import { formatPercent } from '../lib/util/misc.ts'
-import { makeImageDataBrittlenessCalculator } from '../lib/wfc/ImageDataBrittlenessCalculator.ts'
-import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc/WFCModelOverlapping.worker.ts'
-import ImageFileInput from './ImageFileInput.vue'
-import PixelImg from './PixelImg.vue'
+import { type Attempt, makeAttempt, resetAttempt } from '../../../lib/_types.ts'
+import { useOverlappingStore } from '../../../lib/store/overlapping-store.ts'
+import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
+import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeImageDataBrittlenessCalculator } from '../../../lib/wfc/ImageDataBrittlenessCalculator.ts'
+import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../../../lib/wfc/WFCModelOverlapping.worker.ts'
+import ImageFileInput from '../../ImageFileInput.vue'
+import PixelImg from '../../PixelImg.vue'
 import Settings from './Settings.vue'
 import WorkerAttemptRow from './WorkerAttemptRow.vue'
 
-const store = useStore()
+const store = useOverlappingStore()
 const { settings, autoRun, scale } = storeToRefs(store)
 
 const canvasRef = useTemplateRef('canvasRef')

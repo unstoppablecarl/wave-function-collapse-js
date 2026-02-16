@@ -5,8 +5,8 @@ const { attempt } = defineProps<{
 }>()
 
 import prettyMilliseconds from 'pretty-ms'
-import type { WorkerAttempt } from '../lib/_types.ts'
-import { formatPercent } from '../lib/util/misc.ts'
+import type { WorkerAttempt } from '../../../lib/_types.ts'
+import { formatPercent } from '../../../lib/util/misc.ts'
 </script>
 <template>
   <div class="row mb-1 attempt-row">

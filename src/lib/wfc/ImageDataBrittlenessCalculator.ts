@@ -1,9 +1,9 @@
 import { ref, type ShallowRef, watch } from 'vue'
-import { useStore } from '../store.ts'
+import { useOverlappingStore } from '../store/overlapping-store.ts'
 import type { CalcBrittlenessWorkerOptions } from './calcBrittleness.worker.ts'
 
 export function makeImageDataBrittlenessCalculator(imageDataSource: ShallowRef<ImageData | null>) {
-  const store = useStore()
+  const store = useOverlappingStore()
 
   let worker: Worker | null = null
   const averageBrittleness = ref<number | null>(null)
