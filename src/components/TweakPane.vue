@@ -99,12 +99,6 @@ onMounted(() => {
     label: 'max attempts',
   })
 
-  settingsFolder.addBinding(store.settings, 'maxAttempts', {
-    min: 0,
-    step: 1,
-    label: 'max attempts',
-  })
-
   settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
   })
