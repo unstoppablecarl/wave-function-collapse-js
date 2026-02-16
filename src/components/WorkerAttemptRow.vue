@@ -6,6 +6,7 @@ const { attempt } = defineProps<{
 
 import prettyMilliseconds from 'pretty-ms'
 import type { WorkerAttempt } from '../lib/_types.ts'
+import { formatPercent } from '../lib/util/misc.ts'
 </script>
 <template>
   <div class="row mb-1 attempt-row">
@@ -13,7 +14,7 @@ import type { WorkerAttempt } from '../lib/_types.ts'
       <strong>Attempt: </strong> {{ attempt.attempt }}
     </div>
     <div class="col-3">
-      <strong>Progress: </strong> {{ (attempt.filledPercent * 100).toFixed(1) }}%
+      <strong>Progress: </strong> {{ formatPercent(attempt.filledPercent) }}
     </div>
     <div class="col-3">
       <strong>Elapsed: </strong> {{ prettyMilliseconds(attempt.elapsedTime) }}

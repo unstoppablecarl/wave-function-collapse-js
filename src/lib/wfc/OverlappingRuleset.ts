@@ -129,6 +129,7 @@ export function makeOverlappingRuleset(
       }
     }
   }
+
   const propagator = makePropagator({
     data: propagatorData,
     offsets: propagatorOffsets,

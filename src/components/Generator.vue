@@ -3,8 +3,10 @@ import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
 import { type Attempt, makeAttempt, resetAttempt } from '../lib/_types.ts'
-import { getImgElementImageData, imageDataToUrlImage } from '../lib/util/ImageData.ts'
 import { useStore } from '../lib/store.ts'
+import { getImgElementImageData, imageDataToUrlImage } from '../lib/util/ImageData.ts'
+import { formatPercent } from '../lib/util/misc.ts'
+import { makeImageDataBrittlenessCalculator } from '../lib/wfc/ImageDataBrittlenessCalculator.ts'
 import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc/WFCModelOverlapping.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
@@ -28,7 +30,10 @@ const errorMessage = shallowRef<{ title: string, message: string } | null>(null)
 const currentAttempt = makeAttempt()
 const finalAttempt = makeAttempt()
 
+const brittleness = makeImageDataBrittlenessCalculator(imageDataSource)
+
 watch(imageDataSource, () => {
+  console.log('w1')
   if (!imageDataSource.value) {
     imageDataSourceUrlImage.value = null
     return
@@ -215,9 +220,18 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           </button>
         </div>
 
-        <p v-if="imageDataSourceUrlImage">
-          Target Image:
-        </p>
+        <div v-if="imageDataSourceUrlImage" class="mb-1">
+          <strong>Target Image: </strong>
+          <div>
+            <strong>Brittleness: </strong>
+            <template v-if="brittleness.average.value">
+              {{ formatPercent(brittleness.average.value) }}
+            </template>
+            <template v-else-if="brittleness.running.value">
+              <span role="status" class="spinner small" style="display: inline-block"></span>
+            </template>
+          </div>
+        </div>
         <div v-if="imageDataSourceUrlImage">
           <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
         </div>
@@ -264,7 +278,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           <div class="hstack attempt-log-info">
             <div>Attempt: {{ item.attempt }}</div>
             <div>Time: {{ prettyMilliseconds(item.elapsedTime) }}</div>
-            <div>Progress: {{ (item.filledPercent * 100).toFixed(1) }}%</div>
+            <div>Progress: {{ formatPercent(item.filledPercent) }}</div>
             <div v-if="item.repairs">Repairs: {{ item.repairs }}</div>
           </div>
           <PixelImg :src="item.encoded" :scale="scale" />
