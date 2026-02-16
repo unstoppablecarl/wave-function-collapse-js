@@ -6,11 +6,13 @@ import './style/main.scss'
 import { createApp } from 'vue'
 
 import App from './App.vue'
+import router from './router.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 pinia.use(createPiniaSimplePersist())
 
+app.use(router)
 app.use(pinia)
 app.mount('#app')

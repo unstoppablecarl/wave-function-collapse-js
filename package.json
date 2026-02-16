@@ -18,7 +18,8 @@
     "pretty-ms": "^9.3.0",
     "tweakpane": "^4.0.5",
     "tweakpane-plugin-infodump": "^4.0.2",
-    "vue": "^3.5.25"
+    "vue": "^3.5.25",
+    "vue-router": "4"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
