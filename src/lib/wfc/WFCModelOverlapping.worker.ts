@@ -1,7 +1,7 @@
 import { makeMulberry32 } from '../util/mulberry32.ts'
-import { makeOverlappingModel, type OverlappingModelOptions } from './WFCModelOverlapping.ts'
 import { IterationResult } from './WFCModel.ts'
-import { colorToIdMap, makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
+import { makeOverlappingModelFromImageData, type OverlappingModelOptions } from './WFCModelOverlapping.ts'
+import { makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
 
 export const WFC_WORKER_ID = 'WFC_WORKER'
 
@@ -87,17 +87,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
 
     const { imageData, settings } = e.data
     const { maxRepairsPerAttempt, seed, maxAttempts, previewInterval } = settings
-
-    // 1. Convert source image to IDs and a flat Palette
-    const { sample, palette, avgColor } = colorToIdMap(imageData.data)
-
-    // 2. Init Logical Model
-    const model = makeOverlappingModel({
-      ...settings,
-      sample,
-      sampleWidth: imageData.width,
-      sampleHeight: imageData.height,
-    })
+    const { model, palette, avgColor } = makeOverlappingModelFromImageData(imageData, settings)
 
     // 3. Init Rendering Buffer (Bridging Palette + Patterns)
     const buffer = makeWFCPixelBuffer({

@@ -1,4 +1,3 @@
-
 import { DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
 import { type FastLogFunction, makeFastLog } from '../util/fastLog.ts'
 import type { Propagator } from './Propagator.ts'
@@ -394,6 +393,21 @@ export const makeWFCModel = (
     return minIdx
   }
 
+  function getRandomPatternId(rng: RNG, sumWeights: number, cellIdx: number) {
+    let x = rng() * sumWeights
+    for (let t = 0; t < T; t++) {
+      const waveIdx = getWaveIndex(cellIdx, t)
+      if (wave[waveIdx] === 1) {
+        x -= weights[t]!
+        if (x <= 0) {
+          return t
+        }
+      }
+    }
+
+    return T - 1
+  }
+
   // reused
   const distribution = new Float64Array(T)
 
@@ -412,28 +426,12 @@ export const makeWFCModel = (
       distribution[t] = wave[waveIdx] === 1 ? weights[t]! : 0
     }
 
-    // // find random index (chosenT)
-    // const sumWeights = sumsOfWeights[argmin]!
-    // if (sumWeights <= 0) return argmin
-    //
-    // let x = rng() * sumWeights
-    // let chosenT = -1
-    //
-    // for (let t = 0; t < T; t++) {
-    //   if (wave[argmin * T + t] === 1) {
-    //     x -= weights[t]!
-    //     if (x <= 0) {
-    //       chosenT = t
-    //       break
-    //     }
-    //   }
-    // }
-    //
-    // if (chosenT === -1) chosenT = T - 1
+    // find random index (chosenT)
+    const sumWeights = sumsOfWeights[cellIdx]!
+    // contradiction
+    if (sumWeights <= 0) return cellIdx
 
-    const chosenT = randomIndex(distribution, rng())
-    // Safety fallback for bad distribution
-    if (chosenT === -1) return cellIdx
+    const chosenT = getRandomPatternId(rng, sumWeights, cellIdx)
 
     for (let t = 0; t < T; t++) {
       const waveIdx = getWaveIndex(cellIdx, t)
@@ -587,6 +585,14 @@ export const makeWFCModel = (
     return slice
   }
 
+  function getFilledCount() {
+    let collapsed = 0
+    for (let i = 0; i < N_CELLS; i++) {
+      if (sumsOfOnes[i]! <= 1) collapsed++
+    }
+    return collapsed
+  }
+
   return {
     singleIteration,
     clear,
@@ -595,44 +601,16 @@ export const makeWFCModel = (
     getWave: () => wave,
     onBoundary,
     getRepairCounts: () => repairCounts,
-    getFilledCount: () => N_CELLS - uncollapsedCount,
+    getFilledCount,
     getTotalCells: () => N_CELLS,
-    filledPercent: () => {
-      // Method 1: Scan (accurate but slow)
-      let collapsed = 0
-      for (let i = 0; i < N_CELLS; i++) {
-        if (sumsOfOnes[i]! <= 1) collapsed++
-      }
-      const scanPercent = collapsed / N_CELLS
-
-      // Method 2: Frontier (fast but may be out of sync)
-      const frontierPercent = (N_CELLS - uncollapsedCount) / N_CELLS
-
-      // Debug: Are they different?
-      if (Math.abs(scanPercent - frontierPercent) > 0.01) {
-        console.log(`Mismatch! Scan: ${scanPercent}, Frontier: ${frontierPercent}`)
-      }
-
-      return scanPercent
-    },
+    filledPercent: () => getFilledCount() / N_CELLS,
     getChanges,
     T,
     width,
     height,
     weights,
+    propagator,
     ban,
     propagate,
   }
-}
-
-function randomIndex(array: Float64Array, r: number): number {
-  let sum = 0
-  for (let i = 0; i < array.length; i++) sum += array[i]!
-  if (sum <= 0) return -1
-  let x = r * sum
-  for (let i = 0; i < array.length; i++) {
-    x -= array[i]!
-    if (x <= 0) return i
-  }
-  return array.length - 1
 }
