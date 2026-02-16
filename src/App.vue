@@ -3,7 +3,7 @@
 <template>
   <div class="nav">
     <h1>Wave Function Collapse JS</h1>
-    <RouterLink to="/" class="link">Overlapping</RouterLink>
+    <RouterLink to="/" class="link">Overlapping N</RouterLink>
   </div>
   <div class="container">
     <RouterView />
