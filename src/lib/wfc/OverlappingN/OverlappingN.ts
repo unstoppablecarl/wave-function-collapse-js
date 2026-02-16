@@ -1,8 +1,8 @@
-import { makeOverlappingRuleset } from './OverlappingRuleset.ts'
-import { makeWFCModel } from './WFCModel.ts'
-import { colorToIdMap } from './WFCPixelBuffer.ts'
+import { makeOverlappingNRuleset } from './OverlappingNRuleset.ts'
+import { makeWFCModel } from '../WFCModel.ts'
+import { colorToIdMap } from '../WFCPixelBuffer.ts'
 
-export type OverlappingModelOptions = {
+export type OverlappingNOptions = {
   sample: Int32Array,
   sampleWidth: number,
   sampleHeight: number,
@@ -19,7 +19,7 @@ export type OverlappingModelOptions = {
   startCoordY: number,
 }
 
-export const makeOverlappingModel = (
+export const makeOverlappingN = (
   {
     sample,
     sampleWidth,
@@ -35,9 +35,9 @@ export const makeOverlappingModel = (
     startCoordBias,
     startCoordX,
     startCoordY,
-  }: OverlappingModelOptions) => {
+  }: OverlappingNOptions) => {
 
-  const { T, propagator, weights, patterns } = makeOverlappingRuleset({
+  const { T, propagator, weights, patterns } = makeOverlappingNRuleset({
     N,
     sample,
     sampleWidth,
@@ -67,11 +67,11 @@ export const makeOverlappingModel = (
   }
 }
 
-export function makeOverlappingModelFromImageData(imageData: ImageData, settings: Omit<OverlappingModelOptions, 'sample' | 'sampleWidth' | 'sampleHeight'>) {
+export function makeOverlappingModelFromImageData(imageData: ImageData, settings: Omit<OverlappingNOptions, 'sample' | 'sampleWidth' | 'sampleHeight'>) {
   const { sample, palette, avgColor } = colorToIdMap(imageData.data)
 
   return {
-    model: makeOverlappingModel({
+    model: makeOverlappingN({
       ...settings,
       sample,
       sampleWidth: imageData.width,

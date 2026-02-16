@@ -1,9 +1,11 @@
-import { ref, type ShallowRef, watch } from 'vue'
-import { useOverlappingStore } from '../store/overlapping-store.ts'
+import { type Reactive, ref, type ShallowRef, watch } from 'vue'
 import type { CalcBrittlenessWorkerOptions } from './calcBrittleness.worker.ts'
+import type { OverlappingNWorkerOptions } from './OverlappingN/OverlappingN.worker.ts'
 
-export function makeImageDataBrittlenessCalculator(imageDataSource: ShallowRef<ImageData | null>) {
-  const store = useOverlappingStore()
+export function makeImageDataBrittlenessCalculator(
+  imageDataSource: ShallowRef<ImageData | null>,
+  settings: Reactive<OverlappingNWorkerOptions['settings']>,
+) {
 
   let worker: Worker | null = null
   const averageBrittleness = ref<number | null>(null)
@@ -11,15 +13,15 @@ export function makeImageDataBrittlenessCalculator(imageDataSource: ShallowRef<I
 
   watch([
     imageDataSource,
-    () => store.settings.N,
-    () => store.settings.symmetry,
-    () => store.settings.periodicInput,
+    () => settings.N,
+    () => settings.symmetry,
+    () => settings.periodicInput,
   ], () => {
     running.value = false
     averageBrittleness.value = null
     if (!imageDataSource.value) return
 
-    const { N, symmetry, periodicInput } = store.settings
+    const { N, symmetry, periodicInput } = settings
 
     run({
       imageData: imageDataSource.value,

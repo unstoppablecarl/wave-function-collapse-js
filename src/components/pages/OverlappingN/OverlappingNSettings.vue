@@ -3,10 +3,10 @@ import { BindingApi } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, useTemplateRef, watchEffect } from 'vue'
-import { useOverlappingStore } from '../../../lib/store/overlapping-store.ts'
+import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
 
-const store = useOverlappingStore()
+const store = useOverlappingNStore()
 
 const paneRef = useTemplateRef('paneRef')
 

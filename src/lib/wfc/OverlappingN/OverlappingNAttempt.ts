@@ -1,10 +1,10 @@
 import { reactive } from 'vue'
 
-export type Attempt = Omit<WorkerAttempt, 'startedAt'> & {
+export type OverlappingNAttempt = Omit<OverlappingNWorkerAttempt, 'startedAt'> & {
   encoded: string,
 }
 
-export type WorkerAttempt = {
+export type OverlappingNWorkerAttempt = {
   attempt: number,
   startedAt: number,
   repairs: number,
@@ -12,8 +12,8 @@ export type WorkerAttempt = {
   filledPercent: number,
 }
 
-export function makeAttempt() {
-  return reactive<WorkerAttempt>({
+export function makeOverlappingNAttempt() {
+  return reactive<OverlappingNWorkerAttempt>({
     attempt: 0,
     startedAt: 0,
     filledPercent: 0,
@@ -22,7 +22,7 @@ export function makeAttempt() {
   })
 }
 
-export function resetAttempt(result: WorkerAttempt, attempt: number) {
+export function resetOverlappingNAttempt(result: OverlappingNWorkerAttempt, attempt: number) {
   result.attempt = attempt
   result.filledPercent = 0
   result.startedAt = performance.now()

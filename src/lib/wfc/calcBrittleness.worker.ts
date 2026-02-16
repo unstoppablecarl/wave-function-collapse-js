@@ -1,4 +1,4 @@
-import { makeOverlappingRuleset } from './OverlappingRuleset.ts'
+import { makeOverlappingNRuleset } from './OverlappingN/OverlappingNRuleset.ts'
 import { colorToIdMap } from './WFCPixelBuffer.ts'
 
 export type CalcBrittlenessWorkerOptions = {
@@ -12,7 +12,7 @@ const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<CalcBrittlenessWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput } = e.data
   const { sample } = colorToIdMap(imageData.data)
-  const { propagator } = makeOverlappingRuleset({
+  const { propagator } = makeOverlappingNRuleset({
     N,
     sample,
     sampleWidth: imageData.width,

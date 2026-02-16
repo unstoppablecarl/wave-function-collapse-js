@@ -1,11 +1,11 @@
 <script setup lang="ts">
 
 const { attempt } = defineProps<{
-  attempt: WorkerAttempt
+  attempt: OverlappingNWorkerAttempt
 }>()
 
 import prettyMilliseconds from 'pretty-ms'
-import type { WorkerAttempt } from '../../../lib/_types.ts'
+import type { OverlappingNWorkerAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 </script>
 <template>

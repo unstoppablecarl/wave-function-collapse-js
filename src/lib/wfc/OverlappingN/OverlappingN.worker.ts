@@ -1,7 +1,7 @@
-import { makeMulberry32 } from '../util/mulberry32.ts'
-import { IterationResult } from './WFCModel.ts'
-import { makeOverlappingModelFromImageData, type OverlappingModelOptions } from './WFCModelOverlapping.ts'
-import { makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
+import { makeMulberry32 } from '../../util/mulberry32.ts'
+import { IterationResult } from '../WFCModel.ts'
+import { makeOverlappingModelFromImageData, type OverlappingNOptions } from './OverlappingN.ts'
+import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 
 export const WFC_WORKER_ID = 'WFC_WORKER'
 
@@ -15,31 +15,31 @@ export enum WorkerMsg {
   ERROR = 'ERROR',
 }
 
-type MsgAttemptStart = {
+export type MsgAttemptStart = {
   type: WorkerMsg.ATTEMPT_START
   attempt: number
 }
-type MsgAttemptEnd = {
+export type MsgAttemptEnd = {
   type: WorkerMsg.ATTEMPT_END
   attempt: number
   elapsedTime: number
   filledPercent: number,
 }
-type MsgSuccess = {
+export type MsgSuccess = {
   type: WorkerMsg.SUCCESS
   attempt: number
   repairs: number
   result: Uint8ClampedArray<ArrayBuffer>
   totalElapsedTime: number
 }
-type MsgPreview = {
+export type MsgPreview = {
   type: WorkerMsg.PREVIEW
   attempt: number
   result: Uint8ClampedArray<ArrayBuffer>
   filledPercent: number
   repairs: number
 }
-type MsgAttemptFailure = {
+export type MsgAttemptFailure = {
   type: WorkerMsg.ATTEMPT_FAILURE
   attempt: number
   repairs: number
@@ -47,7 +47,7 @@ type MsgAttemptFailure = {
   elapsedTime: number
   filledPercent: number
 }
-type MsgFailure = {
+export type MsgFailure = {
   type: WorkerMsg.FAILURE
   totalAttempts: number
   totalRepairs: number
@@ -55,7 +55,7 @@ type MsgFailure = {
   result: Uint8ClampedArray<ArrayBuffer>
   filledPercent: number
 }
-type MsgError = {
+export type MsgError = {
   type: WorkerMsg.ERROR
   message: string
 }
@@ -69,10 +69,10 @@ export type WorkerResponse =
   | MsgFailure
   | MsgError
 
-export type WfCWorkerOptions = {
+export type OverlappingNWorkerOptions = {
   id: string,
   imageData: ImageData,
-  settings: Omit<OverlappingModelOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
+  settings: Omit<OverlappingNOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
     seed: number,
     maxAttempts: number,
     maxRepairsPerAttempt: number,
@@ -80,7 +80,7 @@ export type WfCWorkerOptions = {
   }
 }
 const ctx: DedicatedWorkerGlobalScope = self as any
-ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
+ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
   try {
     if (e.data.id !== WFC_WORKER_ID) return
     const startedAt = performance.now()

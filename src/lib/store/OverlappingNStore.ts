@@ -2,16 +2,16 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
-import type { WfCWorkerOptions } from '../wfc/WFCModelOverlapping.worker.ts'
+import type { OverlappingNWorkerOptions } from '../wfc/OverlappingN/OverlappingN.worker.ts'
 
-type Settings = WfCWorkerOptions['settings']
+type Settings = OverlappingNWorkerOptions['settings']
 
 type SerializedData = {
   scale: number,
   settings: Settings
 }
 
-export const useOverlappingStore = defineStore('wfc-overlapping', () => {
+export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const scale = ref(4)
   const autoRun = ref(false)

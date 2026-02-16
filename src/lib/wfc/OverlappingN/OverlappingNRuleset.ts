@@ -1,7 +1,7 @@
-import { DX, DY } from '../util/direction.ts'
-import { makePropagator } from './Propagator.ts'
+import { DX, DY } from '../../util/direction.ts'
+import { makePropagator } from '../Propagator.ts'
 
-export type OverlappingRulesetOptions = {
+export type OverlappingNRulesetOptions = {
   sample: Int32Array,
   sampleWidth: number,
   sampleHeight: number,
@@ -10,14 +10,14 @@ export type OverlappingRulesetOptions = {
   symmetry: number,
 }
 
-export function makeOverlappingRuleset(
+export function makeOverlappingNRuleset(
   {
     N,
     sample,
     sampleWidth,
     sampleHeight,
     symmetry, periodicInput,
-  }: OverlappingRulesetOptions) {
+  }: OverlappingNRulesetOptions) {
   const patternLen = N * N
   const getPatternFromSample = (x: number, y: number): Int32Array => {
     const p = new Int32Array(patternLen)

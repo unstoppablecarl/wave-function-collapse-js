@@ -1,67 +1,72 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
-import { type Attempt, makeAttempt, resetAttempt } from '../../../lib/_types.ts'
-import { useOverlappingStore } from '../../../lib/store/overlapping-store.ts'
+import { markRaw, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
-import { makeImageDataBrittlenessCalculator } from '../../../lib/wfc/ImageDataBrittlenessCalculator.ts'
-import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../../../lib/wfc/WFCModelOverlapping.worker.ts'
+import { type MsgPreview } from '../../../lib/wfc/OverlappingN/OverlappingN.worker.ts'
+import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
+import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import PixelImg from '../../PixelImg.vue'
-import Settings from './Settings.vue'
-import WorkerAttemptRow from './WorkerAttemptRow.vue'
+import WorkerAttemptRow from '../OverlappingN/WorkerAttemptRow.vue'
+import OverlappingNSettings from './OverlappingNSettings.vue'
 
-const store = useOverlappingStore()
+const store = useOverlappingNStore()
 const { settings, autoRun, scale } = storeToRefs(store)
 
+let pendingImageData: ImageDataArray | null = null
+const attempts = ref<OverlappingNAttempt[]>([])
 const canvasRef = useTemplateRef('canvasRef')
 
-const imageDataSource = shallowRef<ImageData | null>(null)
+const controller = makeOverlappingNController({
+  settings: store.settings,
+  onBeforeRun() {
+    attempts.value = []
+  },
+  onPreview(_response: MsgPreview, pixels) {
+    pendingImageData = pixels
+    requestAnimationFrame(() => {
+      if (running.value) {
+        updateCanvas()
+      }
+    })
+  },
+  onAttemptFailure(response) {
+    const { attempt, repairs, elapsedTime, filledPercent } = response
+    attempts.value.unshift({
+      encoded: canvasRef.value?.toDataURL?.() ?? '',
+      attempt,
+      repairs,
+      elapsedTime,
+      filledPercent,
+    })
+  },
+  onSuccess(_response, pixels) {
+    draw(pixels)
+  },
+})
+
+const {
+  imageDataSource,
+  running,
+  hasResult,
+  errorMessage,
+  currentAttempt,
+  finalAttempt,
+  brittleness,
+} = controller
+
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
 
-const running = ref(false)
-const attempts = ref<Attempt[]>([])
-
-const hasResult = ref(false)
-const errorMessage = shallowRef<{ title: string, message: string } | null>(null)
-
-const currentAttempt = makeAttempt()
-const finalAttempt = makeAttempt()
-
-const brittleness = makeImageDataBrittlenessCalculator(imageDataSource)
-
 watch(imageDataSource, () => {
-  console.log('w1')
   if (!imageDataSource.value) {
     imageDataSourceUrlImage.value = null
     return
   }
   imageDataSourceUrlImage.value = imageDataToUrlImage(imageDataSource.value)
 })
-
-watch(settings, () => {
-  if (autoRun.value) {
-    generate()
-  }
-})
-
-let wfcWorker: Worker | null = null
-let pendingImageData: ImageDataArray | null = null
-
-function terminateWorker() {
-  hasResult.value = false
-  completeWorker()
-}
-
-function completeWorker() {
-  running.value = false
-  if (wfcWorker) {
-    wfcWorker.terminate()
-    wfcWorker = null
-  }
-}
 
 function updateCanvas() {
   if (!pendingImageData || !canvasRef.value) return
@@ -76,95 +81,6 @@ function draw(data: ImageDataArray) {
   hasResult.value = true
 }
 
-async function generate() {
-  attempts.value = []
-  errorMessage.value = null
-  const imageData = imageDataSource.value
-  if (!imageData) {
-    errorMessage.value = { title: 'Invalid Input', message: 'No Target Image' }
-    return
-  }
-  terminateWorker()
-  running.value = true
-
-  // Initialize Worker
-  wfcWorker = new Worker(new URL('../lib/wfc/WFCModelOverlapping.worker.ts', import.meta.url), {
-    type: 'module',
-  })
-
-  // Send data to worker
-  wfcWorker.postMessage({
-    id: WFC_WORKER_ID,
-    imageData: imageDataSource.value,
-    settings: { ...toValue(settings) },
-  })
-
-  wfcWorker.onmessage = (e) => {
-    const response = e.data as WorkerResponse
-    const { type } = response
-
-    currentAttempt.elapsedTime = performance.now() - currentAttempt.startedAt
-
-    if (type === WorkerMsg.ATTEMPT_START) {
-      const { attempt } = response
-
-      resetAttempt(currentAttempt, attempt)
-    }
-
-    if (type === WorkerMsg.ATTEMPT_END) {
-
-    }
-
-    if (type === WorkerMsg.PREVIEW) {
-      const { result, filledPercent, repairs } = response
-      pendingImageData = new Uint8ClampedArray(result.buffer)
-      currentAttempt.filledPercent = filledPercent
-      currentAttempt.repairs = repairs
-      requestAnimationFrame(() => {
-        if (running.value) {
-          updateCanvas()
-        }
-      })
-    }
-
-    if (type === WorkerMsg.ATTEMPT_FAILURE) {
-      const { result, attempt, repairs, elapsedTime, filledPercent } = response
-      if (result.byteLength === 0) {
-        console.error(`Attempt ${attempt} received an empty buffer!`)
-        return
-      }
-
-      attempts.value.unshift({
-        encoded: canvasRef.value?.toDataURL?.() ?? '',
-        attempt,
-        repairs,
-        elapsedTime,
-        filledPercent,
-      })
-    }
-
-    if (type === WorkerMsg.SUCCESS) {
-      const { result } = response
-      draw(new Uint8ClampedArray(result.buffer))
-      completeWorker()
-      Object.assign(finalAttempt, currentAttempt)
-      finalAttempt.filledPercent = 1
-    }
-
-    if (type === WorkerMsg.FAILURE) {
-      hasResult.value = false
-      completeWorker()
-    }
-
-    if (type === WorkerMsg.ERROR) {
-      const { message } = response
-      hasResult.value = false
-      completeWorker()
-      throw new Error(message)
-    }
-  }
-}
-
 function setImageDataFromFileInput(val: ImageData) {
   imageDataSource.value = val
 }
@@ -174,7 +90,7 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   imageDataSource.value = markRaw(imageData)
 }
 
-const imageModules = import.meta.glob('../assets/*.png', { eager: true })
+const imageModules = import.meta.glob('../../../assets/overlapping-n/*.png', { eager: true })
 const images = Object.values(imageModules).map((m) => (m as any).default)
 </script>
 <template>
@@ -194,7 +110,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
       </template>
     </div>
     <div class="col-3">
-      <Settings />
+      <OverlappingNSettings />
       <div class="hstack">
         <div class="">
           <label data-field class="form-label" title="Auto Run when settings change">
@@ -202,7 +118,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           </label>
         </div>
 
-        <button @click="generate()" :disabled="running" class="ms-auto">
+        <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>
       </div>
@@ -232,7 +148,8 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
         <strong v-else>
           Ready
         </strong>
-        <button v-if="running" data-variant="danger" class="small" @click="terminateWorker">Terminate</button>
+        <button v-if="running" data-variant="danger" class="small" @click="controller.terminateWorker()">Terminate
+        </button>
       </p>
       <div v-if="errorMessage" role="alert" data-variant="warning">
         <strong>
