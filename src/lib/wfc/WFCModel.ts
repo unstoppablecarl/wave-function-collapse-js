@@ -1,6 +1,6 @@
-// import { makeFastLog } from './fastLog.ts'
 
 import { DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
+import { type FastLogFunction, makeFastLog } from '../util/fastLog.ts'
 import type { Propagator } from './Propagator.ts'
 
 export type RNG = () => number
@@ -24,6 +24,7 @@ export type WFCModelOptions = {
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,
+  fastLogFunction?: FastLogFunction
 }
 
 export const makeWFCModel = (
@@ -40,6 +41,7 @@ export const makeWFCModel = (
     startCoordBias,
     startCoordX,
     startCoordY,
+    fastLogFunction,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -142,11 +144,11 @@ export const makeWFCModel = (
   }
   const startingEntropy = Math.log(sumOfWeightsTotal) - sumOfWeightLogWeightsTotal / sumOfWeightsTotal
 
-  // const fastLog = makeFastLog({
-  //   minValue: 0.001,                    // Slightly below minimum possible sum
-  //   maxValue: sumOfWeightsTotal * 2,    // Well above maximum possible sum
-  //   tableSize: 4096,                     // Good balance of memory vs speed
-  // })
+  const fastLog = fastLogFunction ?? makeFastLog({
+    minValue: 0.001,                    // Slightly below minimum possible sum
+    maxValue: sumOfWeightsTotal * 2,    // Well above maximum possible sum
+    tableSize: 4096,                     // Good balance of memory vs speed
+  })
 
   // A static priority map that biases the algorithm to pick cells near a specific focus point.
   // Used to grow the solution like a crystal, which significantly reduces contradictions.
@@ -222,8 +224,7 @@ export const makeWFCModel = (
         }
       }
     } else {
-      const val = Math.log(sum) - (sumsOfWeightLogWeights[i]! / sum)
-      // const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
+      const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
       entropies[i] = Math.max(0, val)
     }
   }

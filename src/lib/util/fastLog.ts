@@ -1,14 +1,18 @@
 export type FastLogFunction = (x: number) => number
 
-export const makeFastLog = (options?: {
-  minValue?: number,
-  maxValue?: number,
-  tableSize?: number
-}): FastLogFunction => {
-  const minValue = options?.minValue ?? 0.0001  // Min expected weight sum
-  const maxValue = options?.maxValue ?? 10000    // Max expected weight sum
-  const tableSize = options?.tableSize ?? 4096   // Power of 2 for fast lookups
-
+export const makeFastLog = (
+  {
+    // Min expected weight sum
+    minValue = 0.0001,
+    // Max expected weight sum
+    maxValue = 10000,
+    // Power of 2 for fast lookups
+    tableSize = 4096,
+  }: {
+    minValue?: number,
+    maxValue?: number,
+    tableSize?: number
+  }): FastLogFunction => {
   // Pre-calculate log values
   const logTable = new Float64Array(tableSize)
   const step = (maxValue - minValue) / (tableSize - 1)
