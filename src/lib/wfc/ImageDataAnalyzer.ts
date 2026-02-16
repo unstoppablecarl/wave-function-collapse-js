@@ -1,8 +1,8 @@
 import { type Reactive, ref, type ShallowRef, watch } from 'vue'
-import type { CalcBrittlenessWorkerOptions } from './calcBrittleness.worker.ts'
+import type { ImageDataAnalyzerWorkerOptions } from './ImageDataAnalyzer.worker.ts'
 import type { OverlappingNWorkerOptions } from './OverlappingN/OverlappingN.worker.ts'
 
-export function makeImageDataBrittlenessCalculator(
+export function makeImageDataAnalyzer(
   imageDataSource: ShallowRef<ImageData | null>,
   settings: Reactive<OverlappingNWorkerOptions['settings']>,
 ) {
@@ -31,11 +31,11 @@ export function makeImageDataBrittlenessCalculator(
     })
   })
 
-  const run = debounce((opts: CalcBrittlenessWorkerOptions) => {
+  const run = debounce((opts: ImageDataAnalyzerWorkerOptions) => {
     terminate()
 
     running.value = true
-    worker = new Worker(new URL('./calcBrittleness.worker.ts', import.meta.url), {
+    worker = new Worker(new URL('./ImageDataAnalyzer.worker.ts', import.meta.url), {
       type: 'module',
     })
     worker.postMessage(opts)
@@ -53,7 +53,7 @@ export function makeImageDataBrittlenessCalculator(
   }
 
   return {
-    average: averageBrittleness,
+    averageBrittleness,
     running,
   }
 }

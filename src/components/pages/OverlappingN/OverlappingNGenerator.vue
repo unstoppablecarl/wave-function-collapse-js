@@ -55,7 +55,7 @@ const {
   errorMessage,
   currentAttempt,
   finalAttempt,
-  brittleness,
+  imageDataAnalysis,
 } = controller
 
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
@@ -121,10 +121,10 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
         <strong>Target Image: </strong>
         <div>
           <strong>Brittleness: </strong>
-          <template v-if="brittleness.average.value">
-            {{ formatPercent(brittleness.average.value) }}
+          <template v-if="imageDataAnalysis.averageBrittleness.value">
+            {{ formatPercent(imageDataAnalysis.averageBrittleness.value) }}
           </template>
-          <template v-else-if="brittleness.running.value">
+          <template v-else-if="imageDataAnalysis.running.value">
             <span role="status" class="spinner small" style="display: inline-block"></span>
           </template>
         </div>

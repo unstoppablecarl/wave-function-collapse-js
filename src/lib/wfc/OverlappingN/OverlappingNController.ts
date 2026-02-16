@@ -1,5 +1,5 @@
 import { type Reactive, ref, shallowRef, toValue } from 'vue'
-import { makeImageDataBrittlenessCalculator } from '../ImageDataBrittlenessCalculator.ts'
+import { makeImageDataAnalyzer } from '../ImageDataAnalyzer.ts'
 import {
   type MsgAttemptFailure,
   type MsgPreview,
@@ -39,7 +39,7 @@ export function makeOverlappingNController(
   const currentAttempt = makeOverlappingNAttempt()
   const finalAttempt = makeOverlappingNAttempt()
 
-  const brittleness = makeImageDataBrittlenessCalculator(imageDataSource, settings)
+  const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings)
 
   function run() {
 
@@ -141,7 +141,7 @@ export function makeOverlappingNController(
     completeWorker,
     running,
     errorMessage,
-    brittleness,
+    imageDataAnalysis,
     run,
     hasResult,
     finalAttempt,
