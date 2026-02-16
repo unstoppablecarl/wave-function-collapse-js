@@ -1,3 +1,4 @@
+import { makePropagator } from './Propagator.ts'
 import { DX, DY, makeWFCModel } from './WFCModel.ts'
 
 export type OverlappingModelOptions = {
@@ -147,15 +148,20 @@ export const makeOverlappingModel = (
     }
   }
 
+  const propagator = makePropagator({
+    data: propagatorData,
+    offsets: propagatorOffsets,
+    lengths: propagatorLengths,
+    T,
+  })
+
   const model = makeWFCModel({
     width,
     height,
     T,
     periodicOutput,
     weights,
-    propagatorData,
-    propagatorOffsets,
-    propagatorLengths,
+    propagator,
     initialGround,
     repairRadius,
     startCoordBias,

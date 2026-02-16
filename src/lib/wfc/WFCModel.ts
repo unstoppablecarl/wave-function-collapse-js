@@ -1,5 +1,7 @@
 // import { makeFastLog } from './fastLog.ts'
 
+import type { Propagator } from './Propagator.ts'
+
 export type RNG = () => number
 export const DX = new Int32Array([-1, 0, 1, 0])
 export const DY = new Int32Array([0, 1, 0, -1])
@@ -14,12 +16,11 @@ export enum IterationResult {
 export type WFCModelOptions = {
   width: number,
   height: number,
+  // number of possible values
   T: number,
   periodicOutput: boolean,
   weights: Float64Array,
-  propagatorData: Int32Array,
-  propagatorOffsets: Int32Array,
-  propagatorLengths: Int32Array,
+  propagator: Propagator,
   initialGround: number,
   repairRadius: number,
   startCoordBias: number,
@@ -33,11 +34,9 @@ export const makeWFCModel = (
     height,
     // the number of unique patterns or tiles the algorithm has to choose from for every single cell
     T,
+    propagator,
     periodicOutput,
     weights,
-    propagatorData,
-    propagatorOffsets,
-    propagatorLengths,
     initialGround,
     repairRadius,
     startCoordBias,
@@ -50,16 +49,24 @@ export const makeWFCModel = (
 
   // Banned: a specific pattern has been mathematically ruled out as a possibility for a specific cell
 
-  // The core "wave" state: A 3D boolean array flattened to 1D [cellIndex * patternCount + patternIndex]
-  // 1 means the pattern is still possible at that cell; 0 means it is banned.
+  // The core "wave" state: A 3D boolean array flattened to 1D [cellIndex * T + patternIndex]
   const wave = new Uint8Array(N_STATES)
 
-  // SUPPORT COUNTERS: Tracks how many patterns in each neighbor cell 'agree' with pattern 't' at this cell.
+  // returns 1/0. 1 means the pattern is still possible at that cell; 0 means it is banned.
+  function getWaveIndex(cellIndex: number, patternId: number): number {
+    return cellIndex * T + patternId
+  }
+
+  // Tracks how many patterns in each neighbor cell allow pattern 't' at this cell.
   // For pattern 't' to remain possible, it must have at least one valid neighbor in EVERY direction.
-  // Logic: If compatible[cell_i][pattern_t][direction_d] reaches 0, it means NO remaining patterns
-  // in that neighbor cell allow pattern 't' to exist here. Pattern 't' must then be banned.
-  // Indexing: [((cellIndex * patternCount) + patternIndex) * 4 + direction] = number of compatible patterns
+  // If it reaches 0, it means NO remaining patterns in that neighbor cell
+  // allow pattern 't' to exist here. Pattern 't' must then be banned as a possibility
   const compatible = new Int32Array(N_STATES * 4)
+
+  // return how many neighbors in `direction` allow pattern `patternId` to exist at cellIdx.
+  function getCompatibleIndex(cellIdx: number, patternId: number, direction: number): number {
+    return (cellIdx * T + patternId) * 4 + direction
+  }
 
   // Stores the final selected pattern index for each cell once it has collapsed.
   // Initialized to -1 (unobserved).
@@ -99,14 +106,14 @@ export const makeWFCModel = (
 
   // A LIFO stack used for the propagation of constraints.
   // Stores [cellIndex, patternIndex] pairs that were recently banned.
-  const stack = new Int32Array(N_STATES * 2)
+  const pendingBans = new Int32Array(N_STATES * 2)
 
   // Tracks how many times a specific cell has been reset by the repair (clearRadius) logic.
   // Useful for identifying "problem areas" in a generation.
   const repairCounts = new Uint32Array(N_CELLS)
 
   // Current pointer for the propagation stack.
-  let stackSize = 0
+  let pendingBanCount = 0
 
   // -- Active Frontier & Biasing --
 
@@ -116,11 +123,6 @@ export const makeWFCModel = (
 
   // The current number of active indices in the uncollapsedIndices frontier.
   let uncollapsedCount = 0
-
-  // A static priority map that biases the algorithm to pick cells near a specific focus point.
-  // Used to grow the solution like a crystal, which significantly reduces contradictions.
-  // Indexing: [x + y * width]
-  const spatialPriority = new Float64Array(N_CELLS)
 
   // Pre-calculate weights
 
@@ -148,50 +150,61 @@ export const makeWFCModel = (
   //   tableSize: 4096,                     // Good balance of memory vs speed
   // })
 
-  // Initialize Spatial Bias (Center-out growth)
-  const centerX = (width * startCoordX) | 0
-  const centerY = (height * startCoordY) | 0
-  for (let i = 0; i < N_CELLS; i++) {
-    const x = i % width
-    const y = (i / width) | 0
-    const dx = x - centerX
-    const dy = y - centerY
-    // Lower value = higher priority.
-    // We scale the distance so it influences choice without totally overriding entropy.
-    spatialPriority[i] = Math.sqrt(dx * dx + dy * dy) * startCoordBias
-  }
+  // A static priority map that biases the algorithm to pick cells near a specific focus point.
+  // Used to grow the solution like a crystal, which significantly reduces contradictions.
+  // Indexing: [x + y * width]
+  const spatialPriority = makeSpacialPriority()
 
   let generationComplete = false
   const distribution = new Float64Array(T)
-
   const changedCells = new Int32Array(N_CELLS)
   let changedCount = 0
   const dirtyFlags = new Uint8Array(N_CELLS)
 
-  const markDirty = (i: number) => {
+  function markDirty(i: number) {
     if (dirtyFlags[i] === 0) {
       dirtyFlags[i] = 1
       changedCells[changedCount++] = i
     }
   }
 
-  const onBoundary = (x: number, y: number): boolean => {
+  function onBoundary(x: number, y: number): boolean {
     return !periodicOutput && (x < 0 || y < 0 || x >= width || y >= height)
   }
 
-  const ban = (i: number, t: number) => {
-    if (wave[i * T + t] === 0) return
-    wave[i * T + t] = 0
+  function makeSpacialPriority() {
+    const spatialPriority = new Float64Array(N_CELLS)
 
-    const compStart = (i * T + t) * 4
+    // Initialize Spatial Bias (Center-out growth)
+    const centerX = (width * startCoordX) | 0
+    const centerY = (height * startCoordY) | 0
+    for (let i = 0; i < N_CELLS; i++) {
+      const x = i % width
+      const y = (i / width) | 0
+      const dx = x - centerX
+      const dy = y - centerY
+      // Lower value = higher priority.
+      // We scale the distance so it influences choice without totally overriding entropy.
+      spatialPriority[i] = Math.sqrt(dx * dx + dy * dy) * startCoordBias
+    }
+    return spatialPriority
+  }
+
+  const ban = (i: number, t: number) => {
+    const waveIdx = getWaveIndex(i, t)
+
+    if (wave[waveIdx] === 0) return
+    wave[waveIdx] = 0
+
+    const compStart = (waveIdx) * 4
     compatible[compStart] = 0
     compatible[compStart + 1] = 0
     compatible[compStart + 2] = 0
     compatible[compStart + 3] = 0
 
-    stack[stackSize * 2] = i
-    stack[stackSize * 2 + 1] = t
-    stackSize++
+    pendingBans[pendingBanCount * 2] = i
+    pendingBans[pendingBanCount * 2 + 1] = t
+    pendingBanCount++
 
     sumsOfOnes[i]! -= 1
     sumsOfWeights[i]! -= weights[t]!
@@ -204,9 +217,11 @@ export const makeWFCModel = (
       entropies[i] = 0
       // Update observed immediately if the cell is collapsed
       if (sumsOfOnes[i] === 1) {
-        for (let t2 = 0; t2 < T; t2++) if (wave[i * T + t2] === 1) {
-          observed[i] = t2
-          break
+        for (let t2 = 0; t2 < T; t2++) {
+          if (wave[i * T + t2] === 1) {
+            observed[i] = t2
+            break
+          }
         }
       }
     } else {
@@ -226,13 +241,13 @@ export const makeWFCModel = (
   }
 
   const clear = () => {
-    stackSize = 0
+    pendingBanCount = 0
     for (let i = 0; i < N_CELLS; i++) {
       for (let t = 0; t < T; t++) {
         wave[i * T + t] = 1
         for (let d = 0; d < 4; d++) {
-          // Initialize with propagatorLengths of the direction WE are looking (d)
-          compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
+          const compatibleIndex = getCompatibleIndex(i, t, d)
+          compatible[compatibleIndex] = propagator.getCompatibleCount(t, d)
         }
       }
       sumsOfOnes[i] = T
@@ -249,7 +264,8 @@ export const makeWFCModel = (
     for (let i = 0; i < N_CELLS; i++) {
       for (let t = 0; t < T; t++) {
         for (let d = 0; d < 4; d++) {
-          if (compatible[(i * T + t) * 4 + d] === 0) {
+          const compIdx = getCompatibleIndex(i, t, d)
+          if (compatible[compIdx] === 0) {
             ban(i, t)
             break
           }
@@ -273,36 +289,47 @@ export const makeWFCModel = (
   }
 
   const propagate = () => {
-    while (stackSize > 0) {
-      stackSize--
-      const i1 = stack[stackSize * 2]!
-      const t1 = stack[stackSize * 2 + 1]!
-      const x1 = i1 % width
-      const y1 = (i1 / width) | 0
+    while (pendingBanCount > 0) {
+      // Pop the last banned cell and the pattern that was removed
+      pendingBanCount--
+      const bannedCellIndex = pendingBans[pendingBanCount * 2]!
+      // banned pattern
+      const patternId = pendingBans[pendingBanCount * 2 + 1]!
+      // banned coord
+      const x1 = bannedCellIndex % width
+      const y1 = (bannedCellIndex / width) | 0
 
+      // Check all 4 neighbors to see if this ban affects their possibilities
       for (let d = 0; d < 4; d++) {
         let x2 = x1 + DX[d]!
         let y2 = y1 + DY[d]!
 
+        // Skip if we hit a non-periodic edge
+        // or out-of-bounds coord
         if (onBoundary(x2, y2)) continue
 
+        // Wrap coordinates if the output is periodic (torus topology)
         if (x2 < 0) x2 += width
         else if (x2 >= width) x2 -= width
         if (y2 < 0) y2 += height
         else if (y2 >= height) y2 -= height
 
-        const i2 = x2 + y2 * width
-        const propIndex = d * T + t1
-        const offset = propagatorOffsets[propIndex]!
-        const len = propagatorLengths[propIndex]!
-        const opp = OPPOSITE[d]!
+        const nCellIndex = x2 + y2 * width
 
-        for (let l = 0; l < len; l++) {
-          const t2 = propagatorData[offset + l]!
-          const compIndex = (i2 * T + t2) * 4 + opp
-          if (compatible[compIndex] === 0) continue
-          compatible[compIndex]!--
-          if (compatible[compIndex] === 0) ban(i2, t2)
+        // looking at neighbor nCellIndex in direction d
+        // from nCellIndex's perspective, the "ban" is coming from the OPPOSITE direction.
+        const oppositeDir = OPPOSITE[d]!
+        // need to know: Which patterns in nCellIndex were supported by the patternId we just banned
+        const validPatternIds = propagator.getValidPatternIds(patternId, d)
+        for (let l = 0; l < validPatternIds.length; l++) {
+          const nPatternId = validPatternIds[l]!
+
+          const compIdx = getCompatibleIndex(nCellIndex, nPatternId, oppositeDir)
+          // already not compatible
+          if (compatible[compIdx]! <= 0) continue
+
+          compatible[compIdx]!--
+          if (compatible[compIdx] === 0) ban(nCellIndex, nPatternId)
         }
       }
     }
@@ -424,7 +451,8 @@ export const makeWFCModel = (
 
         // Reset all patterns to valid
         for (let t = 0; t < T; t++) {
-          wave[i * T + t] = 1
+          const waveIdx = getWaveIndex(i, t)
+          wave[waveIdx] = 1
         }
       }
     }
@@ -453,33 +481,33 @@ export const makeWFCModel = (
               ny = (ny + height) % height
             } else if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
               // At boundary: use default (maximum possible)
-              compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
+              const compIdx = getCompatibleIndex(i, t, d)
+              compatible[compIdx] = propagator.getCompatibleCount(t, d)
+
               continue
             }
-
             const ni = nx + ny * width
-
-            // Count how many compatible patterns in the neighbor are actually valid
             let count = 0
-            const propIndex = d * T + t
-            const offset = propagatorOffsets[propIndex]!
-            const len = propagatorLengths[propIndex]!
 
-            for (let l = 0; l < len; l++) {
-              const neighborPattern = propagatorData[offset + l]!
+            const validNeighborIds = propagator.getValidPatternIds(t, d)
+            for (let l = 0; l < validNeighborIds.length; l++) {
+              const neighborPattern = validNeighborIds[l]!
+
+              // Only count it if the neighbor cell actually allows this pattern
               if (wave[ni * T + neighborPattern] === 1) {
                 count++
               }
             }
 
-            compatible[(i * T + t) * 4 + d] = count
+            let compIdx = getCompatibleIndex(i, t, d)
+            compatible[compIdx] = count
           }
         }
       }
     }
 
     // PHASE 3: Ban patterns that have no valid neighbors
-    stackSize = 0
+    pendingBanCount = 0
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         let x = targetX + dx
@@ -492,22 +520,22 @@ export const makeWFCModel = (
         const i = x + y * width
         for (let t = 0; t < T; t++) {
           for (let d = 0; d < 4; d++) {
-            if (compatible[(i * T + t) * 4 + d] === 0) {
+            const compIdx = getCompatibleIndex(i, t, d)
+            if (compatible[compIdx] === 0) {
               // This pattern has no valid neighbors in this direction
-              stack[stackSize * 2] = i
-              stack[stackSize * 2 + 1] = t
-              stackSize++
+              pendingBans[pendingBanCount * 2] = i
+              pendingBans[pendingBanCount * 2 + 1] = t
+              pendingBanCount++
               break  // No need to check other directions for this pattern
             }
           }
         }
       }
+
+      // PHASE 4: Propagate constraints
+      propagate()
     }
-
-    // PHASE 4: Propagate constraints
-    propagate()
   }
-
   const getChanges = () => {
     const slice = changedCells.slice(0, changedCount)
     // Clear dirty flags
