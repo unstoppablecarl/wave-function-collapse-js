@@ -1,11 +1,9 @@
 // import { makeFastLog } from './fastLog.ts'
 
+import { DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
 import type { Propagator } from './Propagator.ts'
 
 export type RNG = () => number
-export const DX = new Int32Array([-1, 0, 1, 0])
-export const DY = new Int32Array([0, 1, 0, -1])
-export const OPPOSITE = new Int32Array([2, 3, 0, 1])
 
 export enum IterationResult {
   REPAIR = 'REPAIR',
