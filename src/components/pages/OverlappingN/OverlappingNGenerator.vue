@@ -14,7 +14,7 @@ import WorkerAttemptRow from '../OverlappingN/WorkerAttemptRow.vue'
 import OverlappingNSettings from './OverlappingNSettings.vue'
 
 const store = useOverlappingNStore()
-const { settings, autoRun, scale } = storeToRefs(store)
+const { settings, scale } = storeToRefs(store)
 
 let pendingImageData: ImageDataArray | null = null
 const attempts = ref<OverlappingNAttempt[]>([])
@@ -112,12 +112,6 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
     <div class="col-3">
       <OverlappingNSettings />
       <div class="hstack">
-        <div class="">
-          <label data-field class="form-label" title="Auto Run when settings change">
-            <input type="checkbox" v-model="autoRun" /> Auto Run
-          </label>
-        </div>
-
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>

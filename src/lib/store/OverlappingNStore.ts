@@ -14,7 +14,6 @@ type SerializedData = {
 export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const scale = ref(4)
-  const autoRun = ref(false)
 
   const settings = reactive<Settings>({
     N: 2,
@@ -36,7 +35,6 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const state = {
     scale,
-    autoRun,
     settings,
   }
 
@@ -76,7 +74,6 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     $serializeState,
     $restoreState,
     scale,
-    autoRun,
     settings,
     currentSymmetryDescription,
   }
