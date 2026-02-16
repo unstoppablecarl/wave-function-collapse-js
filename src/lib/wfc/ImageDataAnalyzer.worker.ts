@@ -20,7 +20,7 @@ const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput } = e.data
   const { sample, palette } = colorToIdMap(imageData.data)
-  const { propagator, weights, patterns } = makeOverlappingNRuleset({
+  const { propagator, weights, patterns, T } = makeOverlappingNRuleset({
     N,
     sample,
     sampleWidth: imageData.width,
@@ -31,5 +31,6 @@ ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
 
   const { averageBrittleness } = propagator.getBrittleness()
 
-  ctx.postMessage({ averageBrittleness, weights, patterns, palette } as ImageDataAnalyzerWorkerResult)
+  const result: ImageDataAnalyzerWorkerResult = { averageBrittleness, weights, patterns, palette, T }
+  ctx.postMessage(result)
 }

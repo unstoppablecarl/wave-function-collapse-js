@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { markRaw, ref, shallowRef, watch } from 'vue'
+import { computed, markRaw, ref, shallowRef, watch } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
@@ -69,6 +69,11 @@ watch(imageDataSource, () => {
   imageDataSourceUrlImage.value = imageDataToUrlImage(imageDataSource.value)
 })
 
+const patternImageUrls = computed(() => {
+  const imageDataArray = imageDataAnalysis.patternImageDataArray.value
+  return imageDataArray.map(id => imageDataToUrlImage(id))
+})
+
 function updateCanvas() {
   if (!pendingImageData || !resultCanvasRef.value!.canvas) return
   draw(pendingImageData)
@@ -120,9 +125,9 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
 
       <div v-if="imageDataSourceUrlImage" class="mb-1">
         <strong>Target Image: </strong>
-        <div>
+        <p>
           <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
-        </div>
+        </p>
         <div>
           <strong>Brittleness: </strong>
           <template v-if="imageDataAnalysis.averageBrittleness.value">
@@ -133,11 +138,17 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           </template>
         </div>
       </div>
-      <canvas
-        ref="patternCanvasRef"
 
-      ></canvas>
+      <p>
+        <strong>Source Patterns:</strong>
+        {{ imageDataAnalysis.T }}, {{ settings.N }}x{{ settings.N }}px
+      </p>
 
+      <div class="pattern-images">
+        <template v-for="item in patternImageUrls">
+          <PixelImg :src="item" :scale="scale" />
+        </template>
+      </div>
     </div>
     <div class="col-7">
       <p class="hstack">
@@ -203,5 +214,11 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
 
 .attempt-log-info {
   margin: 0.5rem 0 0.25rem;
+}
+
+.pattern-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 </style>

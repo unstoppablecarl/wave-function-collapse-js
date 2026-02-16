@@ -25,16 +25,14 @@ const scaledWidth = computed(() => {
 
 </script>
 <template>
-  <div class="image-wrapper">
-    <img
-      ref="imgRef"
-      @click="emit('imgClick', imgRef!)"
-      :src="src"
-      @load="handleImageLoad"
-      :style="{ width: scaledWidth }"
-      class="pixel-art"
-    />
-  </div>
+  <img
+    ref="imgRef"
+    @click="emit('imgClick', imgRef!)"
+    :src="src"
+    @load="handleImageLoad"
+    :style="{ width: scaledWidth }"
+    class="pixel-art"
+  />
 </template>
 <style>
 .pixel-art {

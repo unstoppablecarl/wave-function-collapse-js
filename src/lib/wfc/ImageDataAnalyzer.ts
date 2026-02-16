@@ -12,6 +12,7 @@ export function makeImageDataAnalyzer(
   const averageBrittleness = ref<number | null>(null)
   const running = ref(false)
   const patternImageDataArray = shallowRef<ImageData[]>([])
+  const T = ref(0)
 
   watch([
     imageDataSource,
@@ -42,12 +43,10 @@ export function makeImageDataAnalyzer(
     })
     worker.postMessage(opts)
     worker.onmessage = (e: MessageEvent<ImageDataAnalyzerWorkerResult>) => {
-
-      const { averageBrittleness: avgBrittleness, palette, patterns, T } = e.data
+      const { averageBrittleness: avgBrittleness, palette, patterns, T: TVal } = e.data
       averageBrittleness.value = avgBrittleness ?? null
-
-      patternImageDataArray.value = makePatternImageDataArray(patterns, T, settings.N, palette)
-
+      patternImageDataArray.value = makePatternImageDataArray(patterns, TVal, settings.N, palette)
+      T.value = TVal
       running.value = false
       terminate()
     }
@@ -59,6 +58,7 @@ export function makeImageDataAnalyzer(
   }
 
   return {
+    T,
     averageBrittleness,
     running,
     patternImageDataArray,
