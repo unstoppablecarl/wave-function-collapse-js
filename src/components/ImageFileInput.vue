@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { markRaw, ref, useTemplateRef } from 'vue'
-import { arrayBufferToImageData, getFileAsArrayBuffer } from '../lib/file-upload.ts'
+import { arrayBufferToImageData, getFileAsArrayBuffer } from '../lib/util/file-upload.ts'
 
 type Emits = {
   (e: 'imageDataLoaded', imageData: ImageData): void;

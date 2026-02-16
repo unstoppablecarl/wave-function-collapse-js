@@ -1,5 +1,5 @@
-import { makeMulberry32 } from './mulberry32.ts'
-import { makeOverlappingModel, type OverlappingModelOptions } from './OverlappingModel.ts'
+import { makeMulberry32 } from '../util/mulberry32.ts'
+import { makeOverlappingModel, type OverlappingModelOptions } from './WFCOverlappingModel.ts'
 import { IterationResult } from './WFCModel.ts'
 import { colorToIdMap, makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
 

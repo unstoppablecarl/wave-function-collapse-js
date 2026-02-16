@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from './symmetry-options.ts'
-import type { WfCWorkerOptions } from './WFCOverlappingModelImageData.worker.ts'
+import type { WfCWorkerOptions } from './wfc/WFCOverlappingModelImageData.worker.ts'
 
 type Settings = WfCWorkerOptions['settings']
 
