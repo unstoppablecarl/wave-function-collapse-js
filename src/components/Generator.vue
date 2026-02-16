@@ -5,7 +5,7 @@ import { markRaw, ref, shallowRef, toValue, useTemplateRef, watch } from 'vue'
 import { type Attempt, makeAttempt, resetAttempt } from '../lib/_types.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../lib/util/ImageData.ts'
 import { useStore } from '../lib/store.ts'
-import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc/WFCOverlappingModelImageData.worker.ts'
+import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc/WFCModelOverlapping.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
 import TweakPane from './TweakPane.vue'
@@ -83,7 +83,7 @@ async function generate() {
   running.value = true
 
   // Initialize Worker
-  wfcWorker = new Worker(new URL('../lib/WFCOverlappingModelImageData.worker.ts', import.meta.url), {
+  wfcWorker = new Worker(new URL('../lib/wfc/WFCModelOverlapping.worker.ts', import.meta.url), {
     type: 'module',
   })
 

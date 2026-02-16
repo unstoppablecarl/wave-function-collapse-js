@@ -65,9 +65,7 @@ export const makeWFCPixelBuffer = (
     }
   }
 
-  const getVisualBuffer = (
-
-  ): Uint8ClampedArray<ArrayBuffer> => {
+  const getVisualBuffer = (): Uint8ClampedArray<ArrayBuffer> => {
     // .slice() is necessary because postMessage transfers ownership of the buffer.
     // If we didn't slice, the Worker would lose access to pixelBuffer.buffer!
     return new Uint8ClampedArray(pixelBuffer.buffer).slice()
@@ -116,7 +114,11 @@ export const extractPatternColors = (
  * sample: An array of IDs representing the image grid
  * palette: A lookup table where palette[id] = [r, g, b, a]
  */
-export const colorToIdMap = (data: Uint8ClampedArray) => {
+export const colorToIdMap = (data: Uint8ClampedArray): {
+  sample: Int32Array<ArrayBuffer>,
+  palette: Uint8Array<ArrayBuffer>,
+  avgColor: number,
+} => {
   const sample = new Int32Array(data.length / 4)
   const colorMap = new Map<string, number>()
   const tempPalette: number[] = []

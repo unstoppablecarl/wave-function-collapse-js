@@ -1,5 +1,5 @@
 import { makeMulberry32 } from '../util/mulberry32.ts'
-import { makeOverlappingModel, type OverlappingModelOptions } from './WFCOverlappingModel.ts'
+import { makeOverlappingModel, type OverlappingModelOptions } from './WFCModelOverlapping.ts'
 import { IterationResult } from './WFCModel.ts'
 import { colorToIdMap, makeWFCPixelBuffer } from './WFCPixelBuffer.ts'
 
@@ -141,7 +141,6 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
           const currentFilled = model.filledPercent()
           if (currentFilled > maxFilledPercent) {
             maxFilledPercent = currentFilled
-            console.log({ maxFilledPercent })
           }
         }
 
