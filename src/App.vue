@@ -2,8 +2,8 @@
 import Generator from './components/Generator.vue'
 </script>
 <template>
+    <h1>Wave Function Collapse JS</h1>
   <div class="container">
-    <h3 class="mt-2">Wave Function Collapse JS</h3>
     <Generator />
   </div>
   <p class="footer">
@@ -14,5 +14,12 @@ import Generator from './components/Generator.vue'
 .footer {
   margin: 1rem;
   text-align: center;
+}
+h1 {
+  font-size: 1rem;
+  background: rgba(255,255,255,0.05);
+  padding: 0.5rem;
+  padding-inline: var(--container-pad);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 </style>

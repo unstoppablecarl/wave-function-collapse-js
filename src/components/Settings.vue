@@ -26,6 +26,14 @@ onMounted(() => {
     title: 'Display',
   })
 
+  const preview = displayFolder.addBinding(store.settings, 'previewInterval', {
+    min: 0,
+    max: 1000,
+    step: 1,
+    label: 'Preview',
+  })
+  addInfo(preview, 'How many steps between each frame draw')
+
   displayFolder.addBinding(store, 'scale', {
     min: 0,
     max: 10,
@@ -72,14 +80,14 @@ onMounted(() => {
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
     min: 0,
     step: 1,
-    label: 'periodic input',
+    label: 'periodic in',
   })
   addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
 
   const periodicOutput = settingsFolder.addBinding(store.settings, 'periodicOutput', {
     min: 0,
     step: 1,
-    label: 'periodic output',
+    label: 'periodic out',
   })
   addInfo(periodicOutput, 'Outputs a seamless texture')
 

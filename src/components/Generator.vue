@@ -10,7 +10,7 @@ import { makeImageDataBrittlenessCalculator } from '../lib/wfc/ImageDataBrittlen
 import { WFC_WORKER_ID, WorkerMsg, type WorkerResponse } from '../lib/wfc/WFCModelOverlapping.worker.ts'
 import ImageFileInput from './ImageFileInput.vue'
 import PixelImg from './PixelImg.vue'
-import TweakPane from './TweakPane.vue'
+import Settings from './Settings.vue'
 import WorkerAttemptRow from './WorkerAttemptRow.vue'
 
 const store = useStore()
@@ -178,114 +178,100 @@ const imageModules = import.meta.glob('../assets/*.png', { eager: true })
 const images = Object.values(imageModules).map((m) => (m as any).default)
 </script>
 <template>
-  <article class="card">
-    <div class="row">
-      <div class="col-2">
-        <div class="flex gap-1">
-          <small style="white-space: nowrap">
-            Scale {{ scale }}
-          </small>
-          <label data-field>
-            <input type="range" min="1" max="10" step="1" v-model.number="scale">
+  <div class="row">
+    <div class="col-2">
+      <div class="mb-1">
+        <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
+      </div>
+      <p>Examples</p>
+      <template v-for="image in images" :key="image">
+        <PixelImg
+          :src="image"
+          class="img-target"
+          :scale="scale"
+          @img-click="setImageDataFromElement($event)"
+        />
+      </template>
+    </div>
+    <div class="col-3">
+      <Settings />
+      <div class="hstack">
+        <div class="">
+          <label data-field class="form-label" title="Auto Run when settings change">
+            <input type="checkbox" v-model="autoRun" /> Auto Run
           </label>
         </div>
-        <div class="mb-1">
-          <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
-        </div>
-        <p>Examples</p>
-        <template v-for="image in images" :key="image">
-          <PixelImg
-            :src="image"
-            class="img-target"
-            :scale="scale"
-            @img-click="setImageDataFromElement($event)"
-          />
-        </template>
-      </div>
-      <div class="col-3">
-        <fieldset class="group input-section">
-          <legend>Preview Interval</legend>
-          <input type="number" v-model="settings.previewInterval" />
-        </fieldset>
-        <TweakPane />
-        <div class="hstack">
-          <div class="">
-            <label data-field class="form-label" title="Auto Run when settings change">
-              <input type="checkbox" v-model="autoRun" /> Auto Run
-            </label>
-          </div>
 
-          <button @click="generate()" :disabled="running" class="ms-auto">
-            Generate
-          </button>
-        </div>
-
-        <div v-if="imageDataSourceUrlImage" class="mb-1">
-          <strong>Target Image: </strong>
-          <div>
-            <strong>Brittleness: </strong>
-            <template v-if="brittleness.average.value">
-              {{ formatPercent(brittleness.average.value) }}
-            </template>
-            <template v-else-if="brittleness.running.value">
-              <span role="status" class="spinner small" style="display: inline-block"></span>
-            </template>
-          </div>
-        </div>
-        <div v-if="imageDataSourceUrlImage">
-          <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
-        </div>
+        <button @click="generate()" :disabled="running" class="ms-auto">
+          Generate
+        </button>
       </div>
-      <div class="col-7">
-        <p class="hstack">
-          <strong v-if="running">
-            Generating:
+
+      <div v-if="imageDataSourceUrlImage" class="mb-1">
+        <strong>Target Image: </strong>
+        <div>
+          <strong>Brittleness: </strong>
+          <template v-if="brittleness.average.value">
+            {{ formatPercent(brittleness.average.value) }}
+          </template>
+          <template v-else-if="brittleness.running.value">
             <span role="status" class="spinner small" style="display: inline-block"></span>
-          </strong>
-          <strong v-else>
-            Ready
-          </strong>
-          <button v-if="running" data-variant="danger" class="small" @click="terminateWorker">Terminate</button>
-        </p>
-        <div v-if="errorMessage" role="alert" data-variant="warning">
-          <strong>
-            {{ errorMessage.title }}
-          </strong>
-          {{ errorMessage.message }}
+          </template>
         </div>
-
-        <WorkerAttemptRow
-          v-if="running"
-          :attempt="currentAttempt"
-        />
-
-        <WorkerAttemptRow
-          v-if="!running && hasResult"
-          :attempt="finalAttempt"
-        />
-
-        <div class="canvas-container" v-show="hasResult && !errorMessage"
-             :style="`width: ${settings.width * scale}px; height: ${settings.height * scale}px;`">
-          <canvas
-            ref="canvasRef"
-            class="canvas-output"
-            :width="settings.width"
-            :height="settings.height"
-            :style="`transform: scale(${scale})`"
-          ></canvas>
-        </div>
-        <div class="attempt-log" v-for="item in attempts" :key="item.attempt">
-          <div class="hstack attempt-log-info">
-            <div>Attempt: {{ item.attempt }}</div>
-            <div>Time: {{ prettyMilliseconds(item.elapsedTime) }}</div>
-            <div>Progress: {{ formatPercent(item.filledPercent) }}</div>
-            <div v-if="item.repairs">Repairs: {{ item.repairs }}</div>
-          </div>
-          <PixelImg :src="item.encoded" :scale="scale" />
-        </div>
+      </div>
+      <div v-if="imageDataSourceUrlImage">
+        <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
       </div>
     </div>
-  </article>
+    <div class="col-7">
+      <p class="hstack">
+        <strong v-if="running">
+          Generating:
+          <span role="status" class="spinner small" style="display: inline-block"></span>
+        </strong>
+        <strong v-else>
+          Ready
+        </strong>
+        <button v-if="running" data-variant="danger" class="small" @click="terminateWorker">Terminate</button>
+      </p>
+      <div v-if="errorMessage" role="alert" data-variant="warning">
+        <strong>
+          {{ errorMessage.title }}
+        </strong>
+        {{ errorMessage.message }}
+      </div>
+
+      <WorkerAttemptRow
+        v-if="running"
+        :attempt="currentAttempt"
+      />
+
+      <WorkerAttemptRow
+        v-if="!running && hasResult"
+        :attempt="finalAttempt"
+      />
+
+      <div class="canvas-container" v-show="hasResult && !errorMessage"
+           :style="`width: ${settings.width * scale}px; height: ${settings.height * scale}px;`">
+        <canvas
+          ref="canvasRef"
+          class="canvas-output"
+          :width="settings.width"
+          :height="settings.height"
+          :style="`transform: scale(${scale})`"
+        ></canvas>
+      </div>
+      <div class="attempt-log" v-for="item in attempts" :key="item.attempt">
+        <div class="hstack attempt-log-info">
+          <div>Attempt: {{ item.attempt }}</div>
+          <div>Time: {{ prettyMilliseconds(item.elapsedTime) }}</div>
+          <div>Progress: {{ formatPercent(item.filledPercent) }}</div>
+          <div v-if="item.repairs">Repairs: {{ item.repairs }}</div>
+        </div>
+        <PixelImg :src="item.encoded" :scale="scale" />
+      </div>
+    </div>
+  </div>
 </template>
 <style lang="scss">
 
