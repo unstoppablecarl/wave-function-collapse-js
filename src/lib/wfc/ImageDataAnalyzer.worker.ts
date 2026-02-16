@@ -12,7 +12,8 @@ export type ImageDataAnalyzerWorkerResult = {
   averageBrittleness: number,
   weights: Float64Array<ArrayBuffer>,
   patterns: Int32Array<ArrayBuffer>,
-  palette: Uint8Array<ArrayBuffer>
+  palette: Uint8Array<ArrayBuffer>,
+  T: number,
 }
 
 const ctx: DedicatedWorkerGlobalScope = self as any

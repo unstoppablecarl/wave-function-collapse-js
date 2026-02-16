@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { markRaw, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { markRaw, ref, shallowRef, watch } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
@@ -9,6 +9,7 @@ import { type MsgPreview } from '../../../lib/wfc/OverlappingN/OverlappingN.work
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
+import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
 import WorkerAttemptRow from '../OverlappingN/WorkerAttemptRow.vue'
 import OverlappingNSettings from './OverlappingNSettings.vue'
@@ -18,7 +19,7 @@ const { settings, scale } = storeToRefs(store)
 
 let pendingImageData: ImageDataArray | null = null
 const attempts = ref<OverlappingNAttempt[]>([])
-const canvasRef = useTemplateRef('canvasRef')
+const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
 const controller = makeOverlappingNController({
   settings: store.settings,
@@ -36,7 +37,7 @@ const controller = makeOverlappingNController({
   onAttemptFailure(response) {
     const { attempt, repairs, elapsedTime, filledPercent } = response
     attempts.value.unshift({
-      encoded: canvasRef.value?.toDataURL?.() ?? '',
+      encoded: resultCanvasRef.value!.canvas?.toDataURL?.() ?? '',
       attempt,
       repairs,
       elapsedTime,
@@ -69,13 +70,13 @@ watch(imageDataSource, () => {
 })
 
 function updateCanvas() {
-  if (!pendingImageData || !canvasRef.value) return
+  if (!pendingImageData || !resultCanvasRef.value!.canvas) return
   draw(pendingImageData)
   pendingImageData = null
 }
 
 function draw(data: ImageDataArray) {
-  const ctx = canvasRef.value!.getContext('2d')!
+  const ctx = resultCanvasRef.value!.canvas!.getContext('2d')!
   const imgData = new ImageData(data, settings.value.width, settings.value.height)
   ctx.putImageData(imgData, 0, 0)
   hasResult.value = true
@@ -120,6 +121,9 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
       <div v-if="imageDataSourceUrlImage" class="mb-1">
         <strong>Target Image: </strong>
         <div>
+          <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
+        </div>
+        <div>
           <strong>Brittleness: </strong>
           <template v-if="imageDataAnalysis.averageBrittleness.value">
             {{ formatPercent(imageDataAnalysis.averageBrittleness.value) }}
@@ -129,9 +133,11 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           </template>
         </div>
       </div>
-      <div v-if="imageDataSourceUrlImage">
-        <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
-      </div>
+      <canvas
+        ref="patternCanvasRef"
+
+      ></canvas>
+
     </div>
     <div class="col-7">
       <p class="hstack">
@@ -162,16 +168,13 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
         :attempt="finalAttempt"
       />
 
-      <div class="canvas-container" v-show="hasResult && !errorMessage"
-           :style="`width: ${settings.width * scale}px; height: ${settings.height * scale}px;`">
-        <canvas
-          ref="canvasRef"
-          class="canvas-output"
-          :width="settings.width"
-          :height="settings.height"
-          :style="`transform: scale(${scale})`"
-        ></canvas>
-      </div>
+      <PixelCanvasRender
+        ref="resultCanvasRef"
+        v-show="hasResult && !errorMessage"
+        :width="settings.width"
+        :height="settings.height"
+        :scale="scale"
+      />
       <div class="attempt-log" v-for="item in attempts" :key="item.attempt">
         <div class="hstack attempt-log-info">
           <div>Attempt: {{ item.attempt }}</div>
@@ -185,14 +188,6 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
   </div>
 </template>
 <style lang="scss">
-
-.pixel-img,
-.canvas-output {
-  transform-origin: top left; /* Ensures it scales from the top-left corner */
-  image-rendering: -moz-crisp-edges; /* Firefox */
-  image-rendering: pixelated; /* Chrome, Edge, Safari */
-}
-
 .periodic {
   padding-left: 0.5rem;
 }

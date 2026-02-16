@@ -1,7 +1,14 @@
 :root,
-[data-theme="dark"] {
+[data-theme='dark'] {
   --background: var(--card);
   --container-max: 100%;
+}
+
+.pixel-img,
+.canvas-output {
+  transform-origin: top left; /* Ensures it scales from the top-left corner */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: pixelated; /* Chrome, Edge, Safari */
 }
 
 .input-section {

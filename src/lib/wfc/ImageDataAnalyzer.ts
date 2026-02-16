@@ -1,6 +1,7 @@
-import { type Reactive, ref, type ShallowRef, watch } from 'vue'
-import type { ImageDataAnalyzerWorkerOptions } from './ImageDataAnalyzer.worker.ts'
+import { type Reactive, ref, shallowRef, type ShallowRef, watch } from 'vue'
+import type { ImageDataAnalyzerWorkerOptions, ImageDataAnalyzerWorkerResult } from './ImageDataAnalyzer.worker.ts'
 import type { OverlappingNWorkerOptions } from './OverlappingN/OverlappingN.worker.ts'
+import { makePatternImageDataArray } from './PatternSheetRenderer.ts'
 
 export function makeImageDataAnalyzer(
   imageDataSource: ShallowRef<ImageData | null>,
@@ -10,6 +11,7 @@ export function makeImageDataAnalyzer(
   let worker: Worker | null = null
   const averageBrittleness = ref<number | null>(null)
   const running = ref(false)
+  const patternImageDataArray = shallowRef<ImageData[]>([])
 
   watch([
     imageDataSource,
@@ -39,8 +41,12 @@ export function makeImageDataAnalyzer(
       type: 'module',
     })
     worker.postMessage(opts)
-    worker.onmessage = (e: MessageEvent<{ averageBrittleness: number }>) => {
-      averageBrittleness.value = e.data.averageBrittleness ?? null
+    worker.onmessage = (e: MessageEvent<ImageDataAnalyzerWorkerResult>) => {
+
+      const { averageBrittleness: avgBrittleness, palette, patterns, T } = e.data
+      averageBrittleness.value = avgBrittleness ?? null
+
+      patternImageDataArray.value = makePatternImageDataArray(patterns, T, settings.N, palette)
 
       running.value = false
       terminate()
@@ -55,6 +61,7 @@ export function makeImageDataAnalyzer(
   return {
     averageBrittleness,
     running,
+    patternImageDataArray,
   }
 }
 
