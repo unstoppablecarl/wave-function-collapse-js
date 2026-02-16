@@ -365,10 +365,8 @@ export const makeWFCModel = (
     //
     // if (chosenT === -1) chosenT = T - 1
 
-
     const chosenT = randomIndex(distribution, rng())
     if (chosenT === -1) return argmin // Safety fallback for bad distribution
-
 
     for (let t = 0; t < T; t++) {
       if (wave[argmin * T + t] === 1 && t !== chosenT) {
@@ -406,6 +404,7 @@ export const makeWFCModel = (
   }
 
   const clearRadius = (targetX: number, targetY: number, radius: number) => {
+    // PHASE 1: Reset wave states in the cleared region
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         let x = targetX + dx
@@ -423,36 +422,89 @@ export const makeWFCModel = (
         sumsOfWeightLogWeights[i] = sumOfWeightLogWeightsTotal
         entropies[i] = startingEntropy
 
+        // Reset all patterns to valid
         for (let t = 0; t < T; t++) {
           wave[i * T + t] = 1
-          for (let d = 0; d < 4; d++) {
-            compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
-          }
         }
       }
     }
 
-    stackSize = 0
-    const rim = radius + 1
-    for (let dy = -rim; dy <= rim; dy++) {
-      for (let dx = -rim; dx <= rim; dx++) {
-        if (Math.abs(dx) !== rim && Math.abs(dy) !== rim) continue
+    // PHASE 2: Recalculate compatible counts based on actual neighbor states
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
         let x = targetX + dx
         let y = targetY + dy
         if (periodicOutput) {
           x = (x + width) % width
           y = (y + height) % height
         } else if (x < 0 || y < 0 || x >= width || y >= height) continue
+
         const i = x + y * width
+
+        // For each pattern at this cell
         for (let t = 0; t < T; t++) {
-          if (wave[i * T + t] === 0) {
-            stack[stackSize * 2] = i
-            stack[stackSize * 2 + 1] = t
-            stackSize++
+          // For each direction
+          for (let d = 0; d < 4; d++) {
+            let nx = x + DX[d]!
+            let ny = y + DY[d]!
+
+            if (periodicOutput) {
+              nx = (nx + width) % width
+              ny = (ny + height) % height
+            } else if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+              // At boundary: use default (maximum possible)
+              compatible[(i * T + t) * 4 + d] = propagatorLengths[d * T + t]!
+              continue
+            }
+
+            const ni = nx + ny * width
+
+            // Count how many compatible patterns in the neighbor are actually valid
+            let count = 0
+            const propIndex = d * T + t
+            const offset = propagatorOffsets[propIndex]!
+            const len = propagatorLengths[propIndex]!
+
+            for (let l = 0; l < len; l++) {
+              const neighborPattern = propagatorData[offset + l]!
+              if (wave[ni * T + neighborPattern] === 1) {
+                count++
+              }
+            }
+
+            compatible[(i * T + t) * 4 + d] = count
           }
         }
       }
     }
+
+    // PHASE 3: Ban patterns that have no valid neighbors
+    stackSize = 0
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        let x = targetX + dx
+        let y = targetY + dy
+        if (periodicOutput) {
+          x = (x + width) % width
+          y = (y + height) % height
+        } else if (x < 0 || y < 0 || x >= width || y >= height) continue
+
+        const i = x + y * width
+        for (let t = 0; t < T; t++) {
+          for (let d = 0; d < 4; d++) {
+            if (compatible[(i * T + t) * 4 + d] === 0) {
+              // This pattern has no valid neighbors in this direction
+              stack[stackSize * 2] = i
+              stack[stackSize * 2 + 1] = t
+              stackSize++
+              break  // No need to check other directions for this pattern
+            }
+          }
+        }
+      }
+    }
+
+    // PHASE 4: Propagate constraints
     propagate()
   }
 
@@ -476,12 +528,31 @@ export const makeWFCModel = (
     getRepairCounts: () => repairCounts,
     getFilledCount: () => N_CELLS - uncollapsedCount,
     getTotalCells: () => N_CELLS,
-    filledPercent: () => (N_CELLS - uncollapsedCount) / N_CELLS,
+    filledPercent: () => {
+      // Method 1: Scan (accurate but slow)
+      let collapsed = 0
+      for (let i = 0; i < N_CELLS; i++) {
+        if (sumsOfOnes[i]! <= 1) collapsed++
+      }
+      const scanPercent = collapsed / N_CELLS
+
+      // Method 2: Frontier (fast but may be out of sync)
+      const frontierPercent = (N_CELLS - uncollapsedCount) / N_CELLS
+
+      // Debug: Are they different?
+      if (Math.abs(scanPercent - frontierPercent) > 0.01) {
+        console.log(`Mismatch! Scan: ${scanPercent}, Frontier: ${frontierPercent}`)
+      }
+
+      return scanPercent
+    },
     getChanges,
     T,
     width,
     height,
     weights,
+    ban,
+    propagate,
   }
 }
 

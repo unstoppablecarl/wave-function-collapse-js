@@ -37,6 +37,7 @@ type MsgPreview = {
   attempt: number
   result: Uint8ClampedArray<ArrayBuffer>
   filledPercent: number
+  repairs: number
 }
 type MsgAttemptFailure = {
   type: WorkerMsg.ATTEMPT_FAILURE
@@ -127,18 +128,28 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
 
       let attemptFinished = false
       const startTime = performance.now()
+      let maxFilledPercent = 0
 
       while (!attemptFinished) {
+
         const result = model.singleIteration(mulberry32)
 
         // 4. Update the visual buffer only for changed cells
         buffer.updateCells(model.getWave(), model.getChanges())
 
+        if (result !== IterationResult.REPAIR) {
+          const currentFilled = model.filledPercent()
+          if (currentFilled > maxFilledPercent) {
+            maxFilledPercent = currentFilled
+            console.log({ maxFilledPercent })
+          }
+        }
+
         if (result === IterationResult.REPAIR) {
           repairsInThisAttempt++
           totalRepairsAcrossAllTries++
 
-          if (repairsInThisAttempt > maxRepairsPerAttempt) {
+          if (repairsInThisAttempt >= maxRepairsPerAttempt) {
             const currentData = buffer.getVisualBuffer()
             const msg: MsgAttemptFailure = {
               type: WorkerMsg.ATTEMPT_FAILURE,
@@ -146,7 +157,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               repairs: repairsInThisAttempt,
               result: currentData,
               elapsedTime: performance.now() - startTime,
-              filledPercent: model.filledPercent(),
+              filledPercent: maxFilledPercent,
             }
 
             ctx.postMessage(msg)
@@ -177,6 +188,7 @@ ctx.onmessage = async (e: MessageEvent<WfCWorkerOptions>) => {
               attempt: currentAttempt,
               result: previewData,
               filledPercent: model.filledPercent(),
+              repairs: repairsInThisAttempt,
             }
             // Use transferable objects for high performance
             ctx.postMessage(msg)

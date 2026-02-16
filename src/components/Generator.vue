@@ -111,10 +111,10 @@ async function generate() {
     }
 
     if (type === WorkerMsg.PREVIEW) {
-      const { result, filledPercent } = response
+      const { result, filledPercent, repairs } = response
       pendingImageData = new Uint8ClampedArray(result.buffer)
       currentAttempt.filledPercent = filledPercent
-
+      currentAttempt.repairs = repairs
       requestAnimationFrame(() => {
         if (running.value) {
           updateCanvas()
