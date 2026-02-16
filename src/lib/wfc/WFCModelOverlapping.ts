@@ -1,5 +1,6 @@
+import { DX, DY } from '../util/direction.ts'
 import { makePropagator } from './Propagator.ts'
-import { DX, DY, makeWFCModel } from './WFCModel.ts'
+import { makeWFCModel } from './WFCModel.ts'
 
 export type OverlappingModelOptions = {
   sample: Int32Array,

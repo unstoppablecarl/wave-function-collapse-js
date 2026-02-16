@@ -48,9 +48,9 @@ export const makeWFCModel = (
   // Banned: a specific pattern has been mathematically ruled out as a possibility for a specific cell
 
   // The core "wave" state: A 3D boolean array flattened to 1D [cellIndex * T + patternIndex]
+  // values: 1/0. 1 means the pattern is still possible at that cell; 0 means it is banned.
   const wave = new Uint8Array(N_STATES)
 
-  // returns 1/0. 1 means the pattern is still possible at that cell; 0 means it is banned.
   function getWaveIndex(cellIndex: number, patternId: number): number {
     return cellIndex * T + patternId
   }
@@ -154,7 +154,6 @@ export const makeWFCModel = (
   const spatialPriority = makeSpacialPriority()
 
   let generationComplete = false
-  const distribution = new Float64Array(T)
   const changedCells = new Int32Array(N_CELLS)
   let changedCount = 0
   const dirtyFlags = new Uint8Array(N_CELLS)
@@ -316,7 +315,7 @@ export const makeWFCModel = (
 
         // looking at neighbor nCellIndex in direction d
         // from nCellIndex's perspective, the "ban" is coming from the OPPOSITE direction.
-        const oppositeDir = OPPOSITE[d]!
+        const oppositeDir = OPPOSITE_DIR[d]!
         // need to know: Which patterns in nCellIndex were supported by the patternId we just banned
         const validPatternIds = propagator.getValidPatternIds(patternId, d)
         for (let l = 0; l < validPatternIds.length; l++) {
@@ -333,42 +332,83 @@ export const makeWFCModel = (
     }
   }
 
-  const observe = (rng: RNG): boolean | number | null => {
+  enum ObserveTargetResult {
+    TARGET = -5,
+    CONTRADICTION = -4,
+    STALL = -3,
+    SUCCESS = -2
+  }
+
+  let observeTargetResult: ObserveTargetResult = -5
+
+  function findObserveTargetIndex(rng: RNG): number | null {
     let minScore = 1e10
-    let argmin = -1
+    let minIdx = -1
 
     for (let idx = 0; idx < uncollapsedCount; idx++) {
       const i = uncollapsedIndices[idx]!
       const amount = sumsOfOnes[i]!
 
-      if (amount === 0) return i
+      if (amount === 0) {
+        observeTargetResult = ObserveTargetResult.CONTRADICTION
+        return i
+      }
 
       if (amount > 1) {
         const score = entropies[i]! + spatialPriority[i]! + (0.000001 * rng())
-        if (argmin === -1 || score < minScore) {
+        if (minIdx === -1 || score < minScore) {
           minScore = score
-          argmin = i
+          minIdx = i
         }
       }
     }
 
-    if (argmin === -1) {
+    if (minIdx === -1) {
       for (let i = 0; i < N_CELLS; i++) {
         const amount = sumsOfOnes[i]!
-        if (amount === 0) return i
-        if (amount > 1) return null
+        if (amount === 0) {
+          observeTargetResult = ObserveTargetResult.CONTRADICTION
+          return i
+        }
+        if (amount > 1) {
+          observeTargetResult = ObserveTargetResult.STALL
+          return null
+        }
+        // un observed
         if (observed[i] === -1) {
-          for (let t = 0; t < T; t++) if (wave[i * T + t] === 1) {
-            observed[i] = t
-            break
+          for (let t = 0; t < T; t++) {
+            const waveIdx = getWaveIndex(i, t)
+            if (wave[waveIdx] === 1) {
+              observed[i] = t
+              break
+            }
           }
         }
       }
-      return true
+      observeTargetResult = ObserveTargetResult.SUCCESS
+      return null
     }
 
+    observeTargetResult = ObserveTargetResult.TARGET
+    return minIdx
+  }
+
+  // reused
+  const distribution = new Float64Array(T)
+
+  const observe = (rng: RNG): true | number | null => {
+    const result = findObserveTargetIndex(rng)
+    if (observeTargetResult === ObserveTargetResult.CONTRADICTION) return result
+    if (observeTargetResult === ObserveTargetResult.STALL) return null
+    if (observeTargetResult === ObserveTargetResult.SUCCESS) return true
+    if (observeTargetResult !== ObserveTargetResult.TARGET) {
+      throw new Error('invalid result: ' + result)
+    }
+    const cellIdx = result as number
+
     for (let t = 0; t < T; t++) {
-      distribution[t] = wave[argmin * T + t] === 1 ? weights[t]! : 0
+      const waveIdx = getWaveIndex(cellIdx, t)
+      distribution[t] = wave[waveIdx] === 1 ? weights[t]! : 0
     }
 
     // // find random index (chosenT)
@@ -391,11 +431,13 @@ export const makeWFCModel = (
     // if (chosenT === -1) chosenT = T - 1
 
     const chosenT = randomIndex(distribution, rng())
-    if (chosenT === -1) return argmin // Safety fallback for bad distribution
+    // Safety fallback for bad distribution
+    if (chosenT === -1) return cellIdx
 
     for (let t = 0; t < T; t++) {
-      if (wave[argmin * T + t] === 1 && t !== chosenT) {
-        ban(argmin, t)
+      const waveIdx = getWaveIndex(cellIdx, t)
+      if (wave[waveIdx] === 1 && t !== chosenT) {
+        ban(cellIdx, t)
       }
     }
     return null
@@ -469,6 +511,8 @@ export const makeWFCModel = (
 
         // For each pattern at this cell
         for (let t = 0; t < T; t++) {
+          // The "Base" wave index for this pattern
+          const cellWaveStart = i * T + t
           // For each direction
           for (let d = 0; d < 4; d++) {
             let nx = x + DX[d]!
@@ -479,7 +523,7 @@ export const makeWFCModel = (
               ny = (ny + height) % height
             } else if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
               // At boundary: use default (maximum possible)
-              const compIdx = getCompatibleIndex(i, t, d)
+              let compIdx = cellWaveStart * 4 + d
               compatible[compIdx] = propagator.getCompatibleCount(t, d)
 
               continue
@@ -491,13 +535,13 @@ export const makeWFCModel = (
             for (let l = 0; l < validNeighborIds.length; l++) {
               const neighborPattern = validNeighborIds[l]!
 
+              const waveIdx = getWaveIndex(ni, neighborPattern)
               // Only count it if the neighbor cell actually allows this pattern
-              if (wave[ni * T + neighborPattern] === 1) {
+              if (wave[waveIdx] === 1) {
                 count++
               }
             }
-
-            let compIdx = getCompatibleIndex(i, t, d)
+            let compIdx = cellWaveStart * 4 + d
             compatible[compIdx] = count
           }
         }
@@ -517,23 +561,21 @@ export const makeWFCModel = (
 
         const i = x + y * width
         for (let t = 0; t < T; t++) {
+          const cellWaveStart = i * T + t
           for (let d = 0; d < 4; d++) {
-            const compIdx = getCompatibleIndex(i, t, d)
+            let compIdx = cellWaveStart * 4 + d
             if (compatible[compIdx] === 0) {
-              // This pattern has no valid neighbors in this direction
-              pendingBans[pendingBanCount * 2] = i
-              pendingBans[pendingBanCount * 2 + 1] = t
-              pendingBanCount++
+              ban(i, t)
               break  // No need to check other directions for this pattern
             }
           }
         }
       }
-
-      // PHASE 4: Propagate constraints
-      propagate()
     }
+    // PHASE 4: Propagate constraints
+    propagate()
   }
+
   const getChanges = () => {
     const slice = changedCells.slice(0, changedCount)
     // Clear dirty flags
