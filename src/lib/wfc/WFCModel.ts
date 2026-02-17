@@ -19,7 +19,6 @@ export type WFCModelOptions = {
   weights: Float64Array,
   propagator: Propagator,
   initialGround: number,
-  repairRadius: number,
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,
@@ -36,7 +35,6 @@ export const makeWFCModel = (
     periodicOutput,
     weights,
     initialGround,
-    repairRadius,
     startCoordBias,
     startCoordX,
     startCoordY,
@@ -106,10 +104,6 @@ export const makeWFCModel = (
   // A LIFO stack used for the propagation of constraints.
   // Stores [cellIndex, patternIndex] pairs that were recently banned.
   const pendingBans = new Int32Array(N_STATES * 2)
-
-  // Tracks how many times a specific cell has been reset by the repair (clearRadius) logic.
-  // Useful for identifying "problem areas" in a generation.
-  const repairCounts = new Uint32Array(N_CELLS)
 
   // Current pointer for the propagation stack.
   let pendingBanCount = 0
@@ -252,7 +246,6 @@ export const makeWFCModel = (
       sumsOfWeightLogWeights[i] = sumOfWeightLogWeightsTotal
       entropies[i] = startingEntropy
       observed[i] = -1
-      repairCounts[i] = 0
     }
 
     generationComplete = false
@@ -446,10 +439,6 @@ export const makeWFCModel = (
     const result = observe(rng)
 
     if (typeof result === 'number') {
-      const x = result % width
-      const y = (result / width) | 0
-      clearRadius(x, y, repairRadius)
-      refreshUncollapsed()
       return IterationResult.REPAIR
     }
 
@@ -467,112 +456,6 @@ export const makeWFCModel = (
       return IterationResult.SUCCESS
     }
     return IterationResult.STEP
-  }
-
-  const clearRadius = (targetX: number, targetY: number, radius: number) => {
-    // PHASE 1: Reset wave states in the cleared region
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        let x = targetX + dx
-        let y = targetY + dy
-        if (periodicOutput) {
-          x = (x + width) % width
-          y = (y + height) % height
-        } else if (x < 0 || y < 0 || x >= width || y >= height) continue
-
-        const i = x + y * width
-        repairCounts[i]!++
-        observed[i] = -1
-        sumsOfOnes[i] = T
-        sumsOfWeights[i] = sumOfWeightsTotal
-        sumsOfWeightLogWeights[i] = sumOfWeightLogWeightsTotal
-        entropies[i] = startingEntropy
-
-        // Reset all patterns to valid
-        for (let t = 0; t < T; t++) {
-          const waveIdx = getWaveIndex(i, t)
-          wave[waveIdx] = 1
-        }
-      }
-    }
-
-    // PHASE 2: Recalculate compatible counts based on actual neighbor states
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        let x = targetX + dx
-        let y = targetY + dy
-        if (periodicOutput) {
-          x = (x + width) % width
-          y = (y + height) % height
-        } else if (x < 0 || y < 0 || x >= width || y >= height) continue
-
-        const i = x + y * width
-
-        // For each pattern at this cell
-        for (let t = 0; t < T; t++) {
-          // The "Base" wave index for this pattern
-          const cellWaveStart = i * T + t
-          // For each direction
-          for (let d = 0; d < 4; d++) {
-            let nx = x + DX[d]!
-            let ny = y + DY[d]!
-
-            if (periodicOutput) {
-              nx = (nx + width) % width
-              ny = (ny + height) % height
-            } else if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
-              // At boundary: use default (maximum possible)
-              let compIdx = cellWaveStart * 4 + d
-              compatible[compIdx] = propagator.getCompatibleCount(t, d)
-
-              continue
-            }
-            const ni = nx + ny * width
-            let count = 0
-
-            const validNeighborIds = propagator.getValidPatternIds(t, d)
-            for (let l = 0; l < validNeighborIds.length; l++) {
-              const neighborPattern = validNeighborIds[l]!
-
-              const waveIdx = getWaveIndex(ni, neighborPattern)
-              // Only count it if the neighbor cell actually allows this pattern
-              if (wave[waveIdx] === 1) {
-                count++
-              }
-            }
-            let compIdx = cellWaveStart * 4 + d
-            compatible[compIdx] = count
-          }
-        }
-      }
-    }
-
-    // PHASE 3: Ban patterns that have no valid neighbors
-    pendingBanCount = 0
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        let x = targetX + dx
-        let y = targetY + dy
-        if (periodicOutput) {
-          x = (x + width) % width
-          y = (y + height) % height
-        } else if (x < 0 || y < 0 || x >= width || y >= height) continue
-
-        const i = x + y * width
-        for (let t = 0; t < T; t++) {
-          const cellWaveStart = i * T + t
-          for (let d = 0; d < 4; d++) {
-            let compIdx = cellWaveStart * 4 + d
-            if (compatible[compIdx] === 0) {
-              ban(i, t)
-              break  // No need to check other directions for this pattern
-            }
-          }
-        }
-      }
-    }
-    // PHASE 4: Propagate constraints
-    propagate()
   }
 
   const getChanges = () => {
@@ -600,7 +483,6 @@ export const makeWFCModel = (
     getObserved: () => observed,
     getWave: () => wave,
     onBoundary,
-    getRepairCounts: () => repairCounts,
     getFilledCount,
     getTotalCells: () => N_CELLS,
     filledPercent: () => getFilledCount() / N_CELLS,
