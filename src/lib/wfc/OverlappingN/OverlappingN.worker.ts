@@ -3,15 +3,12 @@ import { IterationResult } from '../WFCModel.ts'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import { makeOverlappingModelFromImageData, type OverlappingNOptions } from './OverlappingN.ts'
 
-export const WFC_WORKER_ID = 'WFC_WORKER'
-
 export enum WorkerMsg {
   ATTEMPT_START = 'ATTEMPT_START',
-  ATTEMPT_END = 'ATTEMPT_END',
+  ATTEMPT_PREVIEW = 'ATTEMPT_PREVIEW',
+  ATTEMPT_SUCCESS = 'ATTEMPT_SUCCESS',
   ATTEMPT_FAILURE = 'ATTEMPT_FAILURE',
-  FAILURE = 'FAILURE',
-  SUCCESS = 'SUCCESS',
-  PREVIEW = 'PREVIEW',
+  ATTEMPT_FINAL_FAILURE = 'ATTEMPT_FINAL_FAILURE',
   ERROR = 'ERROR',
 }
 
@@ -19,42 +16,27 @@ export type MsgAttemptStart = {
   type: WorkerMsg.ATTEMPT_START
   attempt: number
 }
-export type MsgAttemptEnd = {
-  type: WorkerMsg.ATTEMPT_END
+
+type Msg<T extends WorkerMsg> = {
+  type: T
   attempt: number
   elapsedTime: number
-  filledPercent: number,
-}
-export type MsgSuccess = {
-  type: WorkerMsg.SUCCESS
-  attempt: number
+  filledPercent: number
   repairs: number
   result: Uint8ClampedArray<ArrayBuffer>
+}
+
+export type MsgAttemptPreview = Msg<WorkerMsg.ATTEMPT_PREVIEW>
+export type MsgAttemptFailure = Msg<WorkerMsg.ATTEMPT_FAILURE>
+export type MsgAttemptSuccess = Msg<WorkerMsg.ATTEMPT_SUCCESS> & {
   totalElapsedTime: number
-}
-export type MsgPreview = {
-  type: WorkerMsg.PREVIEW
-  attempt: number
-  result: Uint8ClampedArray<ArrayBuffer>
-  filledPercent: number
-  repairs: number
-}
-export type MsgAttemptFailure = {
-  type: WorkerMsg.ATTEMPT_FAILURE
-  attempt: number
-  repairs: number
-  result: Uint8ClampedArray<ArrayBuffer>
-  elapsedTime: number
-  filledPercent: number
-}
-export type MsgFailure = {
-  type: WorkerMsg.FAILURE
-  totalAttempts: number
   totalRepairs: number
-  totalElapsedTime: number
-  result: Uint8ClampedArray<ArrayBuffer>
-  filledPercent: number
 }
+export type MsgAttemptFinalFailure = Msg<WorkerMsg.ATTEMPT_FINAL_FAILURE> & {
+  totalElapsedTime: number
+  totalRepairs: number
+}
+
 export type MsgError = {
   type: WorkerMsg.ERROR
   message: string
@@ -62,11 +44,10 @@ export type MsgError = {
 
 export type WorkerResponse =
   | MsgAttemptStart
-  | MsgAttemptEnd
+  | MsgAttemptPreview
+  | MsgAttemptSuccess
   | MsgAttemptFailure
-  | MsgSuccess
-  | MsgPreview
-  | MsgFailure
+  | MsgAttemptFinalFailure
   | MsgError
 
 export type OverlappingNWorkerOptions = {
@@ -80,17 +61,22 @@ export type OverlappingNWorkerOptions = {
     contradictionColor: number,
   }
 }
+
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
+  const postMsg = <T extends WorkerMsg>(
+    type: T,
+    extra: Omit<Extract<WorkerResponse, { type: T }>, 'type'>,
+    transfer: Transferable[] = [],
+  ) => {
+    ctx.postMessage({ type, ...extra }, transfer)
+  }
   try {
-    if (e.data.id !== WFC_WORKER_ID) return
     const startedAt = performance.now()
-
     const { imageData, settings } = e.data
-    const { maxRepairsPerAttempt, seed, maxAttempts, previewInterval } = settings
     const { model, palette, avgColor } = makeOverlappingModelFromImageData(imageData, settings)
+    const mulberry32 = makeMulberry32(settings.seed)
 
-    // 3. Init Rendering Buffer (Bridging Palette + Patterns)
     const buffer = makeWFCPixelBuffer({
       palette,
       T: model.T,
@@ -103,116 +89,92 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
       contradictionColor: settings.contradictionColor,
     })
 
-    const mulberry32 = makeMulberry32(seed)
-    let totalRepairsAcrossAllTries = 0
+    const syncVisuals = () => buffer.updateCells(model.getWave(), model.getChanges())
 
-    for (let i = 0; i < maxAttempts; i++) {
-      const currentAttempt = i + 1
-      let repairsInThisAttempt = 0
+    let totalRepairs = 0
+
+    for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
+      const attemptStartedAt = performance.now()
+      let repairsInAttempt = 0
       let stepCount = 0
-
-      ctx.postMessage({ type: WorkerMsg.ATTEMPT_START, attempt: currentAttempt })
 
       model.clear()
       buffer.clear()
-      // Initial sync for the blank state
-      buffer.updateCells(model.getWave(), model.getChanges())
+      syncVisuals()
+      postMsg(WorkerMsg.ATTEMPT_START, { attempt })
 
-      let attemptFinished = false
-      const startTime = performance.now()
-      let maxFilledPercent = 0
+      let attemptActive = true
 
-      while (!attemptFinished) {
-
-        const result = model.singleIteration(mulberry32)
-
-        // 4. Update the visual buffer only for changed cells
-        buffer.updateCells(model.getWave(), model.getChanges())
-
-        if (result !== IterationResult.REPAIR) {
-          const currentFilled = model.filledPercent()
-          if (currentFilled > maxFilledPercent) {
-            maxFilledPercent = currentFilled
-          }
-        }
-
-        if (result === IterationResult.REPAIR) {
-          repairsInThisAttempt++
-          totalRepairsAcrossAllTries++
-
-          if (repairsInThisAttempt >= maxRepairsPerAttempt) {
-            const currentData = buffer.getVisualBuffer()
-            const msg: MsgAttemptFailure = {
-              type: WorkerMsg.ATTEMPT_FAILURE,
-              attempt: currentAttempt,
-              repairs: repairsInThisAttempt,
-              result: currentData,
-              elapsedTime: performance.now() - startTime,
-              filledPercent: maxFilledPercent,
-            }
-
-            ctx.postMessage(msg)
-            attemptFinished = true
-          }
-          continue
-        }
+      while (attemptActive) {
+        stepCount++
+        const result = model.singleIterationWithSnapShots(mulberry32)
+        syncVisuals()
 
         if (result === IterationResult.SUCCESS) {
-          const finalImage = buffer.getVisualBuffer()
-          const msg: MsgSuccess = {
-            type: WorkerMsg.SUCCESS,
-            attempt: currentAttempt,
-            repairs: repairsInThisAttempt,
-            result: finalImage,
+          const img = buffer.getVisualBuffer()
+          postMsg(WorkerMsg.ATTEMPT_SUCCESS, {
+            attempt,
+            elapsedTime: performance.now() - attemptStartedAt,
+            filledPercent: 1,
+            repairs: repairsInAttempt,
+            result: img,
             totalElapsedTime: performance.now() - startedAt,
-          }
-          ctx.postMessage(msg, [finalImage.buffer])
+            totalRepairs,
+          }, [img.buffer])
           return
         }
 
-        if (result === IterationResult.STEP) {
-          stepCount++
-          if (stepCount % previewInterval === 0) {
-            const previewData = buffer.getVisualBuffer()
-            const msg: MsgPreview = {
-              type: WorkerMsg.PREVIEW,
-              attempt: currentAttempt,
-              result: previewData,
+        if (result === IterationResult.REPAIR) {
+          repairsInAttempt++
+          totalRepairs++
+        }
+
+        const isLastRepair = repairsInAttempt >= settings.maxRepairsPerAttempt
+        const isFailure = isLastRepair || result === IterationResult.FAIL
+        const isPreviewTime = stepCount % settings.previewInterval === 0
+
+        if (isFailure) {
+          let isLastAttempt = attempt === settings.maxAttempts
+
+          if (isLastAttempt) {
+            const finalImg = buffer.getVisualBuffer()
+            postMsg(WorkerMsg.ATTEMPT_FINAL_FAILURE, {
+              attempt,
+              elapsedTime: performance.now() - attemptStartedAt,
               filledPercent: model.filledPercent(),
-              repairs: repairsInThisAttempt,
-            }
-            // Use transferable objects for high performance
-            ctx.postMessage(msg)
+              repairs: repairsInAttempt,
+              result: finalImg,
+              totalElapsedTime: performance.now() - startedAt,
+              totalRepairs,
+            }, [finalImg.buffer])
+            return // Stop everything, we are done.
           }
+
+          const img = buffer.getVisualBuffer()
+          postMsg(WorkerMsg.ATTEMPT_FAILURE, {
+            attempt,
+            elapsedTime: performance.now() - attemptStartedAt,
+            filledPercent: model.filledPercent(),
+            repairs: repairsInAttempt,
+            result: img,
+          }, [img.buffer])
+          attemptActive = false
+
+        } else if (isPreviewTime) {
+          const img = buffer.getVisualBuffer()
+          postMsg(WorkerMsg.ATTEMPT_PREVIEW, {
+            attempt,
+            elapsedTime: performance.now() - startedAt,
+            filledPercent: model.filledPercent(),
+            result: img,
+            repairs: repairsInAttempt,
+          }, [img.buffer])
         }
       }
-
-      const msg: MsgAttemptEnd = {
-        type: WorkerMsg.ATTEMPT_END,
-        attempt: currentAttempt,
-        elapsedTime: performance.now() - startTime,
-        filledPercent: model.filledPercent(),
-      }
-      ctx.postMessage(msg)
     }
-
-    // 5. Final Failure (Ran out of tries)
-    const finalImage = buffer.getVisualBuffer()
-    const msg: MsgFailure = {
-      type: WorkerMsg.FAILURE,
-      totalAttempts: maxAttempts,
-      totalRepairs: totalRepairsAcrossAllTries,
-      result: finalImage,
-      totalElapsedTime: performance.now() - startedAt,
-      filledPercent: model.filledPercent(),
-    }
-    ctx.postMessage(msg, [finalImage.buffer])
-
   } catch (err) {
-    const msg: MsgError = {
-      type: WorkerMsg.ERROR,
+    postMsg(WorkerMsg.ERROR, {
       message: err instanceof Error ? err.message : String(err),
-    }
-    ctx.postMessage(msg)
+    })
   }
 }

@@ -1,12 +1,9 @@
 import { type Reactive, ref, shallowRef, toValue } from 'vue'
 import { makeImageDataAnalyzer } from '../ImageDataAnalyzer.ts'
 import {
-  type MsgAttemptFailure,
-  type MsgAttemptStart,
-  type MsgPreview,
-  type MsgSuccess,
+  type MsgAttemptFailure, type MsgAttemptPreview,
+  type MsgAttemptStart, type MsgAttemptSuccess,
   type OverlappingNWorkerOptions,
-  WFC_WORKER_ID,
   WorkerMsg,
   type WorkerResponse,
 } from './OverlappingN.worker.ts'
@@ -15,10 +12,10 @@ import { makeOverlappingNAttempt, resetOverlappingNAttempt } from './Overlapping
 export type OverlappingNControllerOptions = {
   settings: Reactive<OverlappingNWorkerOptions['settings']>,
   onBeforeRun?(): void,
-  onPreview?(response: MsgPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
+  onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
   onAttemptStart?(response: MsgAttemptStart): void,
   onAttemptFailure?(response: MsgAttemptFailure): void,
-  onSuccess?(response: MsgSuccess, pixels: Uint8ClampedArray<ArrayBuffer>): void,
+  onSuccess?(response: MsgAttemptSuccess, pixels: Uint8ClampedArray<ArrayBuffer>): void,
 }
 
 export function makeOverlappingNController(
@@ -43,8 +40,45 @@ export function makeOverlappingNController(
 
   const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings)
 
-  function run() {
 
+  const handlers: Partial<Record<WorkerMsg, (data: any) => void>> = {
+    [WorkerMsg.ATTEMPT_START]: (data: MsgAttemptStart) => {
+      resetOverlappingNAttempt(currentAttempt, data.attempt)
+      onAttemptStart?.(data)
+    },
+
+    [WorkerMsg.ATTEMPT_PREVIEW]: (data: MsgAttemptPreview) => {
+      const pixels = new Uint8ClampedArray(data.result.buffer)
+      currentAttempt.filledPercent = data.filledPercent
+      currentAttempt.repairs = data.repairs
+      onPreview?.(data, pixels)
+    },
+
+    [WorkerMsg.ATTEMPT_SUCCESS]: (data: MsgAttemptSuccess) => {
+      const pixels = new Uint8ClampedArray(data.result.buffer)
+      onSuccess?.(data, pixels)
+      Object.assign(finalAttempt, currentAttempt)
+      finalAttempt.filledPercent = 1
+      hasResult.value = true
+      completeWorker()
+    },
+
+    [WorkerMsg.ATTEMPT_FAILURE]: (data: MsgAttemptFailure) => {
+      if (data.result.byteLength > 0) onAttemptFailure?.(data)
+    },
+
+    [WorkerMsg.ATTEMPT_FINAL_FAILURE]: () => {
+      hasResult.value = false
+      completeWorker()
+    },
+
+    [WorkerMsg.ERROR]: (data: any) => {
+      hasResult.value = false
+      errorMessage.value = { title: 'Worker Error', message: data.message }
+      completeWorker()
+    },
+  }
+  function run() {
     onBeforeRun?.()
 
     errorMessage.value = null
@@ -56,73 +90,19 @@ export function makeOverlappingNController(
     terminateWorker()
     running.value = true
 
-    // Initialize Worker
     worker = new Worker(new URL('./OverlappingN.worker.ts', import.meta.url), {
       type: 'module',
     })
 
-    // Send data to worker
     worker.postMessage({
-      id: WFC_WORKER_ID,
       imageData: imageDataSource.value,
       settings: { ...toValue(settings) },
     })
 
     worker.onmessage = (e) => {
       const response = e.data as WorkerResponse
-      const { type } = response
-
+      handlers[response.type]?.(response)
       currentAttempt.elapsedTime = performance.now() - currentAttempt.startedAt
-
-      if (type === WorkerMsg.ATTEMPT_START) {
-        const { attempt } = response
-        resetOverlappingNAttempt(currentAttempt, attempt)
-        onAttemptStart?.(response)
-      }
-
-      if (type === WorkerMsg.ATTEMPT_END) {
-
-      }
-
-      if (type === WorkerMsg.PREVIEW) {
-        const { result, filledPercent, repairs } = response
-        const pixels = new Uint8ClampedArray(result.buffer)
-        onPreview?.(response, pixels)
-
-        currentAttempt.filledPercent = filledPercent
-        currentAttempt.repairs = repairs
-      }
-
-      if (type === WorkerMsg.ATTEMPT_FAILURE) {
-        const { result, attempt } = response
-        if (result.byteLength === 0) {
-          console.error(`Attempt ${attempt} received an empty buffer!`)
-          return
-        }
-
-        onAttemptFailure?.(response)
-      }
-
-      if (type === WorkerMsg.SUCCESS) {
-        const { result } = response
-        const pixels = new Uint8ClampedArray(result.buffer)
-        onSuccess?.(response, pixels)
-        completeWorker()
-        Object.assign(finalAttempt, currentAttempt)
-        finalAttempt.filledPercent = 1
-      }
-
-      if (type === WorkerMsg.FAILURE) {
-        hasResult.value = false
-        completeWorker()
-      }
-
-      if (type === WorkerMsg.ERROR) {
-        const { message } = response
-        hasResult.value = false
-        completeWorker()
-        throw new Error(message)
-      }
     }
   }
 

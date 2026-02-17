@@ -7,7 +7,8 @@ export type RNG = () => number
 export enum IterationResult {
   REPAIR = 'REPAIR',
   SUCCESS = 'SUCCESS',
-  STEP = 'STEP'
+  STEP = 'STEP',
+  FAIL = 'FAIL'
 }
 
 export type WFCModelOptions = {
@@ -232,6 +233,8 @@ export const makeWFCModel = (
   }
 
   const clear = () => {
+    history = []
+    lastCheckpointPercent = 0
     pendingBanCount = 0
     for (let i = 0; i < N_CELLS; i++) {
       for (let t = 0; t < T; t++) {
@@ -319,10 +322,19 @@ export const makeWFCModel = (
           if (compatible[compIdx]! <= 0) continue
 
           compatible[compIdx]!--
-          if (compatible[compIdx] === 0) ban(nCellIndex, nPatternId)
+          if (compatible[compIdx] === 0) {
+            ban(nCellIndex, nPatternId)
+            // CIRCUIT BREAKER: If this ban caused a contradiction, abort
+            if (sumsOfOnes[nCellIndex] === 0) {
+              // ABORT EVERYTHING on this stack
+              pendingBanCount = 0
+              return false
+            }
+          }
         }
       }
     }
+    return true
   }
 
   enum ObserveTargetResult {
@@ -435,14 +447,70 @@ export const makeWFCModel = (
     return null
   }
 
+  let history: WFCSnapshot[] = []
+  let lastCheckpointPercent = 0
+  let lastIterationHealthy = true
+  let failedAttempts = 0
+
+  const singleIterationWithSnapShots = (
+    rng: RNG,
+    snapshotIntervalPercent = 0.05,
+    maxSnapshots = 10,
+  ): IterationResult => {
+    const progress = filledPercent()
+
+    if (progress > lastCheckpointPercent + snapshotIntervalPercent) {
+      history.push(createSnapshot())
+      lastCheckpointPercent = progress
+      if (history.length > maxSnapshots) history.shift()
+    }
+    const result = singleIteration(rng)
+
+    if (!lastIterationHealthy || result === IterationResult.REPAIR) {
+      failedAttempts++
+
+      if (history.length > 0) {
+        // ESCALATION: If we fail repeatedly, pop extra snapshots to escape the "dead zone"
+        // 1st fail: go back 1 step
+        // 3rd fail: go back 2 steps
+        // 5th fail: go back 3 steps
+        const rewindDepth = Math.min(history.length, Math.ceil(failedAttempts / 2))
+
+        let latest: WFCSnapshot | undefined
+        for (let i = 0; i < rewindDepth; i++) {
+          latest = history.pop()
+        }
+
+        if (latest) {
+          restoreSnapshot(latest)
+          lastCheckpointPercent = filledPercent()
+          lastIterationHealthy = true
+          return IterationResult.REPAIR
+        }
+      }
+
+      // If no history left or escalation exhausted the stack
+      console.error('Unsolvable state reached. Hard reset.')
+      clear()
+      failedAttempts = 0
+      return IterationResult.FAIL
+    }
+
+    failedAttempts = 0
+
+    if (result === IterationResult.SUCCESS) return IterationResult.SUCCESS
+    return IterationResult.STEP
+  }
+
   const singleIteration = (rng: RNG): IterationResult => {
     const result = observe(rng)
 
     if (typeof result === 'number') {
+      lastIterationHealthy = false
       return IterationResult.REPAIR
     }
 
-    propagate()
+    lastIterationHealthy = propagate()
 
     let i = 0
     while (i < uncollapsedCount) {
@@ -476,8 +544,44 @@ export const makeWFCModel = (
     return collapsed
   }
 
+  const filledPercent = () => getFilledCount() / N_CELLS
+
+  function createSnapshot(): WFCSnapshot {
+    return {
+      wave: new Uint8Array(wave),
+      compatible: new Int32Array(compatible),
+      sumsOfOnes: new Int32Array(sumsOfOnes),
+      sumsOfWeights: new Float64Array(sumsOfWeights),
+      sumsOfWeightLogWeights: new Float64Array(sumsOfWeightLogWeights),
+      entropies: new Float64Array(entropies),
+      observed: new Int32Array(observed),
+      uncollapsedIndices: new Int32Array(uncollapsedIndices),
+      uncollapsedCount: uncollapsedCount,
+    }
+  }
+
+  function restoreSnapshot(s: WFCSnapshot) {
+    wave.set(s.wave)
+    compatible.set(s.compatible)
+    sumsOfOnes.set(s.sumsOfOnes)
+    sumsOfWeights.set(s.sumsOfWeights)
+    sumsOfWeightLogWeights.set(s.sumsOfWeightLogWeights)
+    entropies.set(s.entropies)
+    observed.set(s.observed)
+    uncollapsedIndices.set(s.uncollapsedIndices)
+    uncollapsedCount = s.uncollapsedCount
+    pendingBanCount = 0
+    for (let i = 0; i < N_CELLS; i++) {
+      if (dirtyFlags[i] === 0) {
+        dirtyFlags[i] = 1
+        changedCells[changedCount++] = i
+      }
+    }
+  }
+
   return {
     singleIteration,
+    singleIterationWithSnapShots,
     clear,
     isGenerationComplete: () => generationComplete,
     getObserved: () => observed,
@@ -485,7 +589,7 @@ export const makeWFCModel = (
     onBoundary,
     getFilledCount,
     getTotalCells: () => N_CELLS,
-    filledPercent: () => getFilledCount() / N_CELLS,
+    filledPercent,
     getChanges,
     T,
     width,
@@ -494,5 +598,20 @@ export const makeWFCModel = (
     propagator,
     ban,
     propagate,
+    createSnapshot,
+    restoreSnapshot,
   }
 }
+
+export type WFCSnapshot = {
+  wave: Uint8Array,
+  compatible: Int32Array,
+  sumsOfOnes: Int32Array,
+  sumsOfWeights: Float64Array,
+  sumsOfWeightLogWeights: Float64Array,
+  entropies: Float64Array,
+  observed: Int32Array,
+  uncollapsedIndices: Int32Array,
+  uncollapsedCount: number,
+}
+

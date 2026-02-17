@@ -76,13 +76,6 @@ onMounted(() => {
   })
   addInfo(repairsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
 
-  const repairRadius = settingsFolder.addBinding(store.settings, 'repairRadius', {
-    min: 0,
-    step: 1,
-    label: 'repair radius',
-  })
-  addInfo(repairRadius, 'Radius of pixels that will be removed around the contradiction')
-
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
     min: 0,
     step: 1,
