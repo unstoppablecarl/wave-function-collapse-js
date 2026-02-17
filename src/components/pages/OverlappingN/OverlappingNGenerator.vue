@@ -34,6 +34,9 @@ const controller = makeOverlappingNController({
       }
     })
   },
+  onAttemptStart() {
+    clearCanvas()
+  },
   onAttemptFailure(response) {
     const { attempt, repairs, elapsedTime, filledPercent } = response
     attempts.value.unshift({
@@ -80,8 +83,15 @@ function updateCanvas() {
   pendingImageData = null
 }
 
+function clearCanvas() {
+  let canvas = resultCanvasRef.value!.canvas!
+  const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+}
+
 function draw(data: ImageDataArray) {
-  const ctx = resultCanvasRef.value!.canvas!.getContext('2d')!
+  let canvas = resultCanvasRef.value!.canvas
+  const ctx = canvas!.getContext('2d')!
   const imgData = new ImageData(data, settings.value.width, settings.value.height)
   ctx.putImageData(imgData, 0, 0)
   hasResult.value = true

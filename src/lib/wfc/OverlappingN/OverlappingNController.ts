@@ -2,6 +2,7 @@ import { type Reactive, ref, shallowRef, toValue } from 'vue'
 import { makeImageDataAnalyzer } from '../ImageDataAnalyzer.ts'
 import {
   type MsgAttemptFailure,
+  type MsgAttemptStart,
   type MsgPreview,
   type MsgSuccess,
   type OverlappingNWorkerOptions,
@@ -12,10 +13,10 @@ import {
 import { makeOverlappingNAttempt, resetOverlappingNAttempt } from './OverlappingNAttempt.ts'
 
 export type OverlappingNControllerOptions = {
-
   settings: Reactive<OverlappingNWorkerOptions['settings']>,
   onBeforeRun?(): void,
   onPreview?(response: MsgPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
+  onAttemptStart?(response: MsgAttemptStart): void,
   onAttemptFailure?(response: MsgAttemptFailure): void,
   onSuccess?(response: MsgSuccess, pixels: Uint8ClampedArray<ArrayBuffer>): void,
 }
@@ -26,6 +27,7 @@ export function makeOverlappingNController(
     onPreview,
     onAttemptFailure,
     onSuccess,
+    onAttemptStart,
     onBeforeRun,
   }: OverlappingNControllerOptions,
 ) {
@@ -75,6 +77,7 @@ export function makeOverlappingNController(
       if (type === WorkerMsg.ATTEMPT_START) {
         const { attempt } = response
         resetOverlappingNAttempt(currentAttempt, attempt)
+        onAttemptStart?.(response)
       }
 
       if (type === WorkerMsg.ATTEMPT_END) {

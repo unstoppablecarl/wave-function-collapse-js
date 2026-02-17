@@ -25,6 +25,7 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     symmetry: 2,
     seed: 1,
     maxAttempts: 10,
+    contradictionColor: 0xff0055,
     maxRepairsPerAttempt: 10,
     previewInterval: 100,
     repairRadius: 2,

@@ -40,6 +40,12 @@ onMounted(() => {
     step: 1,
   })
 
+  const contradictionColor = displayFolder.addBinding(store.settings, 'contradictionColor', {
+    view: 'color',
+    label: 'cont. color',
+  })
+  addInfo(contradictionColor, 'Color of contradiction error pixels')
+
   const settingsFolder = pane.addFolder({
     title: 'Settings',
   })
@@ -68,7 +74,7 @@ onMounted(() => {
     step: 1,
     label: 'max repairs',
   })
-  addInfo(repairsPerAttempt, 'When encountering a contradiction, pixels will be cleared and filled again. This limits the number of times an attempt can repair before failing.')
+  addInfo(repairsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
 
   const repairRadius = settingsFolder.addBinding(store.settings, 'repairRadius', {
     min: 0,

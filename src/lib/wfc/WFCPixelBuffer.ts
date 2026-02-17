@@ -6,7 +6,8 @@ export type WFCPixelBufferOptions = {
   height: number
   patterns: Int32Array
   palette: Uint8Array
-  bgColor: number
+  bgColor: number,
+  contradictionColor?: number,
 }
 
 export const makeWFCPixelBuffer = (
@@ -19,6 +20,7 @@ export const makeWFCPixelBuffer = (
     patterns,
     palette,
     bgColor,
+    contradictionColor = 0xFFFF00FF,
   }: WFCPixelBufferOptions) => {
   const pixelBuffer = new Uint32Array(width * height)
 
@@ -50,7 +52,7 @@ export const makeWFCPixelBuffer = (
       }
 
       if (totalW === 0) {
-        pixelBuffer[i] = 0xFF2D2828
+        pixelBuffer[i] = contradictionColor
       } else {
         const invW = 1 / totalW
 

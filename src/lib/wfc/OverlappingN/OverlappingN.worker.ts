@@ -1,7 +1,7 @@
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { IterationResult } from '../WFCModel.ts'
-import { makeOverlappingModelFromImageData, type OverlappingNOptions } from './OverlappingN.ts'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
+import { makeOverlappingModelFromImageData, type OverlappingNOptions } from './OverlappingN.ts'
 
 export const WFC_WORKER_ID = 'WFC_WORKER'
 
@@ -77,6 +77,7 @@ export type OverlappingNWorkerOptions = {
     maxAttempts: number,
     maxRepairsPerAttempt: number,
     previewInterval: number,
+    contradictionColor: number,
   }
 }
 const ctx: DedicatedWorkerGlobalScope = self as any
@@ -99,6 +100,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
       weights: model.weights,
       patterns: model.patterns,
       bgColor: avgColor,
+      contradictionColor: settings.contradictionColor,
     })
 
     const mulberry32 = makeMulberry32(seed)
