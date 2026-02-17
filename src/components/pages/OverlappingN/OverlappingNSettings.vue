@@ -68,13 +68,6 @@ onMounted(() => {
     step: 1,
   })
 
-  const revertsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRevertsPerAttempt', {
-    min: 0,
-    step: 1,
-    label: 'max reverts',
-  })
-  addInfo(revertsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
-
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
     min: 0,
     step: 1,
@@ -89,21 +82,19 @@ onMounted(() => {
   })
   addInfo(periodicOutput, 'Outputs a seamless texture')
 
-  settingsFolder.addBinding(store.settings, 'width', {
-    min: 0,
-    step: 1,
-  })
-
-  settingsFolder.addBinding(store.settings, 'height', {
-    min: 0,
-    step: 1,
-  })
-
   settingsFolder.addBinding(store.settings, 'maxAttempts', {
     min: 0,
     step: 1,
     label: 'max attempts',
   })
+
+  const revertsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRevertsPerAttempt', {
+    min: 0,
+    step: 1,
+    label: 'max reverts',
+  })
+  addInfo(revertsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
+
 
   settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
@@ -140,6 +131,20 @@ onMounted(() => {
     label: 'start bias',
   })
   addInfo(startBias, 'Bias toward start')
+
+  const outputFolder = pane.addFolder({
+    title: 'output',
+  })
+
+  outputFolder.addBinding(store.settings, 'width', {
+    min: 0,
+    step: 1,
+  })
+
+  outputFolder.addBinding(store.settings, 'height', {
+    min: 0,
+    step: 1,
+  })
 
 })
 </script>
