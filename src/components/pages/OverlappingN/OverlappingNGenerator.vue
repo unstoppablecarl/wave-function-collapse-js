@@ -38,11 +38,11 @@ const controller = makeOverlappingNController({
     clearCanvas()
   },
   onAttemptFailure(response) {
-    const { attempt, repairs, elapsedTime, filledPercent } = response
+    const { attempt, reverts, elapsedTime, filledPercent } = response
     attempts.value.unshift({
       encoded: resultCanvasRef.value!.canvas?.toDataURL?.() ?? '',
       attempt,
-      repairs,
+      reverts,
       elapsedTime,
       filledPercent,
     })
@@ -201,7 +201,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
           <div>Attempt: {{ item.attempt }}</div>
           <div>Time: {{ prettyMilliseconds(item.elapsedTime) }}</div>
           <div>Progress: {{ formatPercent(item.filledPercent) }}</div>
-          <div v-if="item.repairs">Repairs: {{ item.repairs }}</div>
+          <div v-if="item.reverts">Reverts: {{ item.reverts }}</div>
         </div>
         <PixelImg :src="item.encoded" :scale="scale" />
       </div>

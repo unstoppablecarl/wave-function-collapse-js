@@ -50,7 +50,7 @@ export function makeOverlappingNController(
     [WorkerMsg.ATTEMPT_PREVIEW]: (data: MsgAttemptPreview) => {
       const pixels = new Uint8ClampedArray(data.result.buffer)
       currentAttempt.filledPercent = data.filledPercent
-      currentAttempt.repairs = data.repairs
+      currentAttempt.reverts = data.reverts
       onPreview?.(data, pixels)
     },
 

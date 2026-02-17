@@ -68,12 +68,12 @@ onMounted(() => {
     step: 1,
   })
 
-  const repairsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRepairsPerAttempt', {
+  const revertsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRevertsPerAttempt', {
     min: 0,
     step: 1,
-    label: 'max repairs',
+    label: 'max reverts',
   })
-  addInfo(repairsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
+  addInfo(revertsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
 
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
     min: 0,

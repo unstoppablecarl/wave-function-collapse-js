@@ -22,7 +22,7 @@ type Msg<T extends WorkerMsg> = {
   attempt: number
   elapsedTime: number
   filledPercent: number
-  repairs: number
+  reverts: number
   result: Uint8ClampedArray<ArrayBuffer>
 }
 
@@ -30,11 +30,11 @@ export type MsgAttemptPreview = Msg<WorkerMsg.ATTEMPT_PREVIEW>
 export type MsgAttemptFailure = Msg<WorkerMsg.ATTEMPT_FAILURE>
 export type MsgAttemptSuccess = Msg<WorkerMsg.ATTEMPT_SUCCESS> & {
   totalElapsedTime: number
-  totalRepairs: number
+  totalReverts: number
 }
 export type MsgAttemptFinalFailure = Msg<WorkerMsg.ATTEMPT_FINAL_FAILURE> & {
   totalElapsedTime: number
-  totalRepairs: number
+  totalReverts: number
 }
 
 export type MsgError = {
@@ -56,7 +56,7 @@ export type OverlappingNWorkerOptions = {
   settings: Omit<OverlappingNOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
     seed: number,
     maxAttempts: number,
-    maxRepairsPerAttempt: number,
+    maxRevertsPerAttempt: number,
     previewInterval: number,
     contradictionColor: number,
   }
@@ -91,11 +91,11 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
 
     const syncVisuals = () => buffer.updateCells(model.getWave(), model.getChanges())
 
-    let totalRepairs = 0
+    let totalReverts = 0
 
     for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
       const attemptStartedAt = performance.now()
-      let repairsInAttempt = 0
+      let revertsInAttempt = 0
       let stepCount = 0
 
       model.clear()
@@ -116,21 +116,21 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             attempt,
             elapsedTime: performance.now() - attemptStartedAt,
             filledPercent: 1,
-            repairs: repairsInAttempt,
+            reverts: revertsInAttempt,
             result: img,
             totalElapsedTime: performance.now() - startedAt,
-            totalRepairs,
+            totalReverts,
           }, [img.buffer])
           return
         }
 
-        if (result === IterationResult.REPAIR) {
-          repairsInAttempt++
-          totalRepairs++
+        if (result === IterationResult.REVERT) {
+          revertsInAttempt++
+          totalReverts++
         }
 
-        const isLastRepair = repairsInAttempt >= settings.maxRepairsPerAttempt
-        const isFailure = isLastRepair || result === IterationResult.FAIL
+        const isLastRevert = revertsInAttempt >= settings.maxRevertsPerAttempt
+        const isFailure = isLastRevert || result === IterationResult.FAIL
         const isPreviewTime = stepCount % settings.previewInterval === 0
 
         if (isFailure) {
@@ -142,10 +142,10 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
               attempt,
               elapsedTime: performance.now() - attemptStartedAt,
               filledPercent: model.filledPercent(),
-              repairs: repairsInAttempt,
+              reverts: revertsInAttempt,
               result: finalImg,
               totalElapsedTime: performance.now() - startedAt,
-              totalRepairs,
+              totalReverts,
             }, [finalImg.buffer])
             return // Stop everything, we are done.
           }
@@ -155,7 +155,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             attempt,
             elapsedTime: performance.now() - attemptStartedAt,
             filledPercent: model.filledPercent(),
-            repairs: repairsInAttempt,
+            reverts: revertsInAttempt,
             result: img,
           }, [img.buffer])
           attemptActive = false
@@ -167,7 +167,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             elapsedTime: performance.now() - startedAt,
             filledPercent: model.filledPercent(),
             result: img,
-            repairs: repairsInAttempt,
+            reverts: revertsInAttempt,
           }, [img.buffer])
         }
       }

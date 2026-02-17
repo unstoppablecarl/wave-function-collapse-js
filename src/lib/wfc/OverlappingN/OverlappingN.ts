@@ -13,7 +13,7 @@ export type OverlappingNOptions = {
   periodicOutput: boolean,
   symmetry: number,
   initialGround: number,
-  repairRadius: number,
+  revertRadius: number,
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,

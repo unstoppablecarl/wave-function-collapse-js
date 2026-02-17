@@ -20,7 +20,7 @@ import { formatPercent } from '../../../lib/util/misc.ts'
       <strong>Elapsed: </strong> {{ prettyMilliseconds(attempt.elapsedTime) }}
     </div>
     <div class="col-3">
-      <strong>Repairs: </strong> {{ attempt.repairs }}
+      <strong>Reverts: </strong> {{ attempt.reverts }}
     </div>
   </div>
 </template>

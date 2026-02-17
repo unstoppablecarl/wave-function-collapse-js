@@ -7,7 +7,7 @@ export type OverlappingNAttempt = Omit<OverlappingNWorkerAttempt, 'startedAt'> &
 export type OverlappingNWorkerAttempt = {
   attempt: number,
   startedAt: number,
-  repairs: number,
+  reverts: number,
   elapsedTime: number,
   filledPercent: number,
 }
@@ -18,7 +18,7 @@ export function makeOverlappingNAttempt() {
     startedAt: 0,
     filledPercent: 0,
     elapsedTime: 0,
-    repairs: 0,
+    reverts: 0,
   })
 }
 
@@ -27,5 +27,5 @@ export function resetOverlappingNAttempt(result: OverlappingNWorkerAttempt, atte
   result.filledPercent = 0
   result.startedAt = performance.now()
   result.elapsedTime = 0
-  result.repairs = 0
+  result.reverts = 0
 }

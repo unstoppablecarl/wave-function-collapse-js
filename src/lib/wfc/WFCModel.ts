@@ -5,7 +5,7 @@ import type { Propagator } from './Propagator.ts'
 export type RNG = () => number
 
 export enum IterationResult {
-  REPAIR = 'REPAIR',
+  REVERT = 'REVERT',
   SUCCESS = 'SUCCESS',
   STEP = 'STEP',
   FAIL = 'FAIL'
@@ -466,7 +466,7 @@ export const makeWFCModel = (
     }
     const result = singleIteration(rng)
 
-    if (!lastIterationHealthy || result === IterationResult.REPAIR) {
+    if (!lastIterationHealthy || result === IterationResult.REVERT) {
       failedAttempts++
 
       if (history.length > 0) {
@@ -485,7 +485,7 @@ export const makeWFCModel = (
           restoreSnapshot(latest)
           lastCheckpointPercent = filledPercent()
           lastIterationHealthy = true
-          return IterationResult.REPAIR
+          return IterationResult.REVERT
         }
       }
 
@@ -507,7 +507,7 @@ export const makeWFCModel = (
 
     if (typeof result === 'number') {
       lastIterationHealthy = false
-      return IterationResult.REPAIR
+      return IterationResult.REVERT
     }
 
     lastIterationHealthy = propagate()
