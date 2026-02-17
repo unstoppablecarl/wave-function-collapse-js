@@ -2,12 +2,11 @@
 import { BindingApi } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
-import { onMounted, useTemplateRef, watchEffect } from 'vue'
+import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
 
 const store = useOverlappingNStore()
-
 const paneRef = useTemplateRef('paneRef')
 
 function addInfo(target: BindingApi, message: string) {
@@ -110,7 +109,7 @@ onMounted(() => {
     options: SYMMETRY_DROPDOWN,
   })
 
-  const symmetryDesc = pane.addBlade({
+  const symmetryDesc = settingsFolder.addBlade({
     view: 'infodump',
     content: 'adfs',
     markdown: false,
@@ -119,6 +118,29 @@ onMounted(() => {
   watchEffect(() => {
     symmetryDesc.element.innerText = store.currentSymmetryDescription
   })
+
+  const startCoordTarget = reactive({ coord: { x: 0.5, y: 0.5 } })
+
+  const startCoord = settingsFolder.addBinding(startCoordTarget, 'coord', {
+    picker: 'inline',
+    label: 'start',
+    x: { min: 0, max: 1 },
+    y: { min: 0, max: 1 },
+  })
+  addInfo(startCoord, 'Position that generation starts')
+
+  watch(startCoordTarget, () => {
+    store.settings.startCoordX = startCoordTarget.coord.x
+    store.settings.startCoordY = startCoordTarget.coord.y
+  })
+
+  const startBias = settingsFolder.addBinding(store.settings, 'startCoordBias', {
+    min: 0,
+    step: 1,
+    label: 'start bias',
+  })
+  addInfo(startBias, 'Bias toward start')
+
 })
 </script>
 <template>
@@ -135,5 +157,9 @@ onMounted(() => {
   &::after {
     content: ' ⓘ';
   }
+}
+
+.tp-induv {
+  color: var(--lbl-fg);
 }
 </style>
