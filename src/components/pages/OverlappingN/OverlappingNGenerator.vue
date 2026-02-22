@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { computed, markRaw, ref, shallowRef, watch } from 'vue'
+import { computed, markRaw, nextTick, ref, shallowRef, watch } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
+import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
@@ -19,6 +20,7 @@ const { settings, scale } = storeToRefs(store)
 let pendingImageData: ImageDataArray | null = null
 const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
+const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
 const controller = makeOverlappingNController({
   settings: store.settings,
@@ -74,6 +76,34 @@ watch(imageDataSource, () => {
 const patternImageUrls = computed(() => {
   const imageDataArray = imageDataAnalysis.patternImageDataArray.value
   return imageDataArray.map(id => imageDataToUrlImage(id))
+})
+
+const tileGridSize = shallowRef({ width: 0, height: 0 })
+
+watch(imageDataAnalysis.patternImageDataArray, () => {
+  const imageDataArray = imageDataAnalysis.patternImageDataArray.value
+
+  if (!imageDataArray.length) {
+    tileGridSize.value = {
+      width: 0,
+      height: 0,
+    }
+  }
+
+  const { width, height } = getTileGridToCanvasSize(
+    imageDataArray.length,
+    imageDataArray[0]!.width,
+    imageDataArray[0]!.height,
+  )
+
+  tileGridSize.value = {
+    width,
+    height,
+  }
+
+  nextTick(() => {
+    drawTileGridToCanvas(tileGridCanvasRef.value!.canvas!, imageDataArray)
+  })
 })
 
 function updateCanvas() {
@@ -153,11 +183,22 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
         {{ imageDataAnalysis.T }}, {{ settings.N }}x{{ settings.N }}px
       </p>
 
-      <div class="pattern-images">
+      <div class="pattern-images mb-1">
         <template v-for="item in patternImageUrls">
           <PixelImg :src="item" :scale="scale" />
         </template>
       </div>
+
+      <p>
+        <strong>Tile Sheet:</strong>
+      </p>
+
+      <PixelCanvasRender
+        ref="tileGridCanvasRef"
+        :width="tileGridSize.width"
+        :height="tileGridSize.width"
+        :scale="scale"
+      />
     </div>
     <div class="col-7">
       <p class="hstack">
