@@ -5,6 +5,7 @@ import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
+import { ModelType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
 
 const store = useOverlappingNStore()
 const paneRef = useTemplateRef('paneRef')
@@ -108,6 +109,20 @@ onMounted(() => {
   watchEffect(() => {
     symmetryDesc.element.innerText = store.currentSymmetryDescription
   })
+
+  const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
+    options: [
+      {
+        text: 'WASM',
+        value: ModelType.WASM,
+      },
+      {
+        text: 'JS',
+        value: ModelType.JS,
+      },
+    ],
+  })
+  addInfo(modelType, 'Rust -> Web Assembly, or JS')
 
   const startCoordTarget = reactive({
     coord: {
