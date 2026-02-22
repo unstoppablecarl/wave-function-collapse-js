@@ -75,3 +75,38 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
     getBrittleness,
   }
 }
+
+export type SerializedPropagator = {
+  data: Int32Array,
+  offsets: Int32Array,
+  lengths: Int32Array,
+  T: number,
+}
+
+export function serializePropagator(propagator: any): SerializedPropagator {
+  const data = propagator.data
+  const offsets = propagator.offsets
+  const lengths = propagator.lengths
+  const T = propagator.T
+
+  return {
+    data,
+    offsets,
+    lengths,
+    T,
+  }
+}
+
+export function deserializePropagator(serialized: SerializedPropagator) {
+  const data = serialized.data
+  const offsets = serialized.offsets
+  const lengths = serialized.lengths
+  const T = serialized.T
+
+  return makePropagator({
+    data,
+    offsets,
+    lengths,
+    T,
+  })
+}
