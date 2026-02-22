@@ -8,6 +8,8 @@ import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/I
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
+import { makeOverlappingNSlidingWindowRuleset } from '../../../lib/wfc/OverlappingN/OverlappingNRulesetSlidingWindow.ts'
+import { colorToIdMap } from '../../../lib/wfc/WFCPixelBuffer.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
@@ -22,8 +24,29 @@ const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
+const colorData = computed(() => {
+  if (!imageDataSource.value) return null
+  return colorToIdMap(imageDataSource.value.data)
+})
+
+const ruleset = computed(() => {
+  if (!imageDataSource.value) return null
+  if (!colorData.value) return null
+
+  return makeOverlappingNSlidingWindowRuleset({
+    N: settings.value.N,
+    sample: colorData.value.sample,
+    sampleWidth: imageDataSource.value.width,
+    sampleHeight: imageDataSource.value.height,
+    symmetry: settings.value.symmetry,
+    periodicInput: settings.value.periodicInput,
+  })
+})
+
 const controller = makeOverlappingNController({
   settings: store.settings,
+  ruleset,
+  colorData,
   onBeforeRun() {
     attempts.value = []
   },

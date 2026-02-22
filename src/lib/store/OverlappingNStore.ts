@@ -4,18 +4,23 @@ import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
 import type { OverlappingNWorkerOptions } from '../wfc/OverlappingN/OverlappingN.worker.ts'
 
-type Settings = OverlappingNWorkerOptions['settings']
+export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
+  N: number,
+  periodicInput: boolean,
+  initialGround: number,
+  symmetry: number,
+}
 
 type SerializedData = {
   scale: number,
-  settings: Settings
+  settings: StoreSettings
 }
 
 export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const scale = ref(4)
 
-  const settings = reactive<Settings>({
+  const settings = reactive<StoreSettings>({
     N: 2,
     width: 60,
     height: 60,
@@ -28,7 +33,6 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     contradictionColor: 0xff0055,
     maxRevertsPerAttempt: 10,
     previewInterval: 100,
-    revertRadius: 2,
     startCoordBias: 0.05,
     startCoordX: 0.5,
     startCoordY: 0.5,

@@ -1,8 +1,8 @@
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { IterationResult } from '../WFCModel.ts'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import { type OverlappingNOptions } from './OverlappingN.ts'
-import { makeOverlappingModelWasmFromImageData } from './OverlappingNWasm.ts'
+import { deserializeWFCRuleset, type SerializedWFCRuleset } from '../WFCRuleset.ts'
+import { ModelType, ModelTypeFactory, type OverlappingNOptions } from './OverlappingNModel.ts'
 
 export enum WorkerMsg {
   ATTEMPT_START = 'ATTEMPT_START',
@@ -52,9 +52,11 @@ export type WorkerResponse =
   | MsgError
 
 export type OverlappingNWorkerOptions = {
-  id: string,
-  imageData: ImageData,
-  settings: Omit<OverlappingNOptions, 'sample' | 'sampleWidth' | 'sampleHeight'> & {
+  modelType: ModelType,
+  palette: Uint8Array,
+  avgColor: number,
+  serializedRuleset: SerializedWFCRuleset,
+  settings: Omit<OverlappingNOptions, 'ruleset'> & {
     seed: number,
     maxAttempts: number,
     maxRevertsPerAttempt: number,
@@ -74,19 +76,24 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
   }
   try {
     const startedAt = performance.now()
-    const { imageData, settings } = e.data
-    const { model, palette, avgColor } = await makeOverlappingModelWasmFromImageData(imageData, settings)
-    // const { model, palette, avgColor } = makeOverlappingModelFromImageData(imageData, settings)
+    const { settings, modelType, palette, avgColor, serializedRuleset } = e.data
+
+    const modelFactory = ModelTypeFactory[modelType]
+    const model = await modelFactory({
+      ruleset: deserializeWFCRuleset(serializedRuleset),
+      ...settings,
+    })
+
     const mulberry32 = makeMulberry32(settings.seed)
 
     const buffer = makeWFCPixelBuffer({
       palette,
       T: model.T,
-      N: settings.N,
+      N: model.N,
       width: settings.width,
       height: settings.height,
-      weights: model.weights,
-      patterns: model.patterns,
+      weights: model.ruleset.weights,
+      patterns: model.ruleset.patterns,
       bgColor: avgColor,
       contradictionColor: settings.contradictionColor,
     })

@@ -5,9 +5,9 @@ import type { Propagator } from './Propagator.ts'
 export type RNG = () => number
 
 export enum IterationResult {
-  REVERT  ,
-  SUCCESS ,
-  STEP ,
+  REVERT,
+  SUCCESS,
+  STEP,
   FAIL
 }
 
@@ -16,6 +16,7 @@ export type WFCModelOptions = {
   height: number,
   // number of possible values
   T: number,
+  N: number,
   periodicOutput: boolean,
   weights: Float64Array,
   propagator: Propagator,
@@ -23,7 +24,8 @@ export type WFCModelOptions = {
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,
-  fastLogFunction?: FastLogFunction
+  fastLogFunction?: FastLogFunction,
+  patterns: Int32Array,
 }
 
 export const makeWFCModel = (
@@ -40,6 +42,8 @@ export const makeWFCModel = (
     startCoordX,
     startCoordY,
     fastLogFunction,
+    N,
+    patterns,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -600,6 +604,8 @@ export const makeWFCModel = (
     propagate,
     createSnapshot,
     restoreSnapshot,
+    N,
+    patterns,
   }
 }
 

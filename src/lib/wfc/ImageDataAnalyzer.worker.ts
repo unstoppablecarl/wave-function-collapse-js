@@ -1,4 +1,4 @@
-import { makeOverlappingNRuleset } from './OverlappingN/OverlappingNRuleset.ts'
+import { makeOverlappingNSlidingWindowRuleset } from './OverlappingN/OverlappingNRulesetSlidingWindow.ts'
 import { colorToIdMap } from './WFCPixelBuffer.ts'
 
 export type ImageDataAnalyzerWorkerOptions = {
@@ -10,18 +10,18 @@ export type ImageDataAnalyzerWorkerOptions = {
 
 export type ImageDataAnalyzerWorkerResult = {
   averageBrittleness: number,
-  weights: Float64Array<ArrayBuffer>,
-  patterns: Int32Array<ArrayBuffer>,
-  palette: Uint8Array<ArrayBuffer>,
+  weights: Float64Array,
+  patterns: Int32Array,
+  palette: Uint8Array,
   T: number,
-  originalPatterns: Int32Array<ArrayBuffer>[],
+  originalPatterns: Int32Array[],
 }
 
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput } = e.data
   const { sample, palette } = colorToIdMap(imageData.data)
-  const { propagator, weights, patterns, T, originalPatterns } = makeOverlappingNRuleset({
+  const { propagator, weights, patterns, T, originalPatterns } = makeOverlappingNSlidingWindowRuleset({
     N,
     sample,
     sampleWidth: imageData.width,

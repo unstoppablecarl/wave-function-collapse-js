@@ -134,6 +134,12 @@ export const extractPatternColors = (
   return patternColors
 }
 
+export type ColorData = {
+  sample: Int32Array,
+  palette: Uint8Array,
+  avgColor: number,
+}
+
 /**
  * Maps RGBA pixel data to unique sequential integer IDs.
  * This keeps the WFC model's memory footprint small and logic fast.
@@ -142,11 +148,7 @@ export const extractPatternColors = (
  * sample: An array of IDs representing the image grid
  * palette: A lookup table where palette[id] = [r, g, b, a]
  */
-export const colorToIdMap = (data: Uint8ClampedArray): {
-  sample: Int32Array<ArrayBuffer>,
-  palette: Uint8Array<ArrayBuffer>,
-  avgColor: number,
-} => {
+export const colorToIdMap = (data: Uint8ClampedArray): ColorData => {
   const sample = new Int32Array(data.length / 4)
   const colorMap = new Map<string, number>()
   const tempPalette: number[] = []
