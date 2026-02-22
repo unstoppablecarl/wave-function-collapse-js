@@ -158,8 +158,16 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   imageDataSource.value = markRaw(imageData)
 }
 
-const imageModules = import.meta.glob('../../../assets/overlapping-n/*.png', { eager: true })
-const images = Object.values(imageModules).map((m) => (m as any).default)
+const slidingWindowImageModules = import.meta.glob('../../../assets/overlapping-n/sliding-window/*.png', { eager: true })
+const slidingWindowImages = Object.values(slidingWindowImageModules).map((m) => (m as any).default)
+
+// const fragmentImageModules = import.meta.glob('../../../assets/overlapping-n/fragment/*.png', { eager: true })
+// const fragmentImages = Object.values(fragmentImageModules).map((m) => (m as any).default)
+
+const images = computed(() => {
+  return slidingWindowImages
+})
+
 </script>
 <template>
   <div class="row">

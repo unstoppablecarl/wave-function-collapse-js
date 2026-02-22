@@ -17,7 +17,7 @@ import { ModelType } from './OverlappingNModel.ts'
 export type OverlappingNControllerOptions = {
   settings: Reactive<OverlappingNWorkerOptions['settings']>,
   ruleset: ComputedRef<WFCRuleset | null>,
-  colorData: ComputedRef<ColorData>,
+  colorData: ComputedRef<ColorData | null>,
   onBeforeRun?(): void,
   onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
   onAttemptStart?(response: MsgAttemptStart): void,
