@@ -5,7 +5,6 @@ import { computed, markRaw, ref, shallowRef, watch } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
-import { type MsgPreview } from '../../../lib/wfc/OverlappingN/OverlappingN.worker.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
@@ -26,7 +25,7 @@ const controller = makeOverlappingNController({
   onBeforeRun() {
     attempts.value = []
   },
-  onPreview(_response: MsgPreview, pixels) {
+  onPreview(_response, pixels) {
     pendingImageData = pixels
     requestAnimationFrame(() => {
       if (running.value) {
@@ -216,6 +215,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
 .img-target {
   cursor: pointer;
   margin: 0.5rem 0.5rem 0 0;
+  display: inline-block;
 }
 
 .attempt-log {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:wasm": "wasm-pack build rust-wfc --target web --release",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit"
   },
@@ -28,6 +29,8 @@
     "sass-embedded": "^1.97.3",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
     "vue-tsc": "^3.1.5"
   }
 }

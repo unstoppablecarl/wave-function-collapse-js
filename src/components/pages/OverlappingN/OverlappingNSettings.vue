@@ -95,7 +95,6 @@ onMounted(() => {
   })
   addInfo(revertsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
 
-
   settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
   })
@@ -110,7 +109,12 @@ onMounted(() => {
     symmetryDesc.element.innerText = store.currentSymmetryDescription
   })
 
-  const startCoordTarget = reactive({ coord: { x: 0.5, y: 0.5 } })
+  const startCoordTarget = reactive({
+    coord: {
+      x: store.settings.startCoordX,
+      y: store.settings.startCoordY,
+    },
+  })
 
   const startCoord = settingsFolder.addBinding(startCoordTarget, 'coord', {
     picker: 'inline',
@@ -127,7 +131,7 @@ onMounted(() => {
 
   const startBias = settingsFolder.addBinding(store.settings, 'startCoordBias', {
     min: 0,
-    step: 1,
+    step: 0.01,
     label: 'start bias',
   })
   addInfo(startBias, 'Bias toward start')

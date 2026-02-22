@@ -1,7 +1,8 @@
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { IterationResult } from '../WFCModel.ts'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import { makeOverlappingModelFromImageData, type OverlappingNOptions } from './OverlappingN.ts'
+import { type OverlappingNOptions } from './OverlappingN.ts'
+import { makeOverlappingModelWasmFromImageData } from './OverlappingNWasm.ts'
 
 export enum WorkerMsg {
   ATTEMPT_START = 'ATTEMPT_START',
@@ -74,7 +75,8 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
   try {
     const startedAt = performance.now()
     const { imageData, settings } = e.data
-    const { model, palette, avgColor } = makeOverlappingModelFromImageData(imageData, settings)
+    const { model, palette, avgColor } = await makeOverlappingModelWasmFromImageData(imageData, settings)
+    // const { model, palette, avgColor } = makeOverlappingModelFromImageData(imageData, settings)
     const mulberry32 = makeMulberry32(settings.seed)
 
     const buffer = makeWFCPixelBuffer({
@@ -89,7 +91,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
       contradictionColor: settings.contradictionColor,
     })
 
-    const syncVisuals = () => buffer.updateCells(model.getWave(), model.getChanges())
+    const syncVisuals = () => buffer.updateCells(model.getWave(), model.getObserved(), model.getChanges())
 
     let totalReverts = 0
 
@@ -100,6 +102,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
 
       model.clear()
       buffer.clear()
+
       syncVisuals()
       postMsg(WorkerMsg.ATTEMPT_START, { attempt })
 
@@ -176,5 +179,6 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
     postMsg(WorkerMsg.ERROR, {
       message: err instanceof Error ? err.message : String(err),
     })
+    throw err
   }
 }

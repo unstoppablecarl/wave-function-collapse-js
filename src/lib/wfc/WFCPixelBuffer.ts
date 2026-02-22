@@ -33,36 +33,62 @@ export const makeWFCPixelBuffer = (
 
   clear()
 
-  const updateCells = (wave: Uint8Array, changedIndices: Int32Array) => {
-    const len = changedIndices.length
+  const updateCells = (wave: Uint8Array, observed: Int32Array, changedIndices: Int32Array) => {
+
+    // console.log("Raw Observed Start:", observed[0], observed[1], observed[2]);
+
+    const len = changedIndices.length;
+
+    // Match the Rust u64 alignment
+    const wordsPerCell = Math.floor((T + 63) / 64);
+    const bytesPerCell = wordsPerCell * 8;
+
     for (let k = 0; k < len; k++) {
       const i = changedIndices[k]!
-      let r = 0, g = 0, b = 0, totalW = 0
-      const waveOffset = i * T
+      const collapsedId = observed[i]!
 
-      for (let t = 0; t < T; t++) {
-        if (wave[waveOffset + t] === 1) {
-          const w = weights[t]!
-          const cIdx = t * 3
-          r += patternColors[cIdx]! * w
-          g += patternColors[cIdx + 1]! * w
-          b += patternColors[cIdx + 2]! * w
-          totalW += w
-        }
+      if (k === 0) {
+        // console.log('Byte at index 0:', wave[0]);
+        // If this is always 0, Rust isn't filling the wave correctly.
       }
-
-      if (totalW === 0) {
-        pixelBuffer[i] = contradictionColor
+      
+      if (collapsedId !== -1) {
+        // Cell is collapsed: Simple high-speed render
+        const cIdx = collapsedId * 3
+        const r = patternColors[cIdx]!
+        const g = patternColors[cIdx + 1]!
+        const b = patternColors[cIdx + 2]!
+        pixelBuffer[i] = 0xFF000000 | (b << 16) | (g << 8) | r
       } else {
-        const invW = 1 / totalW
+        // Cell is uncollapsed: Average the possible patterns
+        let r = 0, g = 0, b = 0, totalW = 0
 
-        // We use bitwise OR with 0 to truncate to integer (faster than Math.floor)
-        const finalR = (r * invW) | 0
-        const finalG = (g * invW) | 0
-        const finalB = (b * invW) | 0
+        const cellByteOffset = i * bytesPerCell
 
-        // Pack ABGR (Little-Endian)
-        pixelBuffer[i] = 0xFF000000 | (finalB << 16) | (finalG << 8) | finalR
+        for (let t = 0; t < T; t++) {
+          const byteIdx = cellByteOffset + (t >> 3);
+          const bitIdx = t & 7;
+
+          // Check if the bit is set
+          if ((wave[byteIdx]! & (1 << bitIdx)) !== 0) {
+            const w = weights[t]!
+            const cIdx = t * 3
+            r += patternColors[cIdx]! * w
+            g += patternColors[cIdx + 1]! * w
+            b += patternColors[cIdx + 2]! * w
+            totalW += w
+          }
+        }
+
+        if (totalW === 0) {
+          pixelBuffer[i] = contradictionColor
+        } else {
+          const invW = 1 / totalW
+          pixelBuffer[i] = 0xFF000000 |
+            (((b * invW) | 0) << 16) |
+            (((g * invW) | 0) << 8) |
+            ((r * invW) | 0)
+        }
       }
     }
   }

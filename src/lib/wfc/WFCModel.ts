@@ -5,10 +5,10 @@ import type { Propagator } from './Propagator.ts'
 export type RNG = () => number
 
 export enum IterationResult {
-  REVERT = 'REVERT',
-  SUCCESS = 'SUCCESS',
-  STEP = 'STEP',
-  FAIL = 'FAIL'
+  REVERT  ,
+  SUCCESS ,
+  STEP ,
+  FAIL
 }
 
 export type WFCModelOptions = {
