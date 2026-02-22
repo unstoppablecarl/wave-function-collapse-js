@@ -28,6 +28,35 @@ export function makePatternImageDataArray(
   return images
 }
 
+export function makeOriginalPatternImageDataArray(
+  patterns: Int32Array[],
+  N: number,
+  palette: Uint8Array,
+): ImageData[] {
+  const images: ImageData[] = []
+  const patternLen = N * N
+
+  for (let t = 0; t < patterns.length; t++) {
+    const buffer = new Uint8ClampedArray(patternLen * 4)
+    const currentPattern = patterns[t]!
+
+    for (let i = 0; i < patternLen; i++) {
+      const pixelId = currentPattern[i]!
+      const palIdx = pixelId * 4
+      const targetIdx = i * 4
+
+      buffer[targetIdx] = palette[palIdx]!
+      buffer[targetIdx + 1] = palette[palIdx + 1]!
+      buffer[targetIdx + 2] = palette[palIdx + 2]!
+      buffer[targetIdx + 3] = palette[palIdx + 3]!
+    }
+
+    images.push(new ImageData(buffer, N, N))
+  }
+
+  return images
+}
+
 export type PatternArrayToCanvasCalculation = ReturnType<typeof calculatePatternArrayToCanvas>
 
 export function calculatePatternArrayToCanvas(

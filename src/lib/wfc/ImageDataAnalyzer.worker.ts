@@ -14,13 +14,14 @@ export type ImageDataAnalyzerWorkerResult = {
   patterns: Int32Array<ArrayBuffer>,
   palette: Uint8Array<ArrayBuffer>,
   T: number,
+  originalPatterns: Int32Array<ArrayBuffer>[],
 }
 
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput } = e.data
   const { sample, palette } = colorToIdMap(imageData.data)
-  const { propagator, weights, patterns, T } = makeOverlappingNRuleset({
+  const { propagator, weights, patterns, T, originalPatterns } = makeOverlappingNRuleset({
     N,
     sample,
     sampleWidth: imageData.width,
@@ -31,6 +32,6 @@ ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
 
   const { averageBrittleness } = propagator.getBrittleness()
 
-  const result: ImageDataAnalyzerWorkerResult = { averageBrittleness, weights, patterns, palette, T }
+  const result: ImageDataAnalyzerWorkerResult = { averageBrittleness, weights, patterns, palette, T, originalPatterns }
   ctx.postMessage(result)
 }

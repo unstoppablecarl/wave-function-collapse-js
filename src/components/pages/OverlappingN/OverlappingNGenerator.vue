@@ -80,8 +80,8 @@ const patternImageUrls = computed(() => {
 
 const tileGridSize = shallowRef({ width: 0, height: 0 })
 
-watch(imageDataAnalysis.patternImageDataArray, () => {
-  const imageDataArray = imageDataAnalysis.patternImageDataArray.value
+watch(imageDataAnalysis.originalPatternImageDataArray, () => {
+  const imageDataArray = imageDataAnalysis.originalPatternImageDataArray.value
 
   if (!imageDataArray.length) {
     tileGridSize.value = {
@@ -190,7 +190,7 @@ const images = Object.values(imageModules).map((m) => (m as any).default)
       </div>
 
       <p>
-        <strong>Tile Sheet:</strong>
+        <strong>Tile Sheet:</strong> (not rotated/reflected)
       </p>
 
       <PixelCanvasRender

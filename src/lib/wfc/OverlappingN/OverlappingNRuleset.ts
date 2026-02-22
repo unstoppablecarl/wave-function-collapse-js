@@ -16,7 +16,8 @@ export function makeOverlappingNRuleset(
     sample,
     sampleWidth,
     sampleHeight,
-    symmetry, periodicInput,
+    symmetry,
+    periodicInput,
   }: OverlappingNRulesetOptions) {
   const patternLen = N * N
   const getPatternFromSample = (x: number, y: number): Int32Array => {
@@ -34,7 +35,9 @@ export function makeOverlappingNRuleset(
   const rotate = (p: Int32Array) => {
     const res = new Int32Array(patternLen)
     for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) res[x + y * N] = p[N - 1 - y + x * N]!
+      for (let x = 0; x < N; x++) {
+        res[x + y * N] = p[N - 1 - y + x * N]!
+      }
     }
     return res
   }
@@ -42,13 +45,16 @@ export function makeOverlappingNRuleset(
   const reflect = (p: Int32Array) => {
     const res = new Int32Array(patternLen)
     for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) res[x + y * N] = p[N - 1 - x + y * N]!
+      for (let x = 0; x < N; x++) {
+        res[x + y * N] = p[N - 1 - x + y * N]!
+      }
     }
     return res
   }
 
   const weightsMap = new Map<bigint, number>()
   const patternsList: Int32Array[] = []
+  const originalPatternIndices: number[] = []
   const yMax = periodicInput ? sampleHeight : sampleHeight - N + 1
   const xMax = periodicInput ? sampleWidth : sampleWidth - N + 1
 
@@ -63,14 +69,20 @@ export function makeOverlappingNRuleset(
       ps[5] = reflect(ps[4])
       ps[6] = rotate(ps[4])
       ps[7] = reflect(ps[6])
+
       for (let k = 0; k < symmetry; k++) {
-        const key = getPatternHash(ps[k]!)
+        const p = ps[k]!
+        const key = getPatternHash(p)
         const w = weightsMap.get(key)
+
         if (w !== undefined) {
           weightsMap.set(key, w + 1)
         } else {
           weightsMap.set(key, 1)
-          patternsList.push(ps[k]!)
+          patternsList.push(p)
+          if (k === 0) {
+            originalPatternIndices.push(patternsList.length - 1)
+          }
         }
       }
     }
@@ -79,11 +91,19 @@ export function makeOverlappingNRuleset(
   const T = patternsList.length
   const patterns = new Int32Array(T * patternLen)
   const weights = new Float64Array(T)
+
   for (let t = 0; t < T; t++) {
     const pat = patternsList[t]!
-    weights[t] = weightsMap.get(getPatternHash(pat))!
+    const hash = getPatternHash(pat)
+    weights[t] = weightsMap.get(hash)!
     patterns.set(pat, t * patternLen)
   }
+
+  const originalPatterns = originalPatternIndices.map(idx => {
+    const start = idx * patternLen
+    const end = start + patternLen
+    return patterns.slice(start, end)
+  })
 
   const agrees = (p1Idx: number, p2Idx: number, dx: number, dy: number) => {
     const xmin = dx < 0 ? 0 : dx
@@ -93,8 +113,9 @@ export function makeOverlappingNRuleset(
 
     for (let y = ymin; y < ymax; y++) {
       for (let x = xmin; x < xmax; x++) {
-        if (patterns[p1Idx * patternLen + x + N * y] !==
-          patterns[p2Idx * patternLen + (x - dx) + N * (y - dy)]) return false
+        const i1 = p1Idx * patternLen + x + N * y
+        const i2 = p2Idx * patternLen + (x - dx) + N * (y - dy)
+        if (patterns[i1] !== patterns[i2]) return false
       }
     }
     return true
@@ -102,6 +123,7 @@ export function makeOverlappingNRuleset(
 
   const propagatorLengths = new Int32Array(4 * T)
   let totalPropagatorSize = 0
+
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
       let count = 0
@@ -118,6 +140,7 @@ export function makeOverlappingNRuleset(
   const propagatorData = new Int32Array(totalPropagatorSize)
   const propagatorOffsets = new Int32Array(4 * T)
   let propCursor = 0
+
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
       const idx = d * T + t1
@@ -140,6 +163,7 @@ export function makeOverlappingNRuleset(
   return {
     T,
     propagator,
+    originalPatterns,
     weights,
     patterns,
   }
