@@ -1,5 +1,4 @@
-import { type ComputedRef, type Reactive, ref, shallowRef, toValue } from 'vue'
-import { makeImageDataAnalyzer } from '../ImageDataAnalyzer.ts'
+import { type ComputedRef, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
 import { type ColorData } from '../WFCPixelBuffer.ts'
 import { serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 import {
@@ -16,8 +15,9 @@ import { ModelType } from './OverlappingNModel.ts'
 
 export type OverlappingNControllerOptions = {
   settings: Reactive<OverlappingNWorkerOptions['settings']>,
-  ruleset: ComputedRef<WFCRuleset | null>,
+  ruleset: Ref<WFCRuleset | null>,
   colorData: ComputedRef<ColorData | null>,
+  imageDataSource: ShallowRef<ImageData | null>
   onBeforeRun?(): void,
   onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
   onAttemptStart?(response: MsgAttemptStart): void,
@@ -35,19 +35,17 @@ export function makeOverlappingNController(
     onBeforeRun,
     ruleset,
     colorData,
+    imageDataSource,
   }: OverlappingNControllerOptions,
 ) {
   let worker: Worker | null = null
 
-  const imageDataSource = shallowRef<ImageData | null>(null)
   const running = ref(false)
   const hasResult = ref(false)
   const errorMessage = shallowRef<{ title: string, message: string } | null>(null)
 
   const currentAttempt = makeOverlappingNAttempt()
   const finalAttempt = makeOverlappingNAttempt()
-
-  const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings)
 
   const handlers: Partial<Record<WorkerMsg, (data: any) => void>> = {
     [WorkerMsg.ATTEMPT_START]: (data: MsgAttemptStart) => {
@@ -142,7 +140,6 @@ export function makeOverlappingNController(
     completeWorker,
     running,
     errorMessage,
-    imageDataAnalysis,
     run,
     hasResult,
     finalAttempt,

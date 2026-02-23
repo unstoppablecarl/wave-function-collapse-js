@@ -43,3 +43,8 @@ export const ModelTypeFactory: Record<ModelType, OverlappingNModelCreator> = {
   [ModelType.JS]: makeOverlappingNJS,
   [ModelType.WASM]: makeOverlappingNModelWasm,
 }
+
+export enum RulesetType {
+  SLIDING_WINDOW,
+  FRAGMENT
+}

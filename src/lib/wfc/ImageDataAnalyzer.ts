@@ -1,11 +1,15 @@
-import { type Reactive, ref, shallowRef, type ShallowRef, watch } from 'vue'
+import { ref, shallowRef, type ShallowRef, watch } from 'vue'
+import type { StoreSettings } from '../store/OverlappingNStore.ts'
 import type { ImageDataAnalyzerWorkerOptions, ImageDataAnalyzerWorkerResult } from './ImageDataAnalyzer.worker.ts'
-import type { OverlappingNWorkerOptions } from './OverlappingN/OverlappingN.worker.ts'
 import { makeOriginalPatternImageDataArray, makePatternImageDataArray } from './PatternSheetRenderer.ts'
+import {
+  deserializeWFCRuleset,
+  type WFCRuleset,
+} from './WFCRuleset.ts'
 
 export function makeImageDataAnalyzer(
   imageDataSource: ShallowRef<ImageData | null>,
-  settings: Reactive<OverlappingNWorkerOptions['settings']>,
+  settings: StoreSettings,
 ) {
 
   let worker: Worker | null = null
@@ -14,6 +18,8 @@ export function makeImageDataAnalyzer(
   const patternImageDataArray = shallowRef<ImageData[]>([])
   const originalPatternImageDataArray = shallowRef<ImageData[]>([])
   const T = ref(0)
+
+  const ruleset = shallowRef<WFCRuleset | null>(null)
 
   watch([
     imageDataSource,
@@ -29,6 +35,7 @@ export function makeImageDataAnalyzer(
 
     run({
       imageData: imageDataSource.value,
+      rulesetType: settings.rulesetType,
       N,
       symmetry,
       periodicInput,
@@ -44,10 +51,21 @@ export function makeImageDataAnalyzer(
     })
     worker.postMessage(opts)
     worker.onmessage = (e: MessageEvent<ImageDataAnalyzerWorkerResult>) => {
-      const { averageBrittleness: avgBrittleness, palette, patterns, T: TVal, originalPatterns } = e.data
-      averageBrittleness.value = avgBrittleness ?? null
+      const {
+        averageBrittleness: avgBrittleness,
+        T: TVal,
+        serializedRuleset,
+        palette,
+        patterns,
+        originalPatterns,
+      } = e.data
+
+      ruleset.value = deserializeWFCRuleset(serializedRuleset)
+
       patternImageDataArray.value = makePatternImageDataArray(patterns, TVal, settings.N, palette)
       originalPatternImageDataArray.value = makeOriginalPatternImageDataArray(originalPatterns, settings.N, palette)
+
+      averageBrittleness.value = avgBrittleness ?? null
 
       T.value = TVal
       running.value = false
@@ -66,6 +84,7 @@ export function makeImageDataAnalyzer(
     running,
     patternImageDataArray,
     originalPatternImageDataArray,
+    ruleset,
   }
 }
 

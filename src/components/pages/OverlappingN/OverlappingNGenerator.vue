@@ -6,9 +6,10 @@ import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeImageDataAnalyzer } from '../../../lib/wfc/ImageDataAnalyzer.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
-import { makeOverlappingNSlidingWindowRuleset } from '../../../lib/wfc/OverlappingN/OverlappingNRulesetSlidingWindow.ts'
+import { RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
 import { colorToIdMap } from '../../../lib/wfc/WFCPixelBuffer.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
@@ -28,23 +29,14 @@ const colorData = computed(() => {
   if (!imageDataSource.value) return null
   return colorToIdMap(imageDataSource.value.data)
 })
+const imageDataSource = shallowRef<ImageData | null>(null)
+const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings.value)
 
-const ruleset = computed(() => {
-  if (!imageDataSource.value) return null
-  if (!colorData.value) return null
-
-  return makeOverlappingNSlidingWindowRuleset({
-    N: settings.value.N,
-    sample: colorData.value.sample,
-    sampleWidth: imageDataSource.value.width,
-    sampleHeight: imageDataSource.value.height,
-    symmetry: settings.value.symmetry,
-    periodicInput: settings.value.periodicInput,
-  })
-})
+const { ruleset } = imageDataAnalysis
 
 const controller = makeOverlappingNController({
   settings: store.settings,
+  imageDataSource,
   ruleset,
   colorData,
   onBeforeRun() {
@@ -77,13 +69,11 @@ const controller = makeOverlappingNController({
 })
 
 const {
-  imageDataSource,
   running,
   hasResult,
   errorMessage,
   currentAttempt,
   finalAttempt,
-  imageDataAnalysis,
 } = controller
 
 const imageDataSourceUrlImage = shallowRef<string | null>(null)
@@ -161,11 +151,16 @@ async function setImageDataFromElement(target: HTMLImageElement) {
 const slidingWindowImageModules = import.meta.glob('../../../assets/overlapping-n/sliding-window/*.png', { eager: true })
 const slidingWindowImages = Object.values(slidingWindowImageModules).map((m) => (m as any).default)
 
-// const fragmentImageModules = import.meta.glob('../../../assets/overlapping-n/fragment/*.png', { eager: true })
-// const fragmentImages = Object.values(fragmentImageModules).map((m) => (m as any).default)
+const fragmentImageModules = import.meta.glob('../../../assets/overlapping-n/fragment/*.png', { eager: true })
+const fragmentImages = Object.values(fragmentImageModules).map((m) => (m as any).default)
 
 const images = computed(() => {
-  return slidingWindowImages
+
+  if (settings.value.rulesetType === RulesetType.SLIDING_WINDOW) {
+    return slidingWindowImages
+  }
+
+  return fragmentImages
 })
 
 </script>
@@ -220,16 +215,17 @@ const images = computed(() => {
         </template>
       </div>
 
-      <p>
-        <strong>Tile Sheet:</strong> (not rotated/reflected)
-      </p>
-
-      <PixelCanvasRender
-        ref="tileGridCanvasRef"
-        :width="tileGridSize.width"
-        :height="tileGridSize.width"
-        :scale="scale"
-      />
+      <div v-show="settings.rulesetType === RulesetType.SLIDING_WINDOW">
+        <p>
+          <strong>Tile Sheet:</strong> (not rotated/reflected)
+        </p>
+        <PixelCanvasRender
+          ref="tileGridCanvasRef"
+          :width="tileGridSize.width"
+          :height="tileGridSize.width"
+          :scale="scale"
+        />
+      </div>
     </div>
     <div class="col-7">
       <p class="hstack">

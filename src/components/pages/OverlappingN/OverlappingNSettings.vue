@@ -5,7 +5,7 @@ import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
-import { ModelType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
+import { ModelType, RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
 
 const store = useOverlappingNStore()
 const paneRef = useTemplateRef('paneRef')
@@ -123,6 +123,20 @@ onMounted(() => {
     ],
   })
   addInfo(modelType, 'Rust -> Web Assembly, or JS')
+
+  const rulesetType = settingsFolder.addBinding(store.settings, 'rulesetType', {
+    options: [
+      {
+        text: 'Generated Tiles',
+        value: RulesetType.SLIDING_WINDOW,
+      },
+      {
+        text: 'Preset Tiles',
+        value: RulesetType.FRAGMENT,
+      },
+    ],
+  })
+  addInfo(rulesetType, 'Sliding window, pre-created tiles')
 
   const startCoordTarget = reactive({
     coord: {

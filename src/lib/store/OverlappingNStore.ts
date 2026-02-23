@@ -3,7 +3,7 @@ import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
 import type { OverlappingNWorkerOptions } from '../wfc/OverlappingN/OverlappingN.worker.ts'
-import { ModelType } from '../wfc/OverlappingN/OverlappingNModel.ts'
+import { ModelType, RulesetType } from '../wfc/OverlappingN/OverlappingNModel.ts'
 
 export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
   N: number,
@@ -11,6 +11,7 @@ export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
   initialGround: number,
   symmetry: number,
   modelType: ModelType,
+  rulesetType: RulesetType,
 }
 
 type SerializedData = {
@@ -39,6 +40,7 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     startCoordX: 0.5,
     startCoordY: 0.5,
     modelType: ModelType.WASM,
+    rulesetType: RulesetType.SLIDING_WINDOW,
   })
 
   const state = {

@@ -1,62 +1,3 @@
-export function makePatternImageDataArray(
-  patterns: Int32Array,
-  T: number,
-  N: number,
-  palette: Uint8Array,
-): ImageData[] {
-  const images: ImageData[] = []
-  const patternLen = N * N
-
-  for (let t = 0; t < T; t++) {
-    const buffer = new Uint8ClampedArray(patternLen * 4)
-    const patternOffset = t * patternLen
-
-    for (let i = 0; i < patternLen; i++) {
-      const pixelId = patterns[patternOffset + i]!
-      const palIdx = pixelId * 4
-      const targetIdx = i * 4
-
-      buffer[targetIdx] = palette[palIdx]!
-      buffer[targetIdx + 1] = palette[palIdx + 1]!
-      buffer[targetIdx + 2] = palette[palIdx + 2]!
-      buffer[targetIdx + 3] = palette[palIdx + 3]!
-    }
-
-    images.push(new ImageData(buffer, N, N))
-  }
-
-  return images
-}
-
-export function makeOriginalPatternImageDataArray(
-  patterns: Int32Array[],
-  N: number,
-  palette: Uint8Array,
-): ImageData[] {
-  const images: ImageData[] = []
-  const patternLen = N * N
-
-  for (let t = 0; t < patterns.length; t++) {
-    const buffer = new Uint8ClampedArray(patternLen * 4)
-    const currentPattern = patterns[t]!
-
-    for (let i = 0; i < patternLen; i++) {
-      const pixelId = currentPattern[i]!
-      const palIdx = pixelId * 4
-      const targetIdx = i * 4
-
-      buffer[targetIdx] = palette[palIdx]!
-      buffer[targetIdx + 1] = palette[palIdx + 1]!
-      buffer[targetIdx + 2] = palette[palIdx + 2]!
-      buffer[targetIdx + 3] = palette[palIdx + 3]!
-    }
-
-    images.push(new ImageData(buffer, N, N))
-  }
-
-  return images
-}
-
 export type PatternArrayToCanvasCalculation = ReturnType<typeof calculatePatternArrayToCanvas>
 
 export function calculatePatternArrayToCanvas(
@@ -118,4 +59,61 @@ export function drawPatternArrayToCanvas(
     width: canvas.width,
     height: canvas.height,
   }
+}
+
+
+export function makePatternImageDataArray(
+  patterns: Int32Array,
+  T: number,
+  N: number,
+  palette: Uint8Array,
+): ImageData[] {
+  const images: ImageData[] = []
+  const patternLen = N * N
+
+  for (let t = 0; t < T; t++) {
+    const patternOffset = t * patternLen
+    const img = createPatternImageData(patterns, N, palette, patternOffset)
+    images.push(img)
+  }
+
+  return images
+}
+
+export function makeOriginalPatternImageDataArray(
+  patterns: Int32Array[],
+  N: number,
+  palette: Uint8Array,
+): ImageData[] {
+  const images: ImageData[] = []
+
+  for (let t = 0; t < patterns.length; t++) {
+    const currentPattern = patterns[t]!
+    const img = createPatternImageData(currentPattern, N, palette)
+    images.push(img)
+  }
+
+  return images
+}
+function createPatternImageData(
+  pattern: Int32Array | Uint32Array,
+  N: number,
+  palette: Uint8Array,
+  offset: number = 0,
+): ImageData {
+  const patternLen = N * N
+  const buffer = new Uint8ClampedArray(patternLen * 4)
+
+  for (let i = 0; i < patternLen; i++) {
+    const pixelId = pattern[offset + i]!
+    const palIdx = pixelId * 4
+    const targetIdx = i * 4
+
+    buffer[targetIdx] = palette[palIdx]!
+    buffer[targetIdx + 1] = palette[palIdx + 1]!
+    buffer[targetIdx + 2] = palette[palIdx + 2]!
+    buffer[targetIdx + 3] = palette[palIdx + 3]!
+  }
+
+  return new ImageData(buffer, N, N)
 }
