@@ -2,10 +2,7 @@ import { ref, shallowRef, type ShallowRef, watch } from 'vue'
 import type { StoreSettings } from '../store/OverlappingNStore.ts'
 import type { ImageDataAnalyzerWorkerOptions, ImageDataAnalyzerWorkerResult } from './ImageDataAnalyzer.worker.ts'
 import { makeOriginalPatternImageDataArray, makePatternImageDataArray } from './PatternSheetRenderer.ts'
-import {
-  deserializeWFCRuleset,
-  type WFCRuleset,
-} from './WFCRuleset.ts'
+import { deserializeWFCRuleset, type WFCRuleset } from './WFCRuleset.ts'
 
 export function makeImageDataAnalyzer(
   imageDataSource: ShallowRef<ImageData | null>,
@@ -46,28 +43,44 @@ export function makeImageDataAnalyzer(
     terminate()
 
     running.value = true
-    worker = new Worker(new URL('./ImageDataAnalyzer.worker.ts', import.meta.url), {
+    const currentWorker = new Worker(new URL('./ImageDataAnalyzer.worker.ts', import.meta.url), {
       type: 'module',
     })
+
+    worker = currentWorker
     worker.postMessage(opts)
     worker.onmessage = (e: MessageEvent<ImageDataAnalyzerWorkerResult>) => {
+      // Only proceed if this is still the active worker
+      if (currentWorker !== worker) return
+
       const {
-        averageBrittleness: avgBrittleness,
-        T: TVal,
         serializedRuleset,
         palette,
-        patterns,
-        originalPatterns,
       } = e.data
 
-      ruleset.value = deserializeWFCRuleset(serializedRuleset)
+      const rs = deserializeWFCRuleset(serializedRuleset)
 
-      patternImageDataArray.value = makePatternImageDataArray(patterns, TVal, settings.N, palette)
-      originalPatternImageDataArray.value = makeOriginalPatternImageDataArray(originalPatterns, settings.N, palette)
+      const patterns = rs.patterns
+      const originalPatterns = rs.originalPatterns
+      const brittleness = rs.propagator.getBrittleness()
 
-      averageBrittleness.value = avgBrittleness ?? null
+      patternImageDataArray.value = makePatternImageDataArray(
+        patterns,
+        rs.T,
+        rs.N,
+        palette,
+      )
 
-      T.value = TVal
+      originalPatternImageDataArray.value = makeOriginalPatternImageDataArray(
+        originalPatterns,
+        rs.N,
+        palette,
+      )
+
+      averageBrittleness.value = brittleness.averageBrittleness ?? null
+
+      ruleset.value = rs
+      T.value = rs.T
       running.value = false
       terminate()
     }

@@ -1,7 +1,7 @@
+import { makeIndexedImage } from 'pixel-data-js'
 import { RulesetType } from './OverlappingN/OverlappingNModel.ts'
 import { makeFragmentRuleset } from './OverlappingN/OverlappingNRulesetFragment.ts'
 import { makeOverlappingNSlidingWindowRuleset } from './OverlappingN/OverlappingNRulesetSlidingWindow.ts'
-import { colorToIdMap } from './WFCPixelBuffer.ts'
 import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from './WFCRuleset.ts'
 
 export type ImageDataAnalyzerWorkerOptions = {
@@ -13,50 +13,41 @@ export type ImageDataAnalyzerWorkerOptions = {
 }
 
 export type ImageDataAnalyzerWorkerResult = {
-  averageBrittleness: number,
-  weights: Float64Array,
-  patterns: Int32Array,
   palette: Uint8Array,
-  T: number,
-  originalPatterns: Int32Array[],
   serializedRuleset: SerializedWFCRuleset,
 }
 
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput, rulesetType } = e.data
-  const { sample, palette } = colorToIdMap(imageData.data)
+  const indexedImage = makeIndexedImage(imageData)
 
   let ruleset: WFCRuleset
 
   if (rulesetType === RulesetType.SLIDING_WINDOW) {
     ruleset = makeOverlappingNSlidingWindowRuleset({
       N,
-      sample,
-      sampleWidth: imageData.width,
-      sampleHeight: imageData.height,
+      indexedImage,
       symmetry: symmetry,
       periodicInput,
     })
   } else {
     ruleset = makeFragmentRuleset({
-      N,
-      source: imageData,
+      indexedImage,
       symmetry: symmetry,
     })
   }
 
-  const { propagator, weights, patterns, T, originalPatterns } = ruleset
-  const { averageBrittleness } = propagator.getBrittleness()
-
+  const serializedRuleset = serializeWFCRuleset(ruleset)
   const result: ImageDataAnalyzerWorkerResult = {
-    averageBrittleness,
-    weights,
-    patterns,
-    palette,
-    T,
-    originalPatterns,
-    serializedRuleset: serializeWFCRuleset(ruleset),
+    palette: indexedImage.palette,
+    serializedRuleset,
   }
-  ctx.postMessage(result)
+
+  // Optimize by transferring large typed arrays instead of cloning
+  ctx.postMessage(result, [
+    result.palette.buffer,
+    (result.serializedRuleset.patterns as Int32Array).buffer,
+    result.serializedRuleset.propagator.data.buffer,
+  ])
 }

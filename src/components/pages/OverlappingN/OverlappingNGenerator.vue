@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { makeIndexedImage } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
 import { computed, markRaw, nextTick, ref, shallowRef, watch } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
@@ -10,7 +11,6 @@ import { makeImageDataAnalyzer } from '../../../lib/wfc/ImageDataAnalyzer.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
 import { RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
-import { colorToIdMap } from '../../../lib/wfc/WFCPixelBuffer.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
@@ -25,9 +25,9 @@ const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
-const colorData = computed(() => {
+const indexedImage = computed(() => {
   if (!imageDataSource.value) return null
-  return colorToIdMap(imageDataSource.value.data)
+  return makeIndexedImage(imageDataSource.value)
 })
 const imageDataSource = shallowRef<ImageData | null>(null)
 const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings.value)
@@ -38,7 +38,7 @@ const controller = makeOverlappingNController({
   settings: store.settings,
   imageDataSource,
   ruleset,
-  colorData,
+  indexedImage,
   onBeforeRun() {
     attempts.value = []
   },
@@ -215,7 +215,7 @@ const images = computed(() => {
         </template>
       </div>
 
-      <div v-show="settings.rulesetType === RulesetType.SLIDING_WINDOW">
+      <div>
         <p>
           <strong>Tile Sheet:</strong> (not rotated/reflected)
         </p>

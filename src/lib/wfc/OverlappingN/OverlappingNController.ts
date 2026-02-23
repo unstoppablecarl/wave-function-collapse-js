@@ -1,5 +1,6 @@
+import { type IndexedImage, indexedImageToAverageColor } from 'pixel-data-js'
 import { type ComputedRef, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
-import { type ColorData } from '../WFCPixelBuffer.ts'
+import type { StoreSettings } from '../../store/OverlappingNStore.ts'
 import { serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 import {
   type MsgAttemptFailure,
@@ -11,12 +12,11 @@ import {
   type WorkerResponse,
 } from './OverlappingN.worker.ts'
 import { makeOverlappingNAttempt, resetOverlappingNAttempt } from './OverlappingNAttempt.ts'
-import { ModelType } from './OverlappingNModel.ts'
 
 export type OverlappingNControllerOptions = {
-  settings: Reactive<OverlappingNWorkerOptions['settings']>,
+  settings: Reactive<StoreSettings>,
   ruleset: Ref<WFCRuleset | null>,
-  colorData: ComputedRef<ColorData | null>,
+  indexedImage: ComputedRef<IndexedImage | null>,
   imageDataSource: ShallowRef<ImageData | null>
   onBeforeRun?(): void,
   onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
@@ -34,7 +34,7 @@ export function makeOverlappingNController(
     onAttemptStart,
     onBeforeRun,
     ruleset,
-    colorData,
+    indexedImage,
     imageDataSource,
   }: OverlappingNControllerOptions,
 ) {
@@ -95,7 +95,7 @@ export function makeOverlappingNController(
       return
     }
     if (!ruleset.value) return
-    if (!colorData.value) return
+    if (!indexedImage.value) return
     terminateWorker()
     running.value = true
 
@@ -103,15 +103,15 @@ export function makeOverlappingNController(
       type: 'module',
     })
 
-    const { palette, avgColor } = colorData.value
+    const { palette } = indexedImage.value
 
+    const avgColor = indexedImageToAverageColor(indexedImage.value)
     const opts: OverlappingNWorkerOptions = {
       settings: { ...toValue(settings) },
-      modelType: ModelType.WASM,
+      modelType: settings.modelType,
       palette,
       avgColor,
       serializedRuleset: serializeWFCRuleset(ruleset.value),
-
     }
     worker.postMessage(opts)
 
@@ -137,7 +137,6 @@ export function makeOverlappingNController(
 
   return {
     terminateWorker,
-    completeWorker,
     running,
     errorMessage,
     run,

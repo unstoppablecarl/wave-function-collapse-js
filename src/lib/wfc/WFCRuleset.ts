@@ -7,6 +7,10 @@ import {
   serializePropagator,
 } from './Propagator.ts'
 
+/**
+ * Wave Function Collapse Ruleset containing the adjacency constraints (propagator),
+ * unique patterns, and their relative weights.
+ */
 export type WFCRuleset = {
   N: number,
   T: number,
@@ -16,6 +20,19 @@ export type WFCRuleset = {
   originalPatterns: Int32Array[],
 }
 
+export type SerializedWFCRuleset = {
+  N: number,
+  T: number,
+  propagator: SerializedPropagator,
+
+  // json serialization will be number[]
+  weights: Float64Array | number[],
+  patterns: Int32Array | number[],
+  originalPatterns: (Int32Array | number[])[],
+}
+
+/** * Rotates a square Int32Array pattern 90 degrees clockwise.
+ */
 export const rotate = (p: Int32Array, N: number): Int32Array => {
   const patternLen = N * N
   const res = new Int32Array(patternLen)
@@ -25,9 +42,13 @@ export const rotate = (p: Int32Array, N: number): Int32Array => {
       res[x + y * N] = p[N - 1 - y + x * N]!
     }
   }
+
   return res
 }
 
+/**
+ * Reflects a square Int32Array pattern horizontally.
+ */
 export const reflect = (p: Int32Array, N: number): Int32Array => {
   const patternLen = N * N
   const res = new Int32Array(patternLen)
@@ -37,49 +58,104 @@ export const reflect = (p: Int32Array, N: number): Int32Array => {
       res[x + y * N] = p[N - 1 - x + y * N]!
     }
   }
+
   return res
 }
 
+/**
+ * Computes a rolling hash for a pattern to allow fast deduplication and edge matching.
+ */
 export const getPatternHash = (p: Int32Array): bigint => {
   let h = 0n
 
   for (let i = 0; i < p.length; i++) {
     h = (h * 31n) + BigInt(p[i]!)
   }
+
   return h
 }
 
-export function makeWFCRuleset(N: number, symmetry: number, sourcePatterns: Int32Array[]) {
+/**
+ * Internal helper to generate unique D4 transformations of a source pattern.
+ */
+function* generateSymmetries(base: Int32Array, N: number, symmetry: number) {
+  const seenHashes = new Set<bigint>()
+  let current = base
+
+  for (let i = 0; i < symmetry; i++) {
+    // 0: Original orientation
+    if (i === 0) current = base
+
+    // 1: Horizontal reflection
+    if (i === 1) current = reflect(base, N)
+
+    // 2: Rotate the reflection 90°
+    if (i === 2) current = rotate(current, N)
+
+    // 3: Reflect that rotation
+    if (i === 3) current = reflect(current, N)
+
+    // 4: Rotate again (180° from reflected start)
+    if (i === 4) current = rotate(current, N)
+
+    // 5: Reflect that rotation
+    if (i === 5) current = reflect(current, N)
+
+    // 6: Rotate again (270° from reflected start)
+    if (i === 6) current = rotate(current, N)
+
+    // 7: Reflect that rotation
+    if (i === 7) current = reflect(current, N)
+
+    const hash = getPatternHash(current)
+
+    if (!seenHashes.has(hash)) {
+      seenHashes.add(hash)
+      yield {
+        pattern: current,
+        hash,
+      }
+    }
+  }
+}
+
+/**
+ * Creates a WFC Ruleset from a list of source patterns.
+ * Optimizes performance by pre-calculating edge hashes to reduce propagator generation
+ * complexity from O(T^2 * N^2) to O(T^2).
+ */
+export function makeWFCRuleset(
+  N: number,
+  symmetry: number,
+  sourcePatterns: Int32Array[],
+): WFCRuleset {
   const patternLen = N * N
   const weightsMap = new Map<bigint, number>()
   const patternsList: Int32Array[] = []
   const originalPatternIndices: number[] = []
 
+  // 1. DEDUPLICATION & SYMMETRY GENERATION
   for (let i = 0; i < sourcePatterns.length; i++) {
-    for (let k = 0; k < symmetry; k++) {
-      const ps: Int32Array[] = new Array(8)
-      ps[0] = sourcePatterns[i]!
-      ps[1] = reflect(ps[0], N)
-      ps[2] = rotate(ps[0], N)
-      ps[3] = reflect(ps[2], N)
-      ps[4] = rotate(ps[2], N)
-      ps[5] = reflect(ps[4], N)
-      ps[6] = rotate(ps[4], N)
-      ps[7] = reflect(ps[6], N)
+    const base = sourcePatterns[i]!
+    let firstVariationIdx = -1
 
-      const p = ps[k]!
-      const key = getPatternHash(p)
-      const w = weightsMap.get(key)
+    for (const { pattern, hash } of generateSymmetries(base, N, symmetry)) {
+      const weight = weightsMap.get(hash)
 
-      if (w !== undefined) {
-        weightsMap.set(key, w + 1)
+      if (weight !== undefined) {
+        weightsMap.set(hash, weight + 1)
       } else {
-        weightsMap.set(key, 1)
-        patternsList.push(p)
-        if (k === 0) {
-          originalPatternIndices.push(patternsList.length - 1)
+        weightsMap.set(hash, 1)
+        patternsList.push(pattern)
+
+        if (firstVariationIdx === -1) {
+          firstVariationIdx = patternsList.length - 1
         }
       }
+    }
+
+    if (firstVariationIdx !== -1) {
+      originalPatternIndices.push(firstVariationIdx)
     }
   }
 
@@ -94,26 +170,34 @@ export function makeWFCRuleset(N: number, symmetry: number, sourcePatterns: Int3
     patterns.set(pat, t * patternLen)
   }
 
-  const originalPatterns = originalPatternIndices.map(idx => {
-    const start = idx * patternLen
-    const end = start + patternLen
-    return patterns.slice(start, end)
-  })
+  // 2. EDGE HASH PRE-CALCULATION
+  // Maps each pattern to a hash of its overlapping region for each direction
+  const edgeHashes = new BigUint64Array(T * 4)
 
-  const agrees = (p1Idx: number, p2Idx: number, dx: number, dy: number) => {
-    const xmin = dx < 0 ? 0 : dx
-    const xmax = dx < 0 ? dx + N : N
-    const ymin = dy < 0 ? 0 : dy
-    const ymax = dy < 0 ? dy + N : N
+  for (let t = 0; t < T; t++) {
+    for (let d = 0; d < 4; d++) {
+      const dx = DX[d]!
+      const dy = DY[d]!
+      const xmin = dx < 0 ? 0 : dx
+      const xmax = dx < 0 ? dx + N : N
+      const ymin = dy < 0 ? 0 : dy
+      const ymax = dy < 0 ? dy + N : N
 
-    for (let y = ymin; y < ymax; y++) {
-      for (let x = xmin; x < xmax; x++) {
-        const i1 = p1Idx * patternLen + x + N * y
-        const i2 = p2Idx * patternLen + (x - dx) + N * (y - dy)
-        if (patterns[i1] !== patterns[i2]) return false
+      let h = 0n
+      for (let y = ymin; y < ymax; y++) {
+        for (let x = xmin; x < xmax; x++) {
+          const pi = t * patternLen + x + N * y
+          h = (h * 31n) + BigInt(patterns[pi]!)
+        }
       }
+      edgeHashes[t * 4 + d] = h
     }
-    return true
+  }
+
+  /** Checks if pattern t1 can be placed next to t2 in direction d */
+  const fastAgrees = (t1: number, t2: number, d: number): boolean => {
+    const oppositeDir = (d + 2) % 4
+    return edgeHashes[t1 * 4 + d] === edgeHashes[t2 * 4 + oppositeDir]
   }
 
   const propagatorLengths = new Int32Array(4 * T)
@@ -123,7 +207,7 @@ export function makeWFCRuleset(N: number, symmetry: number, sourcePatterns: Int3
     for (let t1 = 0; t1 < T; t1++) {
       let count = 0
       for (let t2 = 0; t2 < T; t2++) {
-        if (agrees(t1, t2, DX[d]!, DY[d]!)) {
+        if (fastAgrees(t1, t2, d)) {
           count++
         }
       }
@@ -141,12 +225,19 @@ export function makeWFCRuleset(N: number, symmetry: number, sourcePatterns: Int3
       const idx = d * T + t1
       propagatorOffsets[idx] = propCursor
       for (let t2 = 0; t2 < T; t2++) {
-        if (agrees(t1, t2, DX[d]!, DY[d]!)) {
+        if (fastAgrees(t1, t2, d)) {
           propagatorData[propCursor++] = t2
         }
       }
     }
   }
+
+  const originalPatterns = originalPatternIndices.map(idx => {
+    const start = idx * patternLen
+    const end = start + patternLen
+
+    return patterns.slice(start, end)
+  })
 
   const propagator = makePropagator({
     data: propagatorData,
@@ -165,17 +256,7 @@ export function makeWFCRuleset(N: number, symmetry: number, sourcePatterns: Int3
   }
 }
 
-export type SerializedWFCRuleset = {
-  N: number,
-  T: number,
-  propagator: SerializedPropagator,
-  weights: Float64Array,
-  patterns: Int32Array,
-  originalPatterns: Int32Array[],
-}
-
-export function serializeWFCRuleset(ruleset: WFCRuleset) {
-
+export function serializeWFCRuleset(ruleset: WFCRuleset): SerializedWFCRuleset {
   return {
     N: ruleset.N,
     T: ruleset.T,
@@ -189,9 +270,11 @@ export function serializeWFCRuleset(ruleset: WFCRuleset) {
 export function deserializeWFCRuleset(data: SerializedWFCRuleset): WFCRuleset {
   const N = data.N
   const T = data.T
-  const weights = data.weights
-  const patterns = data.patterns
-  const originalPatterns = data.originalPatterns
+  const weights = data.weights instanceof Float64Array ? data.weights : new Float64Array(data.weights)
+  const patterns = data.patterns instanceof Int32Array ? data.patterns : new Int32Array(data.patterns)
+  const originalPatterns = data.originalPatterns.map(p => {
+    return p instanceof Int32Array ? p : new Int32Array(p)
+  })
 
   const propagator = deserializePropagator(data.propagator)
 

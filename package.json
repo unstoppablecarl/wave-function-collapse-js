@@ -8,7 +8,7 @@
     "build": "vue-tsc -b && vite build",
     "build:wasm": "wasm-pack build rust-wfc --target web --release",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --build --noEmit"
   },
   "dependencies": {
     "@knadh/oat": "^0.2.0",
@@ -16,6 +16,7 @@
     "@tweakpane/plugin-essentials": "^0.2.1",
     "pinia": "^3.0.4",
     "pinia-simple-persist": "^0.0.8",
+    "pixel-data-js": "^0.5.3",
     "pretty-ms": "^9.3.0",
     "tweakpane": "^4.0.5",
     "tweakpane-plugin-infodump": "^4.0.2",

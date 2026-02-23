@@ -23,6 +23,9 @@ importers:
       pinia-simple-persist:
         specifier: ^0.0.8
         version: 0.0.8(pinia@3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)))(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
+      pixel-data-js:
+        specifier: ^0.5.3
+        version: 0.5.3
       pretty-ms:
         specifier: ^9.3.0
         version: 9.3.0
@@ -757,6 +760,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  pixel-data-js@0.5.3:
+    resolution: {integrity: sha512-Yon9c0V5rrxwPAmIu2lh2uV4fpHrbXlGgog5nwF6Q1Xt2LonskjiAkNcZudnC42n006cJiChtQ8G71MkGAJ1TA==}
 
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
@@ -1551,6 +1557,8 @@ snapshots:
       vue: 3.5.28(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
+
+  pixel-data-js@0.5.3: {}
 
   postcss@8.5.6:
     dependencies:

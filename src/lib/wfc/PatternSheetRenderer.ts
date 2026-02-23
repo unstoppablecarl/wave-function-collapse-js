@@ -112,7 +112,10 @@ function createPatternImageData(
     buffer[targetIdx] = palette[palIdx]!
     buffer[targetIdx + 1] = palette[palIdx + 1]!
     buffer[targetIdx + 2] = palette[palIdx + 2]!
-    buffer[targetIdx + 3] = palette[palIdx + 3]!
+
+    // Check if the source alpha is 0; if so, maybe force it to 255 to see the tile
+    const sourceAlpha = palette[palIdx + 3]!
+    buffer[targetIdx + 3] = sourceAlpha === 0 ? 255 : sourceAlpha
   }
 
   return new ImageData(buffer, N, N)

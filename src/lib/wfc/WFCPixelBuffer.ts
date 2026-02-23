@@ -37,11 +37,11 @@ export const makeWFCPixelBuffer = (
 
     // console.log("Raw Observed Start:", observed[0], observed[1], observed[2]);
 
-    const len = changedIndices.length;
+    const len = changedIndices.length
 
     // Match the Rust u64 alignment
-    const wordsPerCell = Math.floor((T + 63) / 64);
-    const bytesPerCell = wordsPerCell * 8;
+    const wordsPerCell = Math.floor((T + 63) / 64)
+    const bytesPerCell = wordsPerCell * 8
 
     for (let k = 0; k < len; k++) {
       const i = changedIndices[k]!
@@ -51,7 +51,7 @@ export const makeWFCPixelBuffer = (
         // console.log('Byte at index 0:', wave[0]);
         // If this is always 0, Rust isn't filling the wave correctly.
       }
-      
+
       if (collapsedId !== -1) {
         // Cell is collapsed: Simple high-speed render
         const cIdx = collapsedId * 3
@@ -66,8 +66,8 @@ export const makeWFCPixelBuffer = (
         const cellByteOffset = i * bytesPerCell
 
         for (let t = 0; t < T; t++) {
-          const byteIdx = cellByteOffset + (t >> 3);
-          const bitIdx = t & 7;
+          const byteIdx = cellByteOffset + (t >> 3)
+          const bitIdx = t & 7
 
           // Check if the bit is set
           if ((wave[byteIdx]! & (1 << bitIdx)) !== 0) {
@@ -132,57 +132,4 @@ export const extractPatternColors = (
   }
 
   return patternColors
-}
-
-export type ColorData = {
-  sample: Int32Array,
-  palette: Uint8Array,
-  avgColor: number,
-}
-
-/**
- * Maps RGBA pixel data to unique sequential integer IDs.
- * This keeps the WFC model's memory footprint small and logic fast.
- * * @param data - The raw Uint8ClampedArray from ImageData.data
- * @returns { sample: Int32Array, palette: number[][] }
- * sample: An array of IDs representing the image grid
- * palette: A lookup table where palette[id] = [r, g, b, a]
- */
-export const colorToIdMap = (data: Uint8ClampedArray): ColorData => {
-  const sample = new Int32Array(data.length / 4)
-  const colorMap = new Map<string, number>()
-  const tempPalette: number[] = []
-
-  // Track sums for the average background color
-  let rSum = 0, gSum = 0, bSum = 0
-
-  for (let i = 0; i < sample.length; i++) {
-    const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!, a = data[i * 4 + 3]!
-
-    rSum += r
-    gSum += g
-    bSum += b
-
-    const key = `${r},${g},${b},${a}`
-    let id = colorMap.get(key)
-    if (id === undefined) {
-      id = colorMap.size
-      tempPalette.push(r, g, b, a)
-      colorMap.set(key, id)
-    }
-    sample[i] = id
-  }
-
-  const count = sample.length
-  // Pack the average color into an ABGR Uint32 for the buffer
-  const avgColor = 0xFF000000 |
-    (((bSum / count) | 0) << 16) |
-    (((gSum / count) | 0) << 8) |
-    ((rSum / count) | 0)
-
-  return {
-    sample,
-    palette: new Uint8Array(tempPalette),
-    avgColor,
-  }
 }
