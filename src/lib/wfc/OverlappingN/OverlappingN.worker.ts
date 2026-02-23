@@ -24,7 +24,8 @@ type Msg<T extends WorkerMsg> = {
   elapsedTime: number
   filledPercent: number
   reverts: number
-  result: Uint8ClampedArray<ArrayBuffer>
+  result: Uint8ClampedArray<ArrayBuffer>,
+  totalMemoryUseBytes: bigint,
 }
 
 export type MsgAttemptPreview = Msg<WorkerMsg.ATTEMPT_PREVIEW>
@@ -130,6 +131,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             result: img,
             totalElapsedTime: performance.now() - startedAt,
             totalReverts,
+            totalMemoryUseBytes: model.getTotalMemoryUseBytes(),
           }, [img.buffer])
           return
         }
@@ -156,6 +158,8 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
               result: finalImg,
               totalElapsedTime: performance.now() - startedAt,
               totalReverts,
+              totalMemoryUseBytes: model.getTotalMemoryUseBytes(),
+
             }, [finalImg.buffer])
             return // Stop everything, we are done.
           }
@@ -167,6 +171,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             filledPercent: model.filledPercent(),
             reverts: revertsInAttempt,
             result: img,
+            totalMemoryUseBytes: model.getTotalMemoryUseBytes(),
           }, [img.buffer])
           attemptActive = false
 
@@ -178,6 +183,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             filledPercent: model.filledPercent(),
             result: img,
             reverts: revertsInAttempt,
+            totalMemoryUseBytes: model.getTotalMemoryUseBytes(),
           }, [img.buffer])
         }
       }

@@ -54,13 +54,14 @@ const controller = makeOverlappingNController({
     clearCanvas()
   },
   onAttemptFailure(response) {
-    const { attempt, reverts, elapsedTime, filledPercent } = response
+    const { attempt, reverts, elapsedTime, filledPercent, totalMemoryUseBytes } = response
     attempts.value.unshift({
       encoded: resultCanvasRef.value!.canvas?.toDataURL?.() ?? '',
       attempt,
       reverts,
       elapsedTime,
       filledPercent,
+      totalMemoryUseBytes,
     })
   },
   onSuccess(_response, pixels) {

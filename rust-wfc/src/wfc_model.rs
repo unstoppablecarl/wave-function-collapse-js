@@ -231,9 +231,11 @@ impl WFCModel {
         let mut local_to_ban = Vec::with_capacity(64);
 
         // 1. Ask the state's wave which patterns must go
-        self.state.wave.collapse_to_pattern(cell, chosen_t, |p_idx| {
-            local_to_ban.push(p_idx);
-        });
+        self.state
+            .wave
+            .collapse_to_pattern(cell, chosen_t, |p_idx| {
+                local_to_ban.push(p_idx);
+            });
 
         // 2. Tell the state to ban them one by one
         for p_idx in local_to_ban {
@@ -283,10 +285,17 @@ impl WFCModel {
             }
             Some(i) => {
                 if self.state.entropy_tracker.has_no_possible_patterns(i) {
-                    return if self.revert() { IterationResult::REVERT } else { IterationResult::FAIL };
+                    return if self.revert() {
+                        IterationResult::REVERT
+                    } else {
+                        IterationResult::FAIL
+                    };
                 }
 
-                let chosen_t = self.state.wave.get_random_pattern(i, rng_val, &self.state.entropy_tracker);
+                let chosen_t =
+                    self.state
+                        .wave
+                        .get_random_pattern(i, rng_val, &self.state.entropy_tracker);
 
                 self.take_snapshot(i, chosen_t);
                 self.collapse_cell(i, chosen_t);
@@ -320,9 +329,15 @@ impl WFCModel {
         min_idx
     }
 
-    pub fn wave_ptr(&self) -> *const u64 { self.state.wave.as_ptr() }
-    pub fn observed_ptr(&self) -> *const i32 { self.state.observed.data.as_ptr() }
-    pub fn entropies_ptr(&self) -> *const f64 { self.state.entropy_tracker.entropies_ptr() }
+    pub fn wave_ptr(&self) -> *const u64 {
+        self.state.wave.as_ptr()
+    }
+    pub fn observed_ptr(&self) -> *const i32 {
+        self.state.observed.data.as_ptr()
+    }
+    pub fn entropies_ptr(&self) -> *const f64 {
+        self.state.entropy_tracker.entropies_ptr()
+    }
 
     pub fn clear(&mut self) {
         self.generation_complete = false;
@@ -340,5 +355,28 @@ impl WFCModel {
         (self.cells_collapsed.collapsed_count() as f64) / (self.n_cells as f64)
     }
 
-    pub fn get_changes(&mut self) -> Vec<i32> { self.state.dirty_cells.flush_to_js() }
+    pub fn get_changes(&mut self) -> Vec<i32> {
+        self.state.dirty_cells.flush_to_js()
+    }
+
+    pub fn is_generation_complete(&self) -> bool {
+        self.generation_complete
+    }
+
+    pub fn get_filled_count(&self) -> usize {
+        self.cells_collapsed.collapsed_count()
+    }
+
+    pub fn get_total_cells(&self) -> usize {
+        self.n_cells
+    }
+
+    pub fn get_total_memory_usage_bytes(&self) -> u64 {
+        // memory_size(0) is a direct Wasm instruction.
+        // It returns the number of 64KB pages.
+        let pages = core::arch::wasm32::memory_size(0);
+        let bytes = pages * 65536;
+
+        (bytes as u64)
+    }
 }

@@ -14,7 +14,6 @@ export type OverlappingNOptions = {
 }
 
 export type OverlappingNModel = {
-  singleIteration: (rng: RNG) => void,
   singleIterationWithSnapShots: (rng: RNG) => IterationResult,
   clear: () => void,
   isGenerationComplete: () => boolean,
@@ -30,6 +29,7 @@ export type OverlappingNModel = {
   height: number,
   destroy: () => void,
   ruleset: WFCRuleset,
+  getTotalMemoryUseBytes: () => bigint,
 }
 
 export type OverlappingNModelCreator = (opt: OverlappingNOptions) => Promise<OverlappingNModel>

@@ -41,7 +41,6 @@ export const makeOverlappingNModelWasm = async (
 
   return {
     ruleset,
-    singleIteration: (rng: RNG) => model.single_iteration(rng()),
     singleIterationWithSnapShots: (rng: RNG) => model.single_iteration_with_snapshots(rng()),
     clear: () => model.clear(),
     isGenerationComplete: () => model.is_generation_complete(),
@@ -56,6 +55,9 @@ export const makeOverlappingNModelWasm = async (
       const stride = wordsPerCell * 8
       const totalBytes = width * height * stride
       return new Uint8Array(wasm.memory.buffer, model.wave_ptr(), totalBytes)
+    },
+    getTotalMemoryUseBytes: () => {
+      return model.get_total_memory_usage_bytes()
     },
     getChanges: () => {
       return model.get_changes() as unknown as Int32Array<ArrayBuffer>

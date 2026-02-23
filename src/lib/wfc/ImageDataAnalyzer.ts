@@ -23,17 +23,19 @@ export function makeImageDataAnalyzer(
     () => settings.N,
     () => settings.symmetry,
     () => settings.periodicInput,
+    () => settings.NOverlap,
   ], () => {
     running.value = false
     averageBrittleness.value = null
     if (!imageDataSource.value) return
 
-    const { N, symmetry, periodicInput } = settings
+    const { N, symmetry, periodicInput, NOverlap } = settings
 
     run({
       imageData: imageDataSource.value,
       rulesetType: settings.rulesetType,
       N,
+      NOverlap,
       symmetry,
       periodicInput,
     })

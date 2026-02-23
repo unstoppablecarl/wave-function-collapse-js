@@ -57,6 +57,7 @@ export function makeOverlappingNController(
       const pixels = new Uint8ClampedArray(data.result.buffer)
       currentAttempt.filledPercent = data.filledPercent
       currentAttempt.reverts = data.reverts
+      currentAttempt.totalMemoryUseBytes = data.totalMemoryUseBytes
       onPreview?.(data, pixels)
     },
 
