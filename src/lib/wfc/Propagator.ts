@@ -1,16 +1,19 @@
 export type PropagatorOptions = {
-  data: Int32Array;
-  offsets: Int32Array;
-  lengths: Int32Array;
-  T: number;
-};
+  data: Int32Array,
+  offsets: Int32Array,
+  lengths: Int32Array,
+  T: number,
+}
 
 export type Propagator = ReturnType<typeof makePropagator>
 
 export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions) {
-
-  // valid results adjacent to patternId in given direction
   function getValidPatternIds(patternId: number, direction: number) {
+    // Basic bounds safety
+    if (direction < 0 || direction >= 4) {
+      return new Int32Array(0)
+    }
+
     const index = direction * T + patternId
     const start = offsets[index]!
     const count = lengths[index]!
@@ -19,14 +22,12 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
   }
 
   function getCompatibleCount(patternId: number, direction: number): number {
-    return lengths[direction * T + patternId]!
+    const idx = direction * T + patternId
+    const len = lengths[idx]
+
+    return len ?? 0
   }
 
-  /**
-   * Analyzes the propagator to find "bottleneck" patterns.
-   * High value = Brittle/Risky (few connection options)
-   * Low value  = Robust/Flexible (many connection options)
-   */
   function getBrittleness() {
     const brittlenessScores = new Float64Array(T)
     const bottlenecks: number[] = []
@@ -38,52 +39,55 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
       for (let d = 0; d < 4; d++) {
         const count = getCompatibleCount(t, d)
 
-        // If a tile has NO valid neighbors in a specific direction,
-        // it is a guaranteed contradiction if placed anywhere but the edge.
         if (count === 0) {
           isDeadEnd = true
         }
+
         totalConnections += count
       }
 
-      // Patterns with low connection counts are "brittle"
-      // We use an inverse scale so that problematic tiles have HIGHER scores.
-      brittlenessScores[t] = isDeadEnd ? 1.0 : 1 / (totalConnections / 4)
+      // Safeguard against division by zero
+      const avg = totalConnections / 4
+      const score = isDeadEnd || avg === 0
+        ? 1.0
+        : Math.min(1.0, 1 / avg)
 
-      if (brittlenessScores[t]! > 0.8) {
+      brittlenessScores[t] = score
+
+      if (score > 0.8) {
         bottlenecks.push(t)
       }
     }
 
+    const totalScore = brittlenessScores.reduce((a, b) => a + b, 0)
+    const averageBrittleness = totalScore / T
+
     return {
       scores: brittlenessScores,
-      bottlenecks, // Indices of patterns that are likely to cause contradictions
-      averageBrittleness: brittlenessScores.reduce((a, b) => a + b, 0) / T,
+      bottlenecks,
+      averageBrittleness,
     }
   }
 
   return {
     data,
-    // Starting index in data for each (direction, pattern)
     offsets,
-    // Number of valid neighbors for each (direction, pattern)
     lengths,
+    T,
     getValidPatternIds,
-    // number of valid results adjacent to patternId in given direction
     getCompatibleCount,
-
     getBrittleness,
   }
 }
 
 export type SerializedPropagator = {
-  data: Int32Array,
-  offsets: Int32Array,
-  lengths: Int32Array,
+  data: Int32Array | number[],
+  offsets: Int32Array | number[],
+  lengths: Int32Array | number[],
   T: number,
 }
 
-export function serializePropagator(propagator: any): SerializedPropagator {
+export function serializePropagator(propagator: Propagator): SerializedPropagator {
   const data = propagator.data
   const offsets = propagator.offsets
   const lengths = propagator.lengths
@@ -97,10 +101,20 @@ export function serializePropagator(propagator: any): SerializedPropagator {
   }
 }
 
-export function deserializePropagator(serialized: SerializedPropagator) {
-  const data = serialized.data
-  const offsets = serialized.offsets
-  const lengths = serialized.lengths
+export function deserializePropagator(serialized: SerializedPropagator): Propagator {
+  // Defensive casting to ensure TypedArrays
+  const data = serialized.data instanceof Int32Array
+    ? serialized.data
+    : new Int32Array(serialized.data)
+
+  const offsets = serialized.offsets instanceof Int32Array
+    ? serialized.offsets
+    : new Int32Array(serialized.offsets)
+
+  const lengths = serialized.lengths instanceof Int32Array
+    ? serialized.lengths
+    : new Int32Array(serialized.lengths)
+
   const T = serialized.T
 
   return makePropagator({
