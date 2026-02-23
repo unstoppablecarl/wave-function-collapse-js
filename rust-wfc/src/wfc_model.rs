@@ -377,6 +377,6 @@ impl WFCModel {
         let pages = core::arch::wasm32::memory_size(0);
         let bytes = pages * 65536;
 
-        (bytes as u64)
+        bytes as u64
     }
 }
