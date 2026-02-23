@@ -13,6 +13,8 @@ export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
   symmetry: number,
   modelType: ModelType,
   rulesetType: RulesetType,
+  maxSnapShots: number,
+  snapshotIntervalPercent: number,
 }
 
 type SerializedData = {
@@ -43,6 +45,8 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     startCoordY: 0.5,
     modelType: ModelType.WASM,
     rulesetType: RulesetType.SLIDING_WINDOW,
+    maxSnapShots: 10,
+    snapshotIntervalPercent: 5,
   })
 
   const state = {

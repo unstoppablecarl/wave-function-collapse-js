@@ -101,6 +101,21 @@ onMounted(() => {
     label: 'max attempts',
   })
 
+  const maxSnapShots = settingsFolder.addBinding(store.settings, 'maxSnapShots', {
+    min: 1,
+    step: 1,
+    label: 'max snapshots',
+  })
+  addInfo(maxSnapShots, 'The max number of snapshots to store. Used when reverting.')
+
+  const snapshotIntervalPercent = settingsFolder.addBinding(store.settings, 'snapshotIntervalPercent', {
+    min: 0,
+    max: 100,
+    step: 1,
+    label: 'snapshot %',
+  });
+  addInfo(snapshotIntervalPercent, 'A snapshot will be stored every time X% progress is made')
+
   const revertsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRevertsPerAttempt', {
     min: 0,
     step: 1,

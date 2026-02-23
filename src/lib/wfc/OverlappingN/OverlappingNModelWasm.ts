@@ -36,7 +36,7 @@ export const makeOverlappingNModelWasm = async (
     startCoordX,
     startCoordY,
     maxSnapshots,
-    snapshotIntervalPercent,
+    snapshotIntervalPercent / 100,
   )
 
   return {

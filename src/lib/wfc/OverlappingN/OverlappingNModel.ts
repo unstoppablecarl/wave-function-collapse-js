@@ -11,6 +11,8 @@ export type OverlappingNOptions = {
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,
+  maxSnapShots: number,
+  snapshotIntervalPercent: number,
 }
 
 export type OverlappingNModel = {
