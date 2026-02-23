@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "build:wasm": "wasm-pack build rust-wfc --target web --release",
+    "build:wasm-debug": "wasm-pack build rust-wfc --target web --debug",
     "preview": "vite preview",
     "typecheck": "vue-tsc --build --noEmit"
   },
