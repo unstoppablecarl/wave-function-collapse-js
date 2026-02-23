@@ -112,6 +112,7 @@ impl Wave {
                 let bit = word.trailing_zeros() as usize;
                 let t_idx = (w_idx << 6) + bit;
 
+                // Safety check for patterns that might exceed t_count in the final word
                 if t_idx < self.t_count {
                     let p = PatternIndex { base: t_idx };
                     let weight = entropy_tracker.get_pattern_weight(p);
@@ -127,13 +128,15 @@ impl Wave {
         PatternIndex { base: 0 }
     }
 
-    pub fn collapse_to_pattern(
+    pub fn collapse_to_pattern<F>(
         &mut self,
         cell: CellIndex,
         chosen_t: PatternIndex,
-    ) -> Vec<PatternIndex> {
-        let mut banned = Vec::new();
-        let word_idx = chosen_t.base >> 6;
+        mut on_ban: F,
+    ) where
+        F: FnMut(PatternIndex),
+    {
+        let word_idx_of_chosen = chosen_t.base >> 6;
         let bit_in_word = chosen_t.base & 63;
         let start_idx = cell.base * self.words_per_cell;
 
@@ -145,8 +148,10 @@ impl Wave {
                 continue;
             }
 
+            // Identify all bits that ARE set but SHOULD NOT be (everything except chosen)
             let mut to_ban_mask = word;
-            if w_inner == word_idx {
+
+            if w_inner == word_idx_of_chosen {
                 to_ban_mask &= !(1u64 << bit_in_word);
             }
 
@@ -155,12 +160,11 @@ impl Wave {
                 let t_idx = (w_inner << 6) + bit;
 
                 if t_idx < self.t_count {
-                    banned.push(PatternIndex { base: t_idx });
+                    on_ban(PatternIndex { base: t_idx });
                 }
 
                 to_ban_mask &= !(1u64 << bit);
             }
         }
-        banned
     }
 }

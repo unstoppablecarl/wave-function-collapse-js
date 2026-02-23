@@ -6,7 +6,7 @@ use crate::wfc_model::propagator::Propagator;
 const STRIDE: usize = 4;
 #[derive(Clone)]
 pub struct Compatible {
-    data: Vec<i32>,
+    data: Vec<u16>,
     t_count: usize,
     n_cells: usize,
 }
@@ -28,7 +28,7 @@ impl Compatible {
                 let pattern_idx = PatternIndex { base: t };
 
                 for d in DIRECTIONS {
-                    let val = propagator.get_compatible_count(pattern_idx, d);
+                    let val = propagator.get_compatible_count(pattern_idx, d) as u16;
 
                     compatible.set(cell_idx, pattern_idx, d, val);
                 }
@@ -66,13 +66,13 @@ impl Compatible {
         cell: CellIndex,
         pattern: PatternIndex,
         direction: Direction,
-        value: i32,
+        value: u16,
     ) {
         let index = self.get_index(cell, pattern, direction);
         self.data[index.base] = value;
     }
 
-    pub fn decrement_by_index(&mut self, idx: CompatibleIndex) -> i32 {
+    pub fn decrement_by_index(&mut self, idx: CompatibleIndex) -> u16 {
         let current_val = self.data[idx.base];
 
         if current_val > 0 {
@@ -87,7 +87,7 @@ impl Compatible {
         cell: CellIndex,
         pattern: PatternIndex,
         direction: Direction,
-    ) -> i32 {
+    ) -> u16 {
         let idx = self.get_index(cell, pattern, direction);
 
         self.decrement_by_index(idx)
@@ -102,7 +102,7 @@ impl Compatible {
 
                 for &d in &DIRECTIONS {
                     // Get the count of valid neighbors from the propagator
-                    let val = propagator.get_compatible_count(pattern_idx, d);
+                    let val = propagator.get_compatible_count(pattern_idx, d) as u16;
 
                     self.set(cell_idx, pattern_idx, d, val);
                 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BindingApi } from '@tweakpane/core'
+import { BindingApi, SliderTextController } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
@@ -56,6 +56,18 @@ onMounted(() => {
     step: 1,
   })
   addInfo(N, 'In the Wave Function Collapse (WFC) algorithm, N represents the pattern size (or "kernel size"). It is the dimension of the small squares the algorithm extracts from your input image to use as its "building blocks."')
+
+  const NOverlap = settingsFolder.addBinding(store.settings, 'NOverlap', {
+    min: 1,
+    max: 10,
+    step: 1,
+  })
+  addInfo(NOverlap, 'The margin of edge pixels that do not have to overlap with existing pixels to place a pattern.')
+
+  watchEffect(() => {
+    const stc = NOverlap.controller.valueController as SliderTextController
+    stc.sliderController.props.set('max', store.maxNOverlap)
+  })
 
   const initialGround = settingsFolder.addBinding(store.settings, 'initialGround', {
     min: -1,

@@ -7,6 +7,7 @@ import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from 
 export type ImageDataAnalyzerWorkerOptions = {
   imageData: ImageData,
   N: number,
+  NOverlap: number,
   symmetry: number,
   rulesetType: RulesetType,
   periodicInput: boolean,
@@ -19,7 +20,7 @@ export type ImageDataAnalyzerWorkerResult = {
 
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
-  const { imageData, N, symmetry, periodicInput, rulesetType } = e.data
+  const { imageData, N, symmetry, periodicInput, rulesetType, NOverlap } = e.data
   const indexedImage = makeIndexedImage(imageData)
 
   let ruleset: WFCRuleset
@@ -27,6 +28,7 @@ ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   if (rulesetType === RulesetType.SLIDING_WINDOW) {
     ruleset = makeOverlappingNSlidingWindowRuleset({
       N,
+      NOverlap,
       indexedImage,
       symmetry: symmetry,
       periodicInput,
@@ -48,6 +50,6 @@ ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   ctx.postMessage(result, [
     result.palette.buffer,
     (result.serializedRuleset.patterns as Int32Array).buffer,
-    result.serializedRuleset.propagator.data.buffer,
+    (result.serializedRuleset.propagator.data as Int32Array).buffer,
   ])
 }

@@ -14,6 +14,7 @@ import {
 export type WFCRuleset = {
   N: number,
   T: number,
+  NOverlap: number,
   propagator: Propagator,
   weights: Float64Array,
   patterns: Int32Array,
@@ -24,7 +25,7 @@ export type SerializedWFCRuleset = {
   N: number,
   T: number,
   propagator: SerializedPropagator,
-
+  NOverlap: number,
   // json serialization will be number[]
   weights: Float64Array | number[],
   patterns: Int32Array | number[],
@@ -123,12 +124,13 @@ export function makeWFCRuleset(
   N: number,
   symmetry: number,
   sourcePatterns: Int32Array[],
-  overlap: number = N - 1,
+  NOverlap: number = 1,
 ): WFCRuleset {
   const patternLen = N * N
   const weightsMap = new Map<bigint, number>()
   const patternsList: Int32Array[] = []
   const originalPatternIndices: number[] = []
+  const overlap = N - NOverlap
 
   for (let i = 0; i < sourcePatterns.length; i++) {
     const base = sourcePatterns[i]!
@@ -255,6 +257,7 @@ export function makeWFCRuleset(
   return {
     N,
     T,
+    NOverlap,
     propagator,
     originalPatterns,
     weights,
@@ -266,6 +269,7 @@ export function serializeWFCRuleset(ruleset: WFCRuleset): SerializedWFCRuleset {
   return {
     N: ruleset.N,
     T: ruleset.T,
+    NOverlap: ruleset.NOverlap,
     weights: ruleset.weights,
     patterns: ruleset.patterns,
     originalPatterns: ruleset.originalPatterns,
@@ -274,8 +278,6 @@ export function serializeWFCRuleset(ruleset: WFCRuleset): SerializedWFCRuleset {
 }
 
 export function deserializeWFCRuleset(data: SerializedWFCRuleset): WFCRuleset {
-  const N = data.N
-  const T = data.T
   const weights = data.weights instanceof Float64Array ? data.weights : new Float64Array(data.weights)
   const patterns = data.patterns instanceof Int32Array ? data.patterns : new Int32Array(data.patterns)
   const originalPatterns = data.originalPatterns.map(p => {
@@ -285,8 +287,9 @@ export function deserializeWFCRuleset(data: SerializedWFCRuleset): WFCRuleset {
   const propagator = deserializePropagator(data.propagator)
 
   return {
-    N,
-    T,
+    N: data.N,
+    T: data.T,
+    NOverlap: data.NOverlap,
     propagator,
     weights,
     patterns,

@@ -45,21 +45,6 @@ impl DirtyCells {
         result
     }
 
-    pub fn peek_changes(&self) -> Vec<i32> {
-        let list = &self.list;
-
-        let result = list
-            .iter()
-            .map(|idx| {
-                let val = idx.base as i32;
-
-                val
-            })
-            .collect();
-
-        result
-    }
-
     pub fn clear(&mut self) {
         let buffer = &mut self.list;
         let flags = &mut self.is_dirty;

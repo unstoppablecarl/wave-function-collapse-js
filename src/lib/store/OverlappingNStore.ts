@@ -7,6 +7,7 @@ import { ModelType, RulesetType } from '../wfc/OverlappingN/OverlappingNModel.ts
 
 export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
   N: number,
+  NOverlap: number,
   periodicInput: boolean,
   initialGround: number,
   symmetry: number,
@@ -25,6 +26,7 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const settings = reactive<StoreSettings>({
     N: 2,
+    NOverlap: 1,
     width: 60,
     height: 60,
     periodicInput: true,
@@ -79,10 +81,13 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     return SYMMETRY_OPTIONS[settings.symmetry]?.description || ''
   })
 
+  const maxNOverlap = computed(() => settings.N - 1)
+
   return {
     $reset,
     $serializeState,
     $restoreState,
+    maxNOverlap,
     scale,
     settings,
     currentSymmetryDescription,
