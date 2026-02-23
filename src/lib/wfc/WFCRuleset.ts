@@ -119,22 +119,17 @@ function* generateSymmetries(base: Int32Array, N: number, symmetry: number) {
   }
 }
 
-/**
- * Creates a WFC Ruleset from a list of source patterns.
- * Optimizes performance by pre-calculating edge hashes to reduce propagator generation
- * complexity from O(T^2 * N^2) to O(T^2).
- */
 export function makeWFCRuleset(
   N: number,
   symmetry: number,
   sourcePatterns: Int32Array[],
+  overlap: number = N - 1,
 ): WFCRuleset {
   const patternLen = N * N
   const weightsMap = new Map<bigint, number>()
   const patternsList: Int32Array[] = []
   const originalPatternIndices: number[] = []
 
-  // 1. DEDUPLICATION & SYMMETRY GENERATION
   for (let i = 0; i < sourcePatterns.length; i++) {
     const base = sourcePatterns[i]!
     let firstVariationIdx = -1
@@ -166,6 +161,7 @@ export function makeWFCRuleset(
   for (let t = 0; t < T; t++) {
     const pat = patternsList[t]!
     const hash = getPatternHash(pat)
+
     weights[t] = weightsMap.get(hash)!
     patterns.set(pat, t * patternLen)
   }
@@ -178,18 +174,22 @@ export function makeWFCRuleset(
     for (let d = 0; d < 4; d++) {
       const dx = DX[d]!
       const dy = DY[d]!
-      const xmin = dx < 0 ? 0 : dx
-      const xmax = dx < 0 ? dx + N : N
-      const ymin = dy < 0 ? 0 : dy
-      const ymax = dy < 0 ? dy + N : N
+
+      // Adjust the sample window based on the desired overlap
+      const xmin = dx < 0 ? 0 : (dx > 0 ? N - overlap : 0)
+      const xmax = dx < 0 ? overlap : (dx > 0 ? N : N)
+      const ymin = dy < 0 ? 0 : (dy > 0 ? N - overlap : 0)
+      const ymax = dy < 0 ? overlap : (dy > 0 ? N : N)
 
       let h = 0n
+
       for (let y = ymin; y < ymax; y++) {
         for (let x = xmin; x < xmax; x++) {
           const pi = t * patternLen + x + N * y
           h = (h * 31n) + BigInt(patterns[pi]!)
         }
       }
+
       edgeHashes[t * 4 + d] = h
     }
   }
@@ -197,7 +197,10 @@ export function makeWFCRuleset(
   /** Checks if pattern t1 can be placed next to t2 in direction d */
   const fastAgrees = (t1: number, t2: number, d: number): boolean => {
     const oppositeDir = (d + 2) % 4
-    return edgeHashes[t1 * 4 + d] === edgeHashes[t2 * 4 + oppositeDir]
+    const h1 = edgeHashes[t1 * 4 + d]
+    const h2 = edgeHashes[t2 * 4 + oppositeDir]
+
+    return h1 === h2
   }
 
   const propagatorLengths = new Int32Array(4 * T)
@@ -206,11 +209,13 @@ export function makeWFCRuleset(
   for (let d = 0; d < 4; d++) {
     for (let t1 = 0; t1 < T; t1++) {
       let count = 0
+
       for (let t2 = 0; t2 < T; t2++) {
         if (fastAgrees(t1, t2, d)) {
           count++
         }
       }
+
       propagatorLengths[d * T + t1] = count
       totalPropagatorSize += count
     }
@@ -224,6 +229,7 @@ export function makeWFCRuleset(
     for (let t1 = 0; t1 < T; t1++) {
       const idx = d * T + t1
       propagatorOffsets[idx] = propCursor
+
       for (let t2 = 0; t2 < T; t2++) {
         if (fastAgrees(t1, t2, d)) {
           propagatorData[propCursor++] = t2
