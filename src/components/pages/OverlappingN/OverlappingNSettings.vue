@@ -102,7 +102,7 @@ onMounted(() => {
   })
 
   const maxSnapShots = settingsFolder.addBinding(store.settings, 'maxSnapShots', {
-    min: 1,
+    min: 0,
     step: 1,
     label: 'max snapshots',
   })

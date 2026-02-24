@@ -12,6 +12,8 @@ export const makeOverlappingNModelWasm = async (
     startCoordBias,
     startCoordX,
     startCoordY,
+    maxSnapShots,
+    snapshotIntervalPercent
   }: OverlappingNOptions): Promise<OverlappingNModel> => {
 
   const wasm = await init({
@@ -19,9 +21,6 @@ export const makeOverlappingNModelWasm = async (
   })
 
   const { T, propagator, weights } = ruleset
-
-  const maxSnapshots = 10
-  const snapshotIntervalPercent = 0.05
 
   const model = new WFCModel(
     width,
@@ -35,7 +34,7 @@ export const makeOverlappingNModelWasm = async (
     startCoordBias,
     startCoordX,
     startCoordY,
-    maxSnapshots,
+    maxSnapShots,
     snapshotIntervalPercent / 100,
   )
 

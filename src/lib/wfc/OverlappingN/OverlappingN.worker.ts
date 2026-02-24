@@ -25,7 +25,7 @@ type Msg<T extends WorkerMsg> = {
   filledPercent: number
   reverts: number
   result: Uint8ClampedArray<ArrayBuffer>,
-  totalMemoryUseBytes: bigint,
+  totalMemoryUseBytes: number,
 }
 
 export type MsgAttemptPreview = Msg<WorkerMsg.ATTEMPT_PREVIEW>

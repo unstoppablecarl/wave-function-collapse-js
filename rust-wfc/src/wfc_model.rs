@@ -147,6 +147,9 @@ impl WFCModel {
     }
 
     fn take_snapshot(&mut self, i: CellIndex, t: PatternIndex) {
+        if self.max_snapshots == 0 {
+            return;
+        }
         let current_progress = self.filled_percent();
         let diff = current_progress - self.last_snapshot_progress;
 
@@ -371,12 +374,10 @@ impl WFCModel {
         self.n_cells
     }
 
-    pub fn get_total_memory_usage_bytes(&self) -> u64 {
-        // memory_size(0) is a direct Wasm instruction.
-        // It returns the number of 64KB pages.
+    pub fn get_total_memory_usage_bytes(&self) -> usize {
         let pages = core::arch::wasm32::memory_size(0);
         let bytes = pages * 65536;
 
-        bytes as u64
+        bytes
     }
 }

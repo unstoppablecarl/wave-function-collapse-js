@@ -31,7 +31,7 @@ export type OverlappingNModel = {
   height: number,
   destroy: () => void,
   ruleset: WFCRuleset,
-  getTotalMemoryUseBytes: () => bigint,
+  getTotalMemoryUseBytes: () => number,
 }
 
 export type OverlappingNModelCreator = (opt: OverlappingNOptions) => Promise<OverlappingNModel>

@@ -35,6 +35,6 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     destroy: () => {
     },
     ruleset,
-    getTotalMemoryUseBytes: () => 0 as unknown as bigint,
+    getTotalMemoryUseBytes: () => 0,
   }
 }

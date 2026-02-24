@@ -10,7 +10,7 @@ export type OverlappingNWorkerAttempt = {
   reverts: number,
   elapsedTime: number,
   filledPercent: number,
-  totalMemoryUseBytes: bigint,
+  totalMemoryUseBytes: number,
 }
 
 export function makeOverlappingNAttempt() {
@@ -20,7 +20,7 @@ export function makeOverlappingNAttempt() {
     filledPercent: 0,
     elapsedTime: 0,
     reverts: 0,
-    totalMemoryUseBytes: 0 as unknown as bigint,
+    totalMemoryUseBytes: 0,
   })
 }
 
