@@ -38,7 +38,7 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     seed: 1,
     maxAttempts: 10,
     contradictionColor: 0xff0055,
-    maxRevertsPerAttempt: 10,
+    maxRevertsPerAttempt: 100,
     previewInterval: 100,
     startCoordBias: 0.05,
     startCoordX: 0.5,
