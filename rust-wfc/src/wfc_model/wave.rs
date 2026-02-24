@@ -1,6 +1,7 @@
 use crate::wfc_model::cell::CellIndex;
 use crate::wfc_model::entropy_tracker::EntropyTracker;
 use crate::wfc_model::pattern::PatternIndex;
+use crate::wfc_model::WaveSnapshot;
 
 #[derive(Clone)]
 pub struct Wave {
@@ -82,6 +83,14 @@ impl Wave {
                 self.data[last_word_idx] &= last_word_mask;
             }
         }
+    }
+
+    pub fn clone_data(&self) -> Vec<u64> {
+        self.data.clone()
+    }
+
+    pub fn set_data(&mut self, s: &WaveSnapshot) {
+        self.data.copy_from_slice(&s.wave_data);
     }
 
     pub fn find_remaining_pattern(&self, i: CellIndex) -> i32 {
@@ -166,5 +175,12 @@ impl Wave {
                 to_ban_mask &= !(1u64 << bit);
             }
         }
+    }
+
+    pub fn is_fully_undetermined(&self, cell: CellIndex, entropy_tracker: &EntropyTracker) -> bool {
+        let current_count = entropy_tracker.possible_pattern_count(cell) as usize;
+
+        // If the count matches the total patterns, no bans have occurred here
+        current_count == self.t_count
     }
 }

@@ -25,7 +25,7 @@ impl<T: Clone + Default> CellCollection<T> {
 
         ptr
     }
-    
+
     pub fn fill(&mut self, value: T) {
         self.data.fill(value);
     }
@@ -36,10 +36,13 @@ impl<T: Clone + Default> Index<CellIndex> for CellCollection<T> {
 
     #[inline(always)]
     fn index(&self, index: CellIndex) -> &Self::Output {
-        let pos = index.base;
-        let internal_data = &self.data;
+        // For maximum Wasm speed use this
+        unsafe { self.data.get_unchecked(index.base) }
 
-        &internal_data[pos]
+        // instead of safer
+        // let pos = index.base;
+        // let internal_data= &self.data;
+        // &internal_data[pos]
     }
 }
 

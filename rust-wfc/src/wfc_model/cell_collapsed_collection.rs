@@ -64,4 +64,11 @@ impl CellCollapsedCollection {
 
         collapsed
     }
+
+    pub fn reset_from_snapshot(&mut self, saved_indices: &[CellIndex]) {
+        let n = saved_indices.len();
+
+        self.indices[..n].copy_from_slice(saved_indices);
+        self.count = n;
+    }
 }
