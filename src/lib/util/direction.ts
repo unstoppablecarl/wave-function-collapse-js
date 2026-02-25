@@ -1,3 +1,5 @@
+export type Direction = number & { readonly __brandDirection: unique symbol; }
+
 const DIRECTIONS = [
   { name: 'LEFT', dx: -1, dy: 0, oppositeName: 'RIGHT' },
   { name: 'DOWN', dx: 0, dy: 1, oppositeName: 'UP' },

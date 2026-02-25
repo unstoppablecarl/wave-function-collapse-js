@@ -1,5 +1,6 @@
-import { DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
+import { type Direction, DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
 import { type FastLogFunction, makeFastLog } from '../util/fastLog.ts'
+import type { CellIndex, PatternIndex } from './_types.ts'
 import type { Propagator } from './Propagator.ts'
 
 export type RNG = () => number
@@ -64,8 +65,8 @@ export const makeWFCModel = (
   const compatible = new Int32Array(N_STATES * 4)
 
   // return how many neighbors in `direction` allow pattern `patternId` to exist at cellIdx.
-  function getCompatibleIndex(cellIdx: number, patternId: number, direction: number): number {
-    return (cellIdx * T + patternId) * 4 + direction
+  function getCompatibleIndex(cell: CellIndex, pattern: PatternIndex, direction: Direction): number {
+    return (cell * T + pattern) * 4 + direction
   }
 
   // Stores the final selected pattern index for each cell once it has collapsed.
@@ -185,8 +186,8 @@ export const makeWFCModel = (
     return spatialPriority
   }
 
-  const ban = (i: number, t: number) => {
-    const waveIdx = getWaveIndex(i, t)
+  const ban = (cell: CellIndex, pattern: PatternIndex) => {
+    const waveIdx = getWaveIndex(cell, pattern)
 
     if (wave[waveIdx] === 0) return
     wave[waveIdx] = 0
@@ -197,31 +198,31 @@ export const makeWFCModel = (
     compatible[compStart + 2] = 0
     compatible[compStart + 3] = 0
 
-    pendingBans[pendingBanCount * 2] = i
-    pendingBans[pendingBanCount * 2 + 1] = t
+    pendingBans[pendingBanCount * 2] = cell
+    pendingBans[pendingBanCount * 2 + 1] = pattern
     pendingBanCount++
 
-    sumsOfOnes[i]! -= 1
-    sumsOfWeights[i]! -= weights[t]!
-    sumsOfWeightLogWeights[i]! -= weightLogWeights[t]!
+    sumsOfOnes[cell]! -= 1
+    sumsOfWeights[cell]! -= weights[pattern]!
+    sumsOfWeightLogWeights[cell]! -= weightLogWeights[pattern]!
 
-    markDirty(i)
+    markDirty(cell)
     // Incremental Shannon Entropy calculation:
-    const sum = sumsOfWeights[i]!
-    if (sum <= 1e-10 || sumsOfOnes[i]! <= 1) {
-      entropies[i] = 0
+    const sum = sumsOfWeights[cell]!
+    if (sum <= 1e-10 || sumsOfOnes[cell]! <= 1) {
+      entropies[cell] = 0
       // Update observed immediately if the cell is collapsed
-      if (sumsOfOnes[i] === 1) {
+      if (sumsOfOnes[cell] === 1) {
         for (let t2 = 0; t2 < T; t2++) {
-          if (wave[i * T + t2] === 1) {
-            observed[i] = t2
+          if (wave[cell * T + t2] === 1) {
+            observed[cell] = t2
             break
           }
         }
       }
     } else {
-      const val = fastLog(sum) - (sumsOfWeightLogWeights[i]! / sum)
-      entropies[i] = Math.max(0, val)
+      const val = fastLog(sum) - (sumsOfWeightLogWeights[cell]! / sum)
+      entropies[cell] = Math.max(0, val)
     }
   }
 
@@ -238,10 +239,10 @@ export const makeWFCModel = (
     history = []
     lastCheckpointPercent = 0
     pendingBanCount = 0
-    for (let i = 0; i < N_CELLS; i++) {
-      for (let t = 0; t < T; t++) {
+    for (let i = 0 as CellIndex; i < N_CELLS; i++) {
+      for (let t = 0 as PatternIndex; t < T; t++) {
         wave[i * T + t] = 1
-        for (let d = 0; d < 4; d++) {
+        for (let d = 0 as Direction; d < 4; d++) {
           const compatibleIndex = getCompatibleIndex(i, t, d)
           compatible[compatibleIndex] = propagator.getCompatibleCount(t, d)
         }
@@ -256,9 +257,9 @@ export const makeWFCModel = (
     generationComplete = false
 
     // If a pattern has 0 valid neighbors in any direction, it is impossible even in an empty grid.
-    for (let i = 0; i < N_CELLS; i++) {
-      for (let t = 0; t < T; t++) {
-        for (let d = 0; d < 4; d++) {
+    for (let i = 0 as CellIndex; i < N_CELLS; i++) {
+      for (let t = 0 as PatternIndex; t < T; t++) {
+        for (let d = 0 as Direction; d < 4; d++) {
           const compIdx = getCompatibleIndex(i, t, d)
           if (compatible[compIdx] === 0) {
             ban(i, t)
@@ -271,11 +272,11 @@ export const makeWFCModel = (
     if (initialGround >= 0 && initialGround < T) {
       const groundY = height - 1
       for (let x = 0; x < width; x++) {
-        const idx = x + groundY * width
-        for (let t = 0; t < T; t++) {
+        const idx = x + groundY * width as CellIndex
+        for (let t = 0 as PatternIndex; t < T; t++) {
           if (t !== initialGround) ban(idx, t)
         }
-        for (let y = 0; y < groundY; y++) ban(x + y * width, initialGround)
+        for (let y = 0; y < groundY; y++) ban((x + y * width) as CellIndex, initialGround as PatternIndex)
       }
     }
 
@@ -287,15 +288,15 @@ export const makeWFCModel = (
     while (pendingBanCount > 0) {
       // Pop the last banned cell and the pattern that was removed
       pendingBanCount--
-      const bannedCellIndex = pendingBans[pendingBanCount * 2]!
+      const bannedCellIndex = pendingBans[pendingBanCount * 2]! as CellIndex
       // banned pattern
-      const patternId = pendingBans[pendingBanCount * 2 + 1]!
+      const pattern = pendingBans[pendingBanCount * 2 + 1]! as PatternIndex
       // banned coord
       const x1 = bannedCellIndex % width
       const y1 = (bannedCellIndex / width) | 0
 
       // Check all 4 neighbors to see if this ban affects their possibilities
-      for (let d = 0; d < 4; d++) {
+      for (let d = 0 as Direction; d < 4; d++) {
         let x2 = x1 + DX[d]!
         let y2 = y1 + DY[d]!
 
@@ -309,15 +310,15 @@ export const makeWFCModel = (
         if (y2 < 0) y2 += height
         else if (y2 >= height) y2 -= height
 
-        const nCellIndex = x2 + y2 * width
+        const nCellIndex = x2 + y2 * width as CellIndex
 
         // looking at neighbor nCellIndex in direction d
         // from nCellIndex's perspective, the "ban" is coming from the OPPOSITE direction.
-        const oppositeDir = OPPOSITE_DIR[d]!
+        const oppositeDir = OPPOSITE_DIR[d]! as Direction
         // need to know: Which patterns in nCellIndex were supported by the patternId we just banned
-        const validPatternIds = propagator.getValidPatternIds(patternId, d)
+        const validPatternIds = propagator.getValidPatternIds(pattern, d)
         for (let l = 0; l < validPatternIds.length; l++) {
-          const nPatternId = validPatternIds[l]!
+          const nPatternId = validPatternIds[l]! as PatternIndex
 
           const compIdx = getCompatibleIndex(nCellIndex, nPatternId, oppositeDir)
           // already not compatible
@@ -426,7 +427,7 @@ export const makeWFCModel = (
     if (observeTargetResult !== ObserveTargetResult.TARGET) {
       throw new Error('invalid result: ' + result)
     }
-    const cellIdx = result as number
+    const cellIdx = result as CellIndex
 
     for (let t = 0; t < T; t++) {
       const waveIdx = getWaveIndex(cellIdx, t)
@@ -440,7 +441,7 @@ export const makeWFCModel = (
 
     const chosenT = getRandomPatternId(rng, sumWeights, cellIdx)
 
-    for (let t = 0; t < T; t++) {
+    for (let t = 0 as PatternIndex; t < T; t++) {
       const waveIdx = getWaveIndex(cellIdx, t)
       if (wave[waveIdx] === 1 && t !== chosenT) {
         ban(cellIdx, t)

@@ -1,3 +1,6 @@
+import type { Direction } from '../util/direction.ts'
+import type { PatternIndex } from './_types.ts'
+
 export type PropagatorOptions = {
   data: Int32Array,
   offsets: Int32Array,
@@ -8,21 +11,21 @@ export type PropagatorOptions = {
 export type Propagator = ReturnType<typeof makePropagator>
 
 export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions) {
-  function getValidPatternIds(patternId: number, direction: number) {
+  function getValidPatternIds(pattern: PatternIndex, direction: Direction) {
     // Basic bounds safety
     if (direction < 0 || direction >= 4) {
       return new Int32Array(0)
     }
 
-    const index = direction * T + patternId
+    const index = direction * T + pattern
     const start = offsets[index]!
     const count = lengths[index]!
 
     return data.subarray(start, start + count)
   }
 
-  function getCompatibleCount(patternId: number, direction: number): number {
-    const idx = direction * T + patternId
+  function getCompatibleCount(pattern: PatternIndex, direction: Direction): number {
+    const idx = direction * T + pattern
     const len = lengths[idx]
 
     return len ?? 0
@@ -32,11 +35,11 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
     const brittlenessScores = new Float64Array(T)
     const bottlenecks: number[] = []
 
-    for (let t = 0; t < T; t++) {
+    for (let t = 0 as PatternIndex; t < T; t++) {
       let totalConnections = 0
       let isDeadEnd = false
 
-      for (let d = 0; d < 4; d++) {
+      for (let d = 0 as Direction; d < 4; d++) {
         const count = getCompatibleCount(t, d)
 
         if (count === 0) {
