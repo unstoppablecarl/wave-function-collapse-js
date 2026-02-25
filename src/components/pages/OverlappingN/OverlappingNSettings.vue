@@ -113,7 +113,7 @@ onMounted(() => {
     max: 100,
     step: 1,
     label: 'snapshot %',
-  });
+  })
   addInfo(snapshotIntervalPercent, 'A snapshot will be stored every time X% progress is made')
 
   const revertsPerAttempt = settingsFolder.addBinding(store.settings, 'maxRevertsPerAttempt', {
@@ -138,16 +138,14 @@ onMounted(() => {
   })
 
   const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
-    options: [
-      {
-        text: 'WASM',
-        value: ModelType.WASM,
-      },
-      {
-        text: 'JS',
-        value: ModelType.JS,
-      },
-    ],
+    options: Object.values(ModelType)
+      .filter(v => typeof v === 'number')
+      .map((v) => {
+        return {
+          value: v,
+          text: ModelType[v as unknown as number],
+        }
+      }),
   })
   addInfo(modelType, 'Rust -> Web Assembly, or JS')
 
