@@ -1,6 +1,6 @@
 use crate::wfc_model::cell::CellIndex;
 use crate::wfc_model::direction::{Direction, DIRECTIONS};
-use crate::wfc_model::pattern::PatternIndex;
+use crate::wfc_model::pattern_collection::PatternIndex;
 use crate::wfc_model::propagator::Propagator;
 
 #[derive(Clone)]

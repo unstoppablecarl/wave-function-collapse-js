@@ -1,4 +1,3 @@
-use crate::wfc_model::pattern::PatternIndex;
 use std::ops::{Index, IndexMut};
 
 #[derive(Clone)]
@@ -29,4 +28,9 @@ impl<T: Clone + Default> IndexMut<PatternIndex> for PatternCollection<T> {
 
         &mut internal_data[pos]
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct PatternIndex {
+   pub base: usize,
 }

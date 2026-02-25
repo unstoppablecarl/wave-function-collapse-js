@@ -1,4 +1,4 @@
-use crate::wfc_model::pattern::PatternIndex;
+use crate::wfc_model::pattern_collection::PatternIndex;
 
 #[derive(Clone)]
 pub struct PatternBitSet {

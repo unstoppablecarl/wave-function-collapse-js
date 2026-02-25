@@ -1,5 +1,5 @@
 use crate::wfc_model::direction::Direction;
-use crate::wfc_model::pattern::PatternIndex;
+use crate::wfc_model::pattern_collection::PatternIndex;
 use crate::wfc_model::pattern_bitset::PatternBitSet;
 
 #[derive(Clone)]

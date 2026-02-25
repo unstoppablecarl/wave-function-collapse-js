@@ -1,6 +1,6 @@
 use crate::wfc_model::cell::CellIndex;
 use crate::wfc_model::cell_collection::CellCollection;
-use crate::wfc_model::pattern::PatternIndex;
+use crate::wfc_model::pattern_collection::PatternIndex;
 use crate::wfc_model::pattern_collection::PatternCollection;
 
 #[derive(Clone)]
