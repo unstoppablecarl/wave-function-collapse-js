@@ -23,7 +23,7 @@ type Msg<T extends WorkerMsg> = {
   elapsedTime: number
   filledPercent: number
   reverts: number
-  result: Uint8ClampedArray<ArrayBuffer>,
+  result: Uint8ClampedArray,
   totalMemoryUseBytes: number,
 }
 

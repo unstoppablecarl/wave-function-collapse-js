@@ -19,10 +19,10 @@ export type OverlappingNControllerOptions = {
   indexedImage: ComputedRef<IndexedImage | null>,
   imageDataSource: ShallowRef<ImageData | null>
   onBeforeRun?(): void,
-  onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray<ArrayBuffer>): void,
+  onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray): void,
   onAttemptStart?(response: MsgAttemptStart): void,
   onAttemptFailure?(response: MsgAttemptFailure): void,
-  onSuccess?(response: MsgAttemptSuccess, pixels: Uint8ClampedArray<ArrayBuffer>): void,
+  onSuccess?(response: MsgAttemptSuccess, pixels: Uint8ClampedArray): void,
 }
 
 export function makeOverlappingNController(

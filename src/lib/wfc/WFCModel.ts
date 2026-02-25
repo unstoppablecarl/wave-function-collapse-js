@@ -25,7 +25,6 @@ export type WFCModelOptions = {
   startCoordX: number,
   startCoordY: number,
   fastLogFunction?: FastLogFunction,
-  patterns: Int32Array,
 }
 
 export const makeWFCModel = (
@@ -43,7 +42,6 @@ export const makeWFCModel = (
     startCoordY,
     fastLogFunction,
     N,
-    patterns,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -605,7 +603,6 @@ export const makeWFCModel = (
     createSnapshot,
     restoreSnapshot,
     N,
-    patterns,
   }
 }
 

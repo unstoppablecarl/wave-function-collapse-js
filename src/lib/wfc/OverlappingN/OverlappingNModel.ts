@@ -33,7 +33,7 @@ export type OverlappingNModel = {
   ruleset: WFCRuleset,
   getTotalMemoryUseBytes: () => number,
   syncVisuals: () => void,
-  getImageBuffer: () =>  Uint8ClampedArray<ArrayBuffer>,
+  getImageBuffer: () => Uint8ClampedArray,
 }
 
 export type OverlappingNModelCreator = (opt: OverlappingNOptions) => Promise<OverlappingNModel>

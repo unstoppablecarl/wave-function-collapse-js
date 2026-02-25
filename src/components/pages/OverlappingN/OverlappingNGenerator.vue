@@ -20,7 +20,7 @@ import OverlappingNSettings from './OverlappingNSettings.vue'
 const store = useOverlappingNStore()
 const { settings, scale } = storeToRefs(store)
 
-let pendingImageData: ImageDataArray | null = null
+let pendingImageData: Uint8ClampedArray | null = null
 const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
@@ -132,10 +132,10 @@ function clearCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 }
 
-function draw(data: ImageDataArray) {
+function draw(data: Uint8ClampedArray) {
   let canvas = resultCanvasRef.value!.canvas
   const ctx = canvas!.getContext('2d')!
-  const imgData = new ImageData(data, settings.value.width, settings.value.height)
+  const imgData = new ImageData(data as ImageDataArray, settings.value.width, settings.value.height)
   ctx.putImageData(imgData, 0, 0)
   hasResult.value = true
 }
