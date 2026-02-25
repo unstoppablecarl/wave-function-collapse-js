@@ -31,6 +31,20 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
     return len ?? 0
   }
 
+  function isCompatible(pattern: PatternIndex, candidate: PatternIndex, direction: Direction): boolean {
+    if (direction < 0 || direction >= 4) return false
+
+    const index = direction * T + pattern
+    const start = offsets[index]!
+    const count = lengths[index]!
+
+    for (let i = start; i < start + count; i++) {
+      if (data[i] === candidate) return true
+    }
+
+    return false
+  }
+
   function getBrittleness() {
     const brittlenessScores = new Float64Array(T)
     const bottlenecks: number[] = []
@@ -77,6 +91,7 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
     offsets,
     lengths,
     T,
+    isCompatible,
     getValidPatternIds,
     getCompatibleCount,
     getBrittleness,
