@@ -22,6 +22,7 @@ export const makeWFCPixelBuffer = (
     bgColor,
     contradictionColor = 0xFFFF00FF,
   }: WFCPixelBufferOptions) => {
+
   const pixelBuffer = new Uint32Array(width * height)
 
   // Pre-calculate pattern colors once so updateCells is just math
@@ -34,9 +35,6 @@ export const makeWFCPixelBuffer = (
   clear()
 
   const updateCells = (wave: Uint8Array, observed: Int32Array, changedIndices: Int32Array) => {
-
-    // console.log("Raw Observed Start:", observed[0], observed[1], observed[2]);
-
     const len = changedIndices.length
 
     // Match the Rust u64 alignment

@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import ConvChainGenerator from './components/pages/ConvChain/ConvChainGenerator.vue'
 import OverlappingNGenerator from './components/pages/OverlappingN/OverlappingNGenerator.vue'
 
 const routes = [
   { path: '/', component: OverlappingNGenerator },
-  // { path: '/about', component: AboutView },
+  { path: '/conv-chain', component: ConvChainGenerator },
 ]
 
 const router = createRouter({

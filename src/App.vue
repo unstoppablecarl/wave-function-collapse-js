@@ -4,6 +4,8 @@
   <div class="nav">
     <h1>Wave Function Collapse JS</h1>
     <RouterLink to="/" class="link">Overlapping N</RouterLink>
+    <RouterLink to="/conv-chain" class="link">Conv Chain</RouterLink>
+
   </div>
   <div class="container">
     <RouterView />
