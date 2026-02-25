@@ -1,5 +1,6 @@
 import { makeWFCModel } from '../WFCModel.ts'
-import type { OverlappingNModelCreator, OverlappingNOptions } from './OverlappingNModel.ts'
+import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
+import type { OverlappingNModel, OverlappingNModelCreator, OverlappingNOptions } from './OverlappingNModel.ts'
 
 export const makeOverlappingNJS: OverlappingNModelCreator = async (
   {
@@ -10,7 +11,10 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     startCoordX,
     startCoordY,
     ruleset,
-  }: OverlappingNOptions) => {
+    palette,
+    avgColor,
+    contradictionColor,
+  }: OverlappingNOptions): Promise<OverlappingNModel> => {
 
   const { T, N, propagator, weights, patterns } = ruleset
 
@@ -30,8 +34,22 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     N,
   })
 
+  const buffer = makeWFCPixelBuffer({
+    palette,
+    T: T,
+    N: ruleset.N,
+    width: width,
+    height: height,
+    weights: ruleset.weights,
+    patterns: ruleset.patterns,
+    bgColor: avgColor,
+    contradictionColor,
+  })
+
   return {
     ...model,
+    syncVisuals: () => buffer.updateCells(model.getWave(), model.getObserved(), model.getChanges()),
+    getImageBuffer: () => buffer.getVisualBuffer(),
     destroy: () => {
     },
     ruleset,

@@ -108,10 +108,8 @@ export function makeOverlappingNController(
 
     const avgColor = indexedImageToAverageColor(indexedImage.value)
     const opts: OverlappingNWorkerOptions = {
-      settings: { ...toValue(settings) },
+      settings: { ...toValue(settings), palette, avgColor },
       modelType: settings.modelType,
-      palette,
-      avgColor,
       serializedRuleset: serializeWFCRuleset(ruleset.value),
     }
     worker.postMessage(opts)

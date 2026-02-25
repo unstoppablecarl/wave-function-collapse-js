@@ -13,18 +13,18 @@ export type OverlappingNOptions = {
   startCoordY: number,
   maxSnapShots: number,
   snapshotIntervalPercent: number,
+  avgColor: number,
+  palette: Uint8Array,
+  contradictionColor: number,
 }
 
 export type OverlappingNModel = {
-  singleIterationWithSnapShots: (rng: RNG) => IterationResult,
+  singleIteration: (rng: RNG) => IterationResult,
   clear: () => void,
   isGenerationComplete: () => boolean,
   getFilledCount: () => number,
   getTotalCells: () => number,
   filledPercent: () => number,
-  getObserved: () => Int32Array,
-  getWave: () => Uint8Array,
-  getChanges: () => Int32Array,
   T: number,
   N: number,
   width: number,
@@ -32,6 +32,8 @@ export type OverlappingNModel = {
   destroy: () => void,
   ruleset: WFCRuleset,
   getTotalMemoryUseBytes: () => number,
+  syncVisuals: () => void,
+  getImageBuffer: () =>  Uint8ClampedArray<ArrayBuffer>,
 }
 
 export type OverlappingNModelCreator = (opt: OverlappingNOptions) => Promise<OverlappingNModel>

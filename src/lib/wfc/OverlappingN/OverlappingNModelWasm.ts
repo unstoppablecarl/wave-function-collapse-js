@@ -1,6 +1,7 @@
 import init, { WFCModel } from '../../../../rust-wfc/pkg/rust_wfc'
 import wasmUrl from '../../../../rust-wfc/pkg/rust_wfc_bg.wasm?url'
 import type { RNG } from '../WFCModel.ts'
+import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'
 
 export const makeOverlappingNModelWasm = async (
@@ -13,7 +14,10 @@ export const makeOverlappingNModelWasm = async (
     startCoordX,
     startCoordY,
     maxSnapShots,
-    snapshotIntervalPercent
+    snapshotIntervalPercent,
+    avgColor,
+    palette,
+    contradictionColor,
   }: OverlappingNOptions): Promise<OverlappingNModel> => {
 
   const wasm = await init({
@@ -37,30 +41,47 @@ export const makeOverlappingNModelWasm = async (
     maxSnapShots,
     snapshotIntervalPercent / 100,
   )
+  const buffer = makeWFCPixelBuffer({
+    palette,
+    T: T,
+    N: ruleset.N,
+    width: width,
+    height: height,
+    weights: ruleset.weights,
+    patterns: ruleset.patterns,
+    bgColor: avgColor,
+    contradictionColor,
+  })
+
+  function getObserved() {
+    return new Int32Array(wasm.memory.buffer, model.observed_ptr(), width * height)
+  }
+
+  function getWave() {
+    const wordsPerCell = ((T + 63) / 64) | 0
+    const stride = wordsPerCell * 8
+    const totalBytes = width * height * stride
+    return new Uint8Array(wasm.memory.buffer, model.wave_ptr(), totalBytes)
+  }
+
+  function getChanges() {
+    return model.get_changes() as unknown as Int32Array<ArrayBuffer>
+  }
 
   return {
     ruleset,
-    singleIterationWithSnapShots: (rng: RNG) => model.single_iteration_with_snapshots(rng()),
-    clear: () => model.clear(),
+    syncVisuals: () => buffer.updateCells(getWave(), getObserved(), getChanges()),
+    singleIteration: (rng: RNG) => model.single_iteration_with_snapshots(rng()),
+    clear: () => {
+      buffer.clear()
+      model.clear()
+    },
     isGenerationComplete: () => model.is_generation_complete(),
     getFilledCount: () => model.get_filled_count(),
     getTotalCells: () => model.get_total_cells(),
     filledPercent: () => model.filled_percent(),
-    getObserved: () => {
-      return new Int32Array(wasm.memory.buffer, model.observed_ptr(), width * height)
-    },
-    getWave: () => {
-      const wordsPerCell = ((T + 63) / 64) | 0
-      const stride = wordsPerCell * 8
-      const totalBytes = width * height * stride
-      return new Uint8Array(wasm.memory.buffer, model.wave_ptr(), totalBytes)
-    },
-    getTotalMemoryUseBytes: () => {
-      return model.get_total_memory_usage_bytes()
-    },
-    getChanges: () => {
-      return model.get_changes() as unknown as Int32Array<ArrayBuffer>
-    },
+    getTotalMemoryUseBytes: () => model.get_total_memory_usage_bytes(),
+    getImageBuffer: () => buffer.getVisualBuffer(),
     T,
     width,
     height,

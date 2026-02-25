@@ -1,6 +1,5 @@
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { IterationResult } from '../WFCModel.ts'
-import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import { deserializeWFCRuleset, type SerializedWFCRuleset } from '../WFCRuleset.ts'
 import { ModelType, ModelTypeFactory, type OverlappingNOptions } from './OverlappingNModel.ts'
 
@@ -54,8 +53,6 @@ export type WorkerResponse =
 
 export type OverlappingNWorkerOptions = {
   modelType: ModelType,
-  palette: Uint8Array,
-  avgColor: number,
   serializedRuleset: SerializedWFCRuleset,
   settings: Omit<OverlappingNOptions, 'ruleset'> & {
     seed: number,
@@ -77,7 +74,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
   }
   try {
     const startedAt = performance.now()
-    const { settings, modelType, palette, avgColor, serializedRuleset } = e.data
+    const { settings, modelType, serializedRuleset } = e.data
 
     const modelFactory = ModelTypeFactory[modelType]
     const model = await modelFactory({
@@ -87,20 +84,6 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
 
     const mulberry32 = makeMulberry32(settings.seed)
 
-    const buffer = makeWFCPixelBuffer({
-      palette,
-      T: model.T,
-      N: model.N,
-      width: settings.width,
-      height: settings.height,
-      weights: model.ruleset.weights,
-      patterns: model.ruleset.patterns,
-      bgColor: avgColor,
-      contradictionColor: settings.contradictionColor,
-    })
-
-    const syncVisuals = () => buffer.updateCells(model.getWave(), model.getObserved(), model.getChanges())
-
     let totalReverts = 0
 
     for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
@@ -109,20 +92,19 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
       let stepCount = 0
 
       model.clear()
-      buffer.clear()
 
-      syncVisuals()
+      model.syncVisuals()
       postMsg(WorkerMsg.ATTEMPT_START, { attempt })
 
       let attemptActive = true
 
       while (attemptActive) {
         stepCount++
-        const result = model.singleIterationWithSnapShots(mulberry32)
-        syncVisuals()
+        const result = model.singleIteration(mulberry32)
+        model.syncVisuals()
 
         if (result === IterationResult.SUCCESS) {
-          const img = buffer.getVisualBuffer()
+          const img = model.getImageBuffer()
           postMsg(WorkerMsg.ATTEMPT_SUCCESS, {
             attempt,
             elapsedTime: performance.now() - attemptStartedAt,
@@ -149,7 +131,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
           let isLastAttempt = attempt === settings.maxAttempts
 
           if (isLastAttempt) {
-            const finalImg = buffer.getVisualBuffer()
+            const finalImg = model.getImageBuffer()
             postMsg(WorkerMsg.ATTEMPT_FINAL_FAILURE, {
               attempt,
               elapsedTime: performance.now() - attemptStartedAt,
@@ -164,7 +146,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
             return // Stop everything, we are done.
           }
 
-          const img = buffer.getVisualBuffer()
+          const img = model.getImageBuffer()
           postMsg(WorkerMsg.ATTEMPT_FAILURE, {
             attempt,
             elapsedTime: performance.now() - attemptStartedAt,
@@ -176,7 +158,7 @@ ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
           attemptActive = false
 
         } else if (isPreviewTime) {
-          const img = buffer.getVisualBuffer()
+          const img = model.getImageBuffer()
           postMsg(WorkerMsg.ATTEMPT_PREVIEW, {
             attempt,
             elapsedTime: performance.now() - startedAt,

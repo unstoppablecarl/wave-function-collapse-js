@@ -5,7 +5,9 @@ import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
 import type { OverlappingNWorkerOptions } from '../wfc/OverlappingN/OverlappingN.worker.ts'
 import { ModelType, RulesetType } from '../wfc/OverlappingN/OverlappingNModel.ts'
 
-export type StoreSettings = OverlappingNWorkerOptions['settings'] & {
+type exclude = 'palette' | 'avgColor'
+
+export type StoreSettings = Omit<OverlappingNWorkerOptions['settings'], exclude> & {
   N: number,
   NOverlap: number,
   periodicInput: boolean,
