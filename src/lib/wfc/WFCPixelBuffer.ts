@@ -47,11 +47,6 @@ export const makeWFCPixelBuffer = (
       const i = changedIndices[k]!
       const collapsedId = observed[i]!
 
-      if (k === 0) {
-        // console.log('Byte at index 0:', wave[0]);
-        // If this is always 0, Rust isn't filling the wave correctly.
-      }
-
       if (collapsedId !== -1) {
         // Cell is collapsed: Simple high-speed render
         const cIdx = collapsedId * 3
