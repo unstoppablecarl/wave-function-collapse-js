@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { BindingApi } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, useTemplateRef } from 'vue'
+import { ConvChainModelType } from '../../../lib/conv-chain/ConvChain.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
+import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
 
 const store = useConvChainStore()
 const paneRef = useTemplateRef('paneRef')
-
-function addInfo(target: BindingApi, message: string) {
-  const labelEl = target.controller.view.element.querySelector('.tp-lblv_l') as HTMLElement
-  labelEl.title = message
-}
 
 onMounted(() => {
   const pane = new Pane({
@@ -55,12 +51,16 @@ onMounted(() => {
 
   settingsFolder.addBinding(store.settings, 'temperature', {
     min: 0,
-    step: 1,
+    step: 0.05,
   })
 
   settingsFolder.addBinding(store.settings, 'maxIterations', {
     min: 1,
     step: 1,
+  })
+
+  settingsFolder.addBinding(store.settings, 'modelType', {
+    options: enumToOptions(ConvChainModelType),
   })
 
   const outputFolder = pane.addFolder({

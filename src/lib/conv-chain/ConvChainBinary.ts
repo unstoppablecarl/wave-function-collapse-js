@@ -164,8 +164,6 @@ export const createConvChainBinary: ConvChainCreator = async (
 
   return {
     step,
-    field,
-    palette,
     getIteration: () => iteration,
     getProgress: () => iteration / maxIterations,
     getVisualBuffer,

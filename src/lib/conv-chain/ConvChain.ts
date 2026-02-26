@@ -6,8 +6,6 @@ export type ConvChainOptions = Omit<ConvChainWorkerOptions, 'seed' | 'previewInt
 
 export type ConvChain = {
   step: () => IterationResult,
-  field: Uint8Array,
-  palette: Uint8Array,
   getIteration: () => number,
   getProgress: () => number,
   getVisualBuffer: () => Uint8ClampedArray,

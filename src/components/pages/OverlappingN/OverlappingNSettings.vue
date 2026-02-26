@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import { BindingApi, SliderTextController } from '@tweakpane/core'
+import { SliderTextController } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
+import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
 import { ModelType, RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
 
 const store = useOverlappingNStore()
 const paneRef = useTemplateRef('paneRef')
-
-function addInfo(target: BindingApi, message: string) {
-  const labelEl = target.controller.view.element.querySelector('.tp-lblv_l') as HTMLElement
-  labelEl.title = message
-}
 
 onMounted(() => {
   const pane = new Pane({
@@ -138,14 +134,7 @@ onMounted(() => {
   })
 
   const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
-    options: Object.values(ModelType)
-      .filter(v => typeof v === 'number')
-      .map((v) => {
-        return {
-          value: v,
-          text: ModelType[v as unknown as number],
-        }
-      }),
+    options: enumToOptions(ModelType),
   })
   addInfo(modelType, 'Rust -> Web Assembly, or JS')
 

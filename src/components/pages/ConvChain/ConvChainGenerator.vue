@@ -135,7 +135,7 @@ const images = Object.values(slidingWindowImageModules).map((m) => (m as any).de
         <button v-if="running" data-variant="danger" class="small" @click="controller.terminateWorker()">Terminate
         </button>
       </p>
-      <div v-if="errorMessage" role="alert" data-variant="warning">
+      <div v-if="errorMessage" role="alert" data-variant="warning" class="mb-1">
         <strong>
           {{ errorMessage.title }}
         </strong>
@@ -143,10 +143,10 @@ const images = Object.values(slidingWindowImageModules).map((m) => (m as any).de
       </div>
 
       <div class="row mb-1 attempt-row">
-        <div class="col-3">
+        <div class="col-6">
           <strong>Progress: </strong> {{ formatPercent(progressPercent) }}
         </div>
-        <div class="col-3">
+        <div class="col-6">
           <strong>Elapsed: </strong> {{ prettyMilliseconds(elapsedTime) }}
         </div>
       </div>

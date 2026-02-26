@@ -38,6 +38,12 @@ export function makeConvChainController(
       worker.terminate()
     }
 
+    errorMessage.value = null
+    if (!indexedImage.value) {
+      errorMessage.value = { title: 'Invalid Input', message: 'No Target Image' }
+      return
+    }
+
     worker = new Worker(new URL('./ConvChain.worker.ts', import.meta.url), {
       type: 'module',
     })

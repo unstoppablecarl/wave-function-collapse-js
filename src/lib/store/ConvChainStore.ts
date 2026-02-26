@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { reactive, ref, toRaw } from 'vue'
+import { ConvChainModelType } from '../conv-chain/ConvChain.ts'
 
 export type ConvChainStoreSettings = {
   seed: number,
@@ -10,6 +11,7 @@ export type ConvChainStoreSettings = {
   temperature: number,
   maxIterations: number,
   previewInterval: number,
+  modelType: ConvChainModelType,
 }
 
 type SerializedData = {
@@ -29,6 +31,7 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     maxIterations: 50,
     seed: 1,
     previewInterval: 10,
+    modelType: ConvChainModelType.BINARY,
   })
 
   const state = {
