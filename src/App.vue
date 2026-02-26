@@ -17,7 +17,6 @@
 <style lang="scss">
 .nav {
   background: rgba(255, 255, 255, 0.05);
-  padding: 0.5rem;
   padding-inline: var(--container-pad);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 1rem;
@@ -27,10 +26,17 @@
     display: inline-block;
     margin-bottom: 0;
     margin-inline-end: 2rem;
+    padding: 1rem;
+
   }
 
   .link {
     text-decoration: none;
+    padding: 1rem;
+  }
+
+  .router-link-active {
+    background: rgba(255,255,255,0.05);
   }
 }
 
