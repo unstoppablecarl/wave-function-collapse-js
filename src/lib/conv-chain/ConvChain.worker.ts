@@ -1,6 +1,6 @@
 import type { IndexedImage } from 'pixel-data-js'
 import { IterationResult } from '../_types.ts'
-import { createConvChainBinary } from './ConvChainBinary.ts'
+import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 
 export enum WorkerMsg {
   FAILURE = 'FAILURE',
@@ -56,7 +56,7 @@ ctx.onmessage = async (e: MessageEvent<ConvChainWorkerOptions>) => {
 
   const { previewInterval, ...options } = e.data
 
-  const model = await createConvChainBinary({ ...options })
+  const model = await makeConvChainModelBinary({ ...options })
   const startedAt = performance.now()
 
   try {

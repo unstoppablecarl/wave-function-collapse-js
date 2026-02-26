@@ -1,6 +1,6 @@
 import type { IterationResult } from '../_types.ts'
 import type { ConvChainWorkerOptions } from './ConvChain.worker.ts'
-import { createConvChainBinary } from './ConvChainBinary.ts'
+import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 
 export type ConvChainOptions = Omit<ConvChainWorkerOptions, 'previewInterval'>
 
@@ -18,5 +18,5 @@ export enum ConvChainModelType {
 }
 
 export const ConvChainModelTypeFactory: Record<ConvChainModelType, ConvChainCreator> = {
-  [ConvChainModelType.BINARY]: createConvChainBinary,
+  [ConvChainModelType.BINARY]: makeConvChainModelBinary,
 }

@@ -1,9 +1,9 @@
-import { IterationResult } from '../_types.ts'
-import { makeDirtyCheck } from '../util/DirtyCheck.ts'
-import { makeMulberry32 } from '../util/mulberry32.ts'
-import type { ConvChainCreator, ConvChainOptions } from './ConvChain.ts'
+import { IterationResult } from '../../_types.ts'
+import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
+import { makeMulberry32 } from '../../util/mulberry32.ts'
+import type { ConvChainCreator, ConvChainOptions } from '../ConvChain.ts'
 
-export const createConvChainBinary: ConvChainCreator = async (
+export const makeConvChainModelBinary: ConvChainCreator = async (
   {
     width,
     height,
