@@ -1,6 +1,6 @@
 import init, { WFCModel } from '../../../../rust-wfc/pkg/rust_wfc'
 import wasmUrl from '../../../../rust-wfc/pkg/rust_wfc_bg.wasm?url'
-import type { RNG } from '../WFCModel.ts'
+import type { RNG } from '../../_types.ts'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'
 

@@ -1,5 +1,5 @@
+import { IterationResult } from '../../_types.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
-import { IterationResult } from '../WFCModel.ts'
 import { deserializeWFCRuleset, type SerializedWFCRuleset } from '../WFCRuleset.ts'
 import { ModelType, ModelTypeFactory, type OverlappingNOptions } from './OverlappingNModel.ts'
 

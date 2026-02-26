@@ -1,16 +1,8 @@
+import { IterationResult, type RNG } from '../_types.ts'
 import { type Direction, DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
 import { type FastLogFunction, makeFastLog } from '../util/fastLog.ts'
 import type { CellIndex, PatternIndex } from './_types.ts'
 import type { Propagator } from './Propagator.ts'
-
-export type RNG = () => number
-
-export enum IterationResult {
-  REVERT,
-  SUCCESS,
-  STEP,
-  FAIL
-}
 
 export type WFCModelOptions = {
   width: number,

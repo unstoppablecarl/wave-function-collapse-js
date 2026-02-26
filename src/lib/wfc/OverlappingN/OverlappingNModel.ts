@@ -1,4 +1,4 @@
-import { IterationResult, type RNG } from '../WFCModel.ts'
+import { IterationResult, type RNG } from '../../_types.ts'
 import type { WFCRuleset } from '../WFCRuleset.ts'
 import { makeOverlappingNJS } from './OverlappingNModelJS.ts'
 import { makeOverlappingNModelWasm } from './OverlappingNModelWasm.ts'
