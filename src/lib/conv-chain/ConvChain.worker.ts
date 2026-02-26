@@ -1,7 +1,7 @@
 import type { IndexedImage } from 'pixel-data-js'
+import { IterationResult } from '../_types.ts'
 import { makeMulberry32 } from '../util/mulberry32.ts'
-import { IterationResult } from '../wfc/WFCModel.ts'
-import { createConvChain } from './ConvChain.ts'
+import { createConvChainBinary } from './ConvChainBinary.ts'
 
 export enum WorkerMsg {
   FAILURE = 'FAILURE',
@@ -58,7 +58,7 @@ ctx.onmessage = async (e: MessageEvent<ConvChainWorkerOptions>) => {
   const { seed, previewInterval, ...options } = e.data
 
   const prng = makeMulberry32(seed)
-  const model = createConvChain({ ...options, prng })
+  const model = await createConvChainBinary({ ...options, prng })
   const startedAt = performance.now()
 
   try {
