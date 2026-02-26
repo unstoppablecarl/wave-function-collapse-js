@@ -1,8 +1,8 @@
-import type { IterationResult, RNG } from '../_types.ts'
+import type { IterationResult } from '../_types.ts'
 import type { ConvChainWorkerOptions } from './ConvChain.worker.ts'
 import { createConvChainBinary } from './ConvChainBinary.ts'
 
-export type ConvChainOptions = Omit<ConvChainWorkerOptions, 'seed' | 'previewInterval'> & { prng: RNG }
+export type ConvChainOptions = Omit<ConvChainWorkerOptions, 'previewInterval'>
 
 export type ConvChain = {
   step: () => IterationResult,

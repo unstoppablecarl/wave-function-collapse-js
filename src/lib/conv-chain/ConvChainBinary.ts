@@ -1,5 +1,6 @@
 import { IterationResult } from '../_types.ts'
 import { makeDirtyCheck } from '../util/DirtyCheck.ts'
+import { makeMulberry32 } from '../util/mulberry32.ts'
 import type { ConvChainCreator, ConvChainOptions } from './ConvChain.ts'
 
 export const createConvChainBinary: ConvChainCreator = async (
@@ -10,7 +11,7 @@ export const createConvChainBinary: ConvChainCreator = async (
     temperature,
     maxIterations,
     indexedImage,
-    prng,
+    seed,
   }: ConvChainOptions,
 ) => {
   const totalCells = width * height
@@ -18,6 +19,7 @@ export const createConvChainBinary: ConvChainCreator = async (
   const eps = 0.1
   let iteration = 0
 
+  const prng = makeMulberry32(seed)
   const sourceWidth = indexedImage.width
   const sourceHeight = indexedImage.height
   const sourceData = indexedImage.data
