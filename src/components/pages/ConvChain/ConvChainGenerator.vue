@@ -21,6 +21,8 @@ const imageDataSourceUrlImage = shallowRef<string | null>(null)
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const progressPercent = ref(0)
 const elapsedTime = ref(0)
+const stabilityPercent = ref(0)
+
 let pendingImageData: Uint8ClampedArray | null = null
 
 const indexedImage = computed(() => {
@@ -47,6 +49,7 @@ const controller = makeConvChainController({
     pendingImageData = response.result
     progressPercent.value = response.progressPercent
     elapsedTime.value = response.elapsedTime
+    stabilityPercent.value = response.stabilityPercent
 
     requestAnimationFrame(() => {
       if (running.value) {
@@ -145,10 +148,13 @@ const images = Object.values(slidingWindowImageModules).map((m) => (m as any).de
       </div>
 
       <div class="row mb-1 attempt-row">
-        <div class="col-6">
+        <div class="col-4">
           <strong>Progress: </strong> {{ formatPercent(progressPercent) }}
         </div>
-        <div class="col-6">
+        <div class="col-4">
+          <strong>Stability: </strong> {{ formatPercent(stabilityPercent) }}
+        </div>
+        <div class="col-4">
           <strong>Elapsed: </strong> {{ prettyMilliseconds(elapsedTime) }}
         </div>
       </div>

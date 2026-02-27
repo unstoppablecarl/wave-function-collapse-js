@@ -1,6 +1,7 @@
 import type { IndexedImage } from 'pixel-data-js'
 import { IterationResult } from '../_types.ts'
-import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
+import type { ConvChainStoreSettings } from '../store/ConvChainStore.ts'
+import { ConvChainModelTypeFactory } from './ConvChain.ts'
 
 export enum WorkerMsg {
   FAILURE = 'FAILURE',
@@ -14,6 +15,7 @@ type Msg<T extends WorkerMsg> = {
   elapsedTime: number
   progressPercent: number
   result: Uint8ClampedArray
+  stabilityPercent: number,
 }
 
 export type MsgPreview = Msg<WorkerMsg.PREVIEW>
@@ -31,21 +33,12 @@ export type WorkerResponse =
   | MsgFailure
   | MsgError
 
-export type ConvChainWorkerOptions = {
-  width: number,
-  height: number,
-  N: number,
-  temperature: number,
-  maxIterations: number,
+export type ConvChainWorkerOptions = ConvChainStoreSettings & {
   indexedImage: IndexedImage,
-  seed: number,
-  previewInterval: number,
 }
-
 const ctx: DedicatedWorkerGlobalScope = self as any
 
 ctx.onmessage = async (e: MessageEvent<ConvChainWorkerOptions>) => {
-
   const postMsg = <T extends WorkerMsg>(
     type: T,
     extra: Omit<Extract<WorkerResponse, { type: T }>, 'type'>,
@@ -54,39 +47,59 @@ ctx.onmessage = async (e: MessageEvent<ConvChainWorkerOptions>) => {
     ctx.postMessage({ type, ...extra }, transfer)
   }
 
-  const { previewInterval, ...options } = e.data
+  const {
+    modelType,
+    previewInterval,
+    ...options
+  } = e.data
 
-  const model = await makeConvChainModelBinary({ ...options })
+  const factory = ConvChainModelTypeFactory[modelType]
+  const model = await factory({ ...options })
   const startedAt = performance.now()
+  const batchSize = Math.max(previewInterval, 1)
 
-  try {
-    let result = IterationResult.STEP
-    while (result === IterationResult.STEP) {
-      result = model.step()
-      const iteration = model.getIteration()
+  const runBatch = () => {
+    try {
+      let result = IterationResult.STEP
+
+      for (let i = 0; i < batchSize; i++) {
+        result = model.step()
+        if (result !== IterationResult.STEP) break
+      }
+
+      const elapsedTime = performance.now() - startedAt
+      const progressPercent = model.getProgress()
+      const stabilityPercent = model.getStabilityPercent()
+      const buffer = model.getVisualBuffer()
 
       if (result === IterationResult.SUCCESS) {
-        const buffer = model.getVisualBuffer()
         postMsg(WorkerMsg.SUCCESS, {
           result: buffer,
-          elapsedTime: performance.now() - startedAt,
+          elapsedTime,
           progressPercent: 1.0,
-        })
-        break
+          stabilityPercent,
+        }, [buffer.buffer]) // Transfer ownership to save memory
+        return
       }
 
-      if (iteration % previewInterval === 0) {
-        const buffer = model.getVisualBuffer()
-        postMsg(WorkerMsg.PREVIEW, {
-          result: buffer,
-          elapsedTime: performance.now() - startedAt,
-          progressPercent: model.getProgress(),
-        })
-      }
+      // Send preview after completing the batch
+      postMsg(WorkerMsg.PREVIEW, {
+        result: buffer,
+        elapsedTime,
+        progressPercent,
+        stabilityPercent,
+      }, [buffer.buffer])
+
+      // yields the worker thread so the engine can manage the Map's memory.
+      // prevents crashes
+      setTimeout(runBatch, 0)
+
+    } catch (err) {
+      postMsg(WorkerMsg.ERROR, {
+        message: err instanceof Error ? err.message : String(err),
+      })
     }
-  } catch (err) {
-    postMsg(WorkerMsg.ERROR, {
-      message: err instanceof Error ? err.message : String(err),
-    })
   }
+
+  runBatch()
 }
