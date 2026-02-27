@@ -5,6 +5,7 @@ import { makeIndexedImage } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
 import { computed, markRaw, ref, shallowRef, watch } from 'vue'
 import { makeConvChainController } from '../../../lib/conv-chain/ConvChainController.ts'
+import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
@@ -92,9 +93,7 @@ function draw(data: Uint8ClampedArray) {
   ctx.putImageData(imgData, 0, 0)
 }
 
-const slidingWindowImageModules = import.meta.glob('../../../assets/overlapping-n/sliding-window/*.png', { eager: true })
-const images = Object.values(slidingWindowImageModules).map((m) => (m as any).default)
-
+const images = SLIDING_WINDOW_IMAGES
 </script>
 <template>
   <div class="row">
@@ -103,9 +102,9 @@ const images = Object.values(slidingWindowImageModules).map((m) => (m as any).de
         <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
       </div>
       <p>Examples</p>
-      <template v-for="image in images" :key="image">
+      <template v-for="image in images" :key="image.src">
         <PixelImg
-          :src="image"
+          :src="image.src"
           class="img-target"
           :scale="scale"
           @img-click="setImageDataFromElement($event)"

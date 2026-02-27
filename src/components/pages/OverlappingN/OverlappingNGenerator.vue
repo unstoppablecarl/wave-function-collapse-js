@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { makeIndexedImage } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
 import { computed, markRaw, nextTick, ref, shallowRef, watch } from 'vue'
+import { SLIDING_WINDOW_IMAGES, TILESET_IMAGES } from '../../../lib/images.ts'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
 import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
@@ -149,19 +150,12 @@ async function setImageDataFromElement(target: HTMLImageElement) {
   imageDataSource.value = markRaw(imageData)
 }
 
-const slidingWindowImageModules = import.meta.glob('../../../assets/overlapping-n/sliding-window/*.png', { eager: true })
-const slidingWindowImages = Object.values(slidingWindowImageModules).map((m) => (m as any).default)
-
-const fragmentImageModules = import.meta.glob('../../../assets/overlapping-n/fragment/*.png', { eager: true })
-const fragmentImages = Object.values(fragmentImageModules).map((m) => (m as any).default)
-
 const images = computed(() => {
-
   if (settings.value.rulesetType === RulesetType.SLIDING_WINDOW) {
-    return slidingWindowImages
+    return SLIDING_WINDOW_IMAGES
   }
 
-  return fragmentImages
+  return TILESET_IMAGES
 })
 
 </script>
@@ -172,9 +166,9 @@ const images = computed(() => {
         <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
       </div>
       <p>Examples</p>
-      <template v-for="image in images" :key="image">
+      <template v-for="image in images" :key="image.src">
         <PixelImg
-          :src="image"
+          :src="image.src"
           class="img-target"
           :scale="scale"
           @img-click="setImageDataFromElement($event)"
