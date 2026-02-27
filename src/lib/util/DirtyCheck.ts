@@ -1,4 +1,6 @@
-export function makeDirtyCheck(size: number, setter: (cellIndex: number) => number) {
+import type { Color32 } from 'pixel-data-js'
+
+export function makeDirtyCheck(size: number, setter: (cellIndex: number) => Color32) {
   const changedCells = new Int32Array(size)
   let changedCount = 0
   const dirtyFlags = new Uint8Array(size)

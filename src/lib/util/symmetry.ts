@@ -1,6 +1,6 @@
 import { getPatternHash } from './pattern.ts'
 
-export function* generateSymmetries(base: Int32Array, N: number, symmetry: number) {
+export function* generateSymmetries(base: Int32Array, N: number, symmetry: number, allowDuplicates = false) {
   const seenHashes = new Set<bigint>()
   let current = base
 
@@ -9,7 +9,7 @@ export function* generateSymmetries(base: Int32Array, N: number, symmetry: numbe
     if (i === 0) current = base
 
     // 1: Horizontal reflection
-    if (i === 1) current = reflect(base, N)
+    if (i === 1) current = reflect(current, N)
 
     // 2: Rotate the reflection 90°
     if (i === 2) current = rotate(current, N)
@@ -31,7 +31,12 @@ export function* generateSymmetries(base: Int32Array, N: number, symmetry: numbe
 
     const hash = getPatternHash(current)
 
-    if (!seenHashes.has(hash)) {
+    if (allowDuplicates) {
+      yield {
+        pattern: current,
+        hash,
+      }
+    } else if (!seenHashes.has(hash)) {
       seenHashes.add(hash)
       yield {
         pattern: current,

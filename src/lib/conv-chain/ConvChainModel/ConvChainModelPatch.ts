@@ -1,7 +1,8 @@
+import type { Color32 } from 'pixel-data-js'
 import { IterationResult } from '../../_types.ts'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
-import { getPatternHash } from '../../util/pattern.ts'
+import { getPatternHash, getPatternsFromIndexedImage } from '../../util/pattern.ts'
 import { generateSymmetries } from '../../util/symmetry.ts'
 import type { ConvChain, ConvChainCreator, ConvChainOptions } from '../ConvChain.ts'
 
@@ -14,7 +15,8 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     maxIterations,
     indexedImage,
     seed,
-    symmetry
+    symmetry,
+    periodicInput,
   }: ConvChainOptions,
 ): Promise<ConvChain> => {
   const totalCells = width * height
@@ -22,58 +24,47 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   const prng = makeMulberry32(seed)
 
   let iteration = 0
-  let pixelIndex = 0
+  // current step index of this iteration
+  let iteration_i = 0
   let changesInCurrentPass = 0
   let isStable = false
   let stabilityHistorySum = 0
   let historyIdx = 0
 
-  const sourceWidth = indexedImage.width
-  const sourceHeight = indexedImage.height
   const sourceData = indexedImage.data
   const palette32 = indexedImage.palette
 
   const stabilityHistory = new Uint8Array(totalCells)
-  const weights = new Map<bigint, number>()
-  const indices = new Int32Array(totalCells)
+  const patternWeights = new Map<bigint, number>()
+  const shuffledCells = new Int32Array(totalCells)
 
-  // Initialize Dirty Check utility
-  const { markDirty, getVisualBuffer } = makeDirtyCheck(totalCells, (i) => {
-    return palette32[field[i]!]!
+  const { markDirty, getVisualBuffer } = makeDirtyCheck(totalCells, (cellIndex) => {
+    const colorIndex = field[cellIndex]!
+    return palette32[colorIndex]! as Color32
   })
 
+  const patchBuffer = new Int32Array(N * N)
   const getHashAt = (data: Int32Array, x: number, y: number, w: number, h: number): bigint => {
-    const patch = new Int32Array(N * N)
     for (let dy = 0; dy < N; dy++) {
       const row = ((y + dy + h) % h) * w
       for (let dx = 0; dx < N; dx++) {
-        patch[dx + dy * N] = data[row + (x + dx + w) % w]!
+        patchBuffer[dx + dy * N] = data[row + (x + dx + w) % w]!
       }
     }
-    return getPatternHash(patch)
+    return getPatternHash(patchBuffer)
   }
 
-  // Pre-process patterns
-  for (let y = 0; y < sourceHeight; y++) {
-    for (let x = 0; x < sourceWidth; x++) {
-      const basePatch = new Int32Array(N * N)
-      for (let py = 0; py < N; py++) {
-        const sy = (y + py) % sourceHeight
-        const row = sy * sourceWidth
-        for (let px = 0; px < N; px++) {
-          const sx = (x + px) % sourceWidth
-          basePatch[px + py * N] = sourceData[row + sx]!
-        }
-      }
-      for (const sym of generateSymmetries(basePatch, N, symmetry)) {
-        weights.set(sym.hash, (weights.get(sym.hash) || 0) + 1)
-      }
+  const basePatterns = getPatternsFromIndexedImage(indexedImage, N, periodicInput)
+  for (const basePatch of basePatterns) {
+    for (const sym of generateSymmetries(basePatch, N, symmetry, true)) {
+      const currentWeight = patternWeights.get(sym.hash) || 0
+      patternWeights.set(sym.hash, currentWeight + 1)
     }
   }
 
   // Initial field population
   for (let i = 0; i < totalCells; i++) {
-    indices[i] = i
+    shuffledCells[i] = i
     field[i] = sourceData[(prng() * sourceData.length) | 0]!
     markDirty(i)
   }
@@ -83,7 +74,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
       return IterationResult.SUCCESS
     }
     const t = temperature * Math.pow(1 - iteration / maxIterations, 2)
-    const idx = indices[pixelIndex]!
+    const idx = shuffledCells[iteration_i]!
     const tx = idx % width
     const ty = (idx / width) | 0
     const oldVal = field[idx]!
@@ -98,11 +89,13 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
         for (let dy = 1 - N; dy <= 0; dy++) {
           for (let dx = 1 - N; dx <= 0; dx++) {
             const hOld = getHashAt(field, tx + dx, ty + dy, width, height)
+            // get hash if value is changed
             field[idx] = newVal
             const hNew = getHashAt(field, tx + dx, ty + dy, width, height)
+            // restore old value
             field[idx] = oldVal
-            const wOld = weights.get(hOld) || 0
-            const wNew = weights.get(hNew) || 0
+            const wOld = patternWeights.get(hOld) || 0
+            const wNew = patternWeights.get(hNew) || 0
             delta += (wNew > 0 ? Math.log(wNew) : -10) - (wOld > 0 ? Math.log(wOld) : -10)
           }
         }
@@ -119,21 +112,21 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     stabilityHistory[historyIdx] = flipped
     stabilityHistorySum += flipped
     historyIdx = (historyIdx + 1) % totalCells
-    pixelIndex++
+    iteration_i++
 
-    if (pixelIndex >= totalCells) {
+    if (iteration_i >= totalCells) {
       if (changesInCurrentPass === 0 && t < 0.05) {
         isStable = true
         return IterationResult.SUCCESS
       }
-      pixelIndex = 0
+      iteration_i = 0
       iteration++
       changesInCurrentPass = 0
       for (let i = totalCells - 1; i > 0; i--) {
         const j = (prng() * (i + 1)) | 0
-        const temp = indices[i]!
-        indices[i] = indices[j]!
-        indices[j] = temp
+        const temp = shuffledCells[i]!
+        shuffledCells[i] = shuffledCells[j]!
+        shuffledCells[j] = temp
       }
     }
     return IterationResult.STEP
@@ -142,7 +135,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   return {
     step,
     getIteration: () => iteration,
-    getProgress: () => (iteration + pixelIndex / totalCells) / maxIterations,
+    getProgress: () => (iteration + iteration_i / totalCells) / maxIterations,
     getStabilityPercent: () => 1 - (stabilityHistorySum / totalCells),
     getVisualBuffer,
   }

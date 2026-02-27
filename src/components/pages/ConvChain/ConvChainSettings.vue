@@ -50,6 +50,13 @@ onMounted(() => {
     step: 1,
   })
 
+  const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
+    min: 0,
+    step: 1,
+    label: 'periodic in',
+  })
+  addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
+
   settingsFolder.addBinding(store.settings, 'temperature', {
     min: 0,
     step: 0.05,
