@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
-import { onMounted, useTemplateRef } from 'vue'
+import { onMounted, useTemplateRef, watchEffect } from 'vue'
 import { ConvChainModelType } from '../../../lib/conv-chain/ConvChain.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
+import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
 import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
 
 const store = useConvChainStore()
@@ -57,6 +58,20 @@ onMounted(() => {
   settingsFolder.addBinding(store.settings, 'maxIterations', {
     min: 1,
     step: 1,
+  })
+
+  settingsFolder.addBinding(store.settings, 'symmetry', {
+    options: SYMMETRY_DROPDOWN,
+  })
+
+  const symmetryDesc = settingsFolder.addBlade({
+    view: 'infodump',
+    content: 'adfs',
+    markdown: false,
+  })
+
+  watchEffect(() => {
+    symmetryDesc.element.innerText = store.currentSymmetryDescription
   })
 
   settingsFolder.addBinding(store.settings, 'modelType', {

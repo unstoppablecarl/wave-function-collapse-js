@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { reactive, ref, toRaw } from 'vue'
+import { computed, reactive, ref, toRaw } from 'vue'
 import { ConvChainModelType } from '../conv-chain/ConvChain.ts'
+import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
 
 export type ConvChainStoreSettings = {
   seed: number,
@@ -68,12 +69,17 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     mapper.$restoreState(data)
   }
 
+  const currentSymmetryDescription = computed(() => {
+    return SYMMETRY_OPTIONS[settings.symmetry]?.description || ''
+  })
+
   return {
     $reset,
     $serializeState,
     $restoreState,
     scale,
     settings,
+    currentSymmetryDescription,
   }
 }, {
   persist: true,
