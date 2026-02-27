@@ -34,7 +34,7 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
   const { markDirty, getVisualBuffer } = makeDirtyCheck(totalCells, (i) => {
     const val = field[i] === 1 ? 255 : 0
     // Force unsigned 32-bit integer for memory alignment
-    return ((255 << 24) | (val << 16) | (val << 8) | val) >>> 0
+    return (((255 << 24) | (val << 16) | (val << 8) | val) >>> 0) as Color32
   })
 
   const getSampleBit = (x: number, y: number): number => {
