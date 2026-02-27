@@ -20,17 +20,20 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   const totalCells = width * height
   const field = new Int32Array(totalCells)
   const prng = makeMulberry32(seed)
+
   let iteration = 0
   let pixelIndex = 0
   let changesInCurrentPass = 0
   let isStable = false
-  const stabilityHistory = new Uint8Array(totalCells)
   let stabilityHistorySum = 0
   let historyIdx = 0
+
   const sourceWidth = indexedImage.width
   const sourceHeight = indexedImage.height
   const sourceData = indexedImage.data
   const palette32 = indexedImage.palette
+
+  const stabilityHistory = new Uint8Array(totalCells)
   const weights = new Map<bigint, number>()
   const indices = new Int32Array(totalCells)
 
