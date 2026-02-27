@@ -2,11 +2,12 @@
 
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { makeConvChainController } from '../../../lib/conv-chain/ConvChainController.ts'
 import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
@@ -22,8 +23,6 @@ const progressPercent = ref(0)
 const elapsedTime = ref(0)
 const stabilityPercent = ref(0)
 
-let pendingImageData: Uint8ClampedArray | null = null
-
 const {
   sourceImageDataUrlImage,
   sourceIndexedImage,
@@ -31,6 +30,10 @@ const {
   setImageDataFromFileInput,
   sourceImageId,
 } = makeReactiveSourceImageData()
+
+const {
+  updateImageBuffer,
+} = makeCanvasRenderer(resultCanvasRef, store.settings)
 
 const controller = makeConvChainController({
   indexedImage: sourceIndexedImage,
@@ -40,16 +43,14 @@ const controller = makeConvChainController({
     elapsedTime.value = 0
   },
   onPreview(response) {
-    pendingImageData = response.result
+    updateImageBuffer(response.result)
     progressPercent.value = response.progressPercent
     elapsedTime.value = response.elapsedTime
     stabilityPercent.value = response.stabilityPercent
-
-    requestAnimationFrame(() => {
-      if (running.value) {
-        updateCanvas()
-      }
-    })
+  },
+  onSuccess(response) {
+    updateImageBuffer(response.result)
+    progressPercent.value = 1
   },
 })
 
@@ -58,24 +59,7 @@ const {
   errorMessage,
 } = controller
 
-function updateCanvas() {
-  if (!pendingImageData || !resultCanvasRef.value!.canvas) return
-  draw(pendingImageData)
-  pendingImageData = null
-}
-
-// function clearCanvas() {
-//   let canvas = resultCanvasRef.value!.canvas!
-//   const ctx = canvas.getContext('2d')!
-//   ctx.clearRect(0, 0, canvas.width, canvas.height)
-// }
-
-function draw(data: Uint8ClampedArray) {
-  let canvas = resultCanvasRef.value!.canvas
-  const ctx = canvas!.getContext('2d')!
-  const imgData = new ImageData(data as ImageDataArray, settings.value.width, settings.value.height)
-  ctx.putImageData(imgData, 0, 0)
-}
+onUnmounted(() => controller.terminateWorker())
 
 const images = SLIDING_WINDOW_IMAGES
 </script>

@@ -7,6 +7,7 @@ import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
 import { imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import { makeImageDataAnalyzer } from '../../../lib/wfc/ImageDataAnalyzer.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
@@ -22,7 +23,6 @@ import OverlappingNSettings from './OverlappingNSettings.vue'
 const store = useOverlappingNStore()
 const { settings, scale } = storeToRefs(store)
 
-let pendingImageData: Uint8ClampedArray | null = null
 const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
@@ -35,6 +35,12 @@ const {
   sourceImageId,
   sourceImageData,
 } = makeReactiveSourceImageData()
+
+const {
+  draw,
+  clearCanvas,
+  updateImageBuffer,
+} = makeCanvasRenderer(resultCanvasRef, store.settings)
 
 const imageDataAnalysis = makeImageDataAnalyzer(sourceImageData, settings.value)
 
@@ -49,12 +55,8 @@ const controller = makeOverlappingNController({
     attempts.value = []
   },
   onPreview(_response, pixels) {
-    pendingImageData = pixels
-    requestAnimationFrame(() => {
-      if (running.value) {
-        updateCanvas()
-      }
-    })
+    updateImageBuffer(pixels)
+    hasResult.value = true
   },
   onAttemptStart() {
     clearCanvas()
@@ -62,7 +64,7 @@ const controller = makeOverlappingNController({
   onAttemptFailure(response) {
     const { attempt, reverts, elapsedTime, filledPercent, totalMemoryUseBytes } = response
     attempts.value.unshift({
-      encoded: resultCanvasRef.value!.canvas?.toDataURL?.() ?? '',
+      encoded: resultCanvasRef.value?.canvas?.toDataURL?.() ?? '',
       attempt,
       reverts,
       elapsedTime,
@@ -72,6 +74,7 @@ const controller = makeOverlappingNController({
   },
   onSuccess(_response, pixels) {
     draw(pixels)
+    hasResult.value = true
   },
 })
 
@@ -112,29 +115,12 @@ watch(imageDataAnalysis.originalPatternImageDataArray, () => {
   }
 
   nextTick(() => {
-    drawTileGridToCanvas(tileGridCanvasRef.value!.canvas!, imageDataArray)
+    const canvas = tileGridCanvasRef.value?.canvas
+    if (canvas && imageDataArray.length) {
+      drawTileGridToCanvas(canvas, imageDataArray)
+    }
   })
 })
-
-function updateCanvas() {
-  if (!pendingImageData || !resultCanvasRef.value!.canvas) return
-  draw(pendingImageData)
-  pendingImageData = null
-}
-
-function clearCanvas() {
-  let canvas = resultCanvasRef.value!.canvas!
-  const ctx = canvas.getContext('2d')!
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-}
-
-function draw(data: Uint8ClampedArray) {
-  let canvas = resultCanvasRef.value!.canvas
-  const ctx = canvas!.getContext('2d')!
-  const imgData = new ImageData(data as ImageDataArray, settings.value.width, settings.value.height)
-  ctx.putImageData(imgData, 0, 0)
-  hasResult.value = true
-}
 
 const images = computed(() => {
   if (settings.value.rulesetType === RulesetType.SLIDING_WINDOW) {
