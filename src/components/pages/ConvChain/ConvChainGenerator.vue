@@ -112,9 +112,11 @@ const images = Object.values(slidingWindowImageModules).map((m) => (m as any).de
     <div class="col-3">
       <ConvChainSettings />
 
-      <button @click="controller.run()" class="ms-auto" :disabled="running">
-        Generate
-      </button>
+      <div class="hstack">
+        <button @click="controller.run()" :disabled="running" class="ms-auto">
+          Generate
+        </button>
+      </div>
 
       <div v-if="imageDataSourceUrlImage" class="mb-1">
         <strong>Target Image: </strong>
