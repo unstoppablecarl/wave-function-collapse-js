@@ -14,9 +14,7 @@ export function makeDirtyCheck(size: number, setter: (cellIndex: number) => numb
   const getVisualBuffer = (): Uint8ClampedArray => {
     for (let idx = 0; idx < changedCount; idx++) {
       const i = changedCells[idx]!
-      // Hardcoded Black and White: 0 = Black (0,0,0,255), 1 = White (255,255,255,255)
-      const val = setter(i)
-      pixelBuffer[i] = (255 << 24) | (val << 16) | (val << 8) | val
+      pixelBuffer[i] = setter(i)
       dirtyFlags[i] = 0
     }
     changedCount = 0
