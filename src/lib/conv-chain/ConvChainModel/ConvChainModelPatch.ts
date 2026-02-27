@@ -1,8 +1,8 @@
 import { IterationResult } from '../../_types.ts'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
+import { getPatternHash } from '../../util/pattern.ts'
 import { generateSymmetries } from '../../util/symmetry.ts'
-import { getPatternHash } from '../../wfc/WFCRuleset.ts'
 import type { ConvChain, ConvChainCreator, ConvChainOptions } from '../ConvChain.ts'
 
 export const makeConvChainModelPatch: ConvChainCreator = async (

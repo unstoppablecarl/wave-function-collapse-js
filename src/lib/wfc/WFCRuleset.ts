@@ -1,4 +1,5 @@
 import { DX, DY } from '../util/direction.ts'
+import { getPatternHash } from '../util/pattern.ts'
 import { generateSymmetries } from '../util/symmetry.ts'
 import {
   deserializePropagator,
@@ -33,18 +34,6 @@ export type SerializedWFCRuleset = {
   originalPatterns: (Int32Array | number[])[],
 }
 
-/**
- * Computes a rolling hash for a pattern to allow fast deduplication and edge matching.
- */
-export const getPatternHash = (p: Int32Array): bigint => {
-  let h = 0n
-
-  for (let i = 0; i < p.length; i++) {
-    h = (h * 31n) + BigInt(p[i]!)
-  }
-
-  return h
-}
 
 /**
  * Internal helper to generate unique D4 transformations of a source pattern.

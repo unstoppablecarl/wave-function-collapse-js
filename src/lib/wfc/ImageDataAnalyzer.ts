@@ -104,7 +104,7 @@ export function makeImageDataAnalyzer(
 }
 
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeoutId: number | undefined
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
 
   return (...args: Parameters<T>): void => {
     clearTimeout(timeoutId)

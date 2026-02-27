@@ -29,3 +29,13 @@ export function getPatternsFromIndexedImage(indexedImage: IndexedImage, N: numbe
 
   return sourcePatterns
 }
+
+export const getPatternHash = (p: Int32Array): bigint => {
+  let h = 0n
+
+  for (let i = 0; i < p.length; i++) {
+    h = (h * 31n) + BigInt(p[i]!)
+  }
+
+  return h
+}

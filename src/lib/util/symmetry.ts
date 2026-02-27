@@ -1,4 +1,4 @@
-import { getPatternHash } from '../wfc/WFCRuleset.ts'
+import { getPatternHash } from './pattern.ts'
 
 export function* generateSymmetries(base: Int32Array, N: number, symmetry: number) {
   const seenHashes = new Set<bigint>()
