@@ -1,3 +1,5 @@
+import { type Color32, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
+
 export type WFCPixelBufferOptions = {
   T: number
   N: number
@@ -5,7 +7,7 @@ export type WFCPixelBufferOptions = {
   width: number
   height: number
   patterns: Int32Array
-  palette: Uint8Array
+  palette: Int32Array
   bgColor: number,
   contradictionColor?: number,
 }
@@ -105,7 +107,7 @@ export const makeWFCPixelBuffer = (
  */
 export const extractPatternColors = (
   patterns: Int32Array,
-  palette: Uint8Array,
+  palette: Int32Array,
   T: number,
   N: number,
 ): Uint8Array => {
@@ -114,14 +116,13 @@ export const extractPatternColors = (
 
   for (let t = 0; t < T; t++) {
     const colorId = patterns[t * patternLen]!
-
-    // palette[id * 4] is Red, [id * 4 + 1] is Green, etc.
-    const pIdx = colorId * 4
+    const color = palette[colorId]! as Color32
     const outIdx = t * 3
 
-    patternColors[outIdx] = palette[pIdx]!     // R
-    patternColors[outIdx + 1] = palette[pIdx + 1]! // G
-    patternColors[outIdx + 2] = palette[pIdx + 2]! // B
+    // Extracting 8-bit channels from the 32-bit integer
+    patternColors[outIdx] = unpackRed(color)
+    patternColors[outIdx + 1] = unpackGreen(color)
+    patternColors[outIdx + 2] = unpackBlue(color)
   }
 
   return patternColors

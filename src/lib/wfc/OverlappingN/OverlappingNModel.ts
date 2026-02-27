@@ -14,7 +14,7 @@ export type OverlappingNOptions = {
   maxSnapShots: number,
   snapshotIntervalPercent: number,
   avgColor: number,
-  palette: Uint8Array,
+  palette: Int32Array,
   contradictionColor: number,
 }
 

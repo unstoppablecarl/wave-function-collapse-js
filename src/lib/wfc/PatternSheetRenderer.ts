@@ -1,3 +1,5 @@
+import { type Color32, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
+
 export type PatternArrayToCanvasCalculation = ReturnType<typeof calculatePatternArrayToCanvas>
 
 export function calculatePatternArrayToCanvas(
@@ -61,12 +63,11 @@ export function drawPatternArrayToCanvas(
   }
 }
 
-
 export function makePatternImageDataArray(
   patterns: Int32Array,
   T: number,
   N: number,
-  palette: Uint8Array,
+  palette: Int32Array,
 ): ImageData[] {
   const images: ImageData[] = []
   const patternLen = N * N
@@ -83,7 +84,7 @@ export function makePatternImageDataArray(
 export function makeOriginalPatternImageDataArray(
   patterns: Int32Array[],
   N: number,
-  palette: Uint8Array,
+  palette: Int32Array,
 ): ImageData[] {
   const images: ImageData[] = []
 
@@ -95,10 +96,11 @@ export function makeOriginalPatternImageDataArray(
 
   return images
 }
+
 function createPatternImageData(
   pattern: Int32Array | Uint32Array,
   N: number,
-  palette: Uint8Array,
+  palette: Int32Array,
   offset: number = 0,
 ): ImageData {
   const patternLen = N * N
@@ -106,15 +108,15 @@ function createPatternImageData(
 
   for (let i = 0; i < patternLen; i++) {
     const pixelId = pattern[offset + i]!
-    const palIdx = pixelId * 4
+    const color = palette[pixelId]! as Color32
     const targetIdx = i * 4
 
-    buffer[targetIdx] = palette[palIdx]!
-    buffer[targetIdx + 1] = palette[palIdx + 1]!
-    buffer[targetIdx + 2] = palette[palIdx + 2]!
+    buffer[targetIdx] = unpackRed(color)
+    buffer[targetIdx + 1] = unpackGreen(color)
+    buffer[targetIdx + 2] = unpackBlue(color)
 
-    // Check if the source alpha is 0; if so, maybe force it to 255 to see the tile
-    const sourceAlpha = palette[palIdx + 3]!
+    // Extracting Alpha and applying visibility fallback
+    const sourceAlpha = (color >> 24) & 0xFF
     buffer[targetIdx + 3] = sourceAlpha === 0 ? 255 : sourceAlpha
   }
 
