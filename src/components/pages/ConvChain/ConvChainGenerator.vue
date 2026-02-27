@@ -1,15 +1,15 @@
 <script setup lang="ts">
 
 import { storeToRefs } from 'pinia'
-import { makeIndexedImage } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
-import { computed, markRaw, ref, shallowRef, watch } from 'vue'
+import { ref } from 'vue'
 import { makeConvChainController } from '../../../lib/conv-chain/ConvChainController.ts'
 import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
-import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
+import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
 import ConvChainSettings from './ConvChainSettings.vue'
@@ -17,8 +17,6 @@ import ConvChainSettings from './ConvChainSettings.vue'
 const store = useConvChainStore()
 const { scale, settings } = storeToRefs(store)
 
-const imageDataSource = shallowRef<ImageData | null>(null)
-const imageDataSourceUrlImage = shallowRef<string | null>(null)
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const progressPercent = ref(0)
 const elapsedTime = ref(0)
@@ -26,21 +24,16 @@ const stabilityPercent = ref(0)
 
 let pendingImageData: Uint8ClampedArray | null = null
 
-const indexedImage = computed(() => {
-  if (!imageDataSource.value) return null
-  return makeIndexedImage(imageDataSource.value)
-})
-
-watch(imageDataSource, () => {
-  if (!imageDataSource.value) {
-    imageDataSourceUrlImage.value = null
-    return
-  }
-  imageDataSourceUrlImage.value = imageDataToUrlImage(imageDataSource.value)
-})
+const {
+  sourceImageDataUrlImage,
+  sourceIndexedImage,
+  setImageDataFromElement,
+  setImageDataFromFileInput,
+  sourceImageId,
+} = makeReactiveSourceImageData()
 
 const controller = makeConvChainController({
-  indexedImage,
+  indexedImage: sourceIndexedImage,
   settings: store.settings,
   onStart() {
     progressPercent.value = 0
@@ -64,15 +57,6 @@ const {
   running,
   errorMessage,
 } = controller
-
-function setImageDataFromFileInput(val: ImageData) {
-  imageDataSource.value = val
-}
-
-async function setImageDataFromElement(target: HTMLImageElement) {
-  const imageData = await getImgElementImageData(target as HTMLImageElement)
-  imageDataSource.value = markRaw(imageData)
-}
 
 function updateCanvas() {
   if (!pendingImageData || !resultCanvasRef.value!.canvas) return
@@ -101,15 +85,12 @@ const images = SLIDING_WINDOW_IMAGES
       <div class="mb-1">
         <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
       </div>
-      <p>Examples</p>
-      <template v-for="image in images" :key="image.src">
-        <PixelImg
-          :src="image.src"
-          class="img-target"
-          :scale="scale"
-          @img-click="setImageDataFromElement($event)"
-        />
-      </template>
+      <InputImages
+        :images="images"
+        :scale="scale"
+        :selected-img-id="sourceImageId"
+        @img-click="setImageDataFromElement"
+      />
     </div>
     <div class="col-3">
       <ConvChainSettings />
@@ -120,10 +101,10 @@ const images = SLIDING_WINDOW_IMAGES
         </button>
       </div>
 
-      <div v-if="imageDataSourceUrlImage" class="mb-1">
+      <div v-if="sourceImageDataUrlImage" class="mb-1">
         <strong>Target Image: </strong>
         <p>
-          <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
+          <PixelImg :src="sourceImageDataUrlImage" :scale="scale" />
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { type IndexedImage, indexedImageToAverageColor, unpackColor } from 'pixel-data-js'
+import { type IndexedImage, indexedImageToAverageColor } from 'pixel-data-js'
 import { type ComputedRef, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
 import type { StoreSettings } from '../../store/OverlappingNStore.ts'
 import { serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
@@ -107,7 +107,6 @@ export function makeOverlappingNController(
     const { palette } = indexedImage.value
 
     const avgColor = indexedImageToAverageColor(indexedImage.value)
-    console.log(unpackColor(avgColor))
     const opts: OverlappingNWorkerOptions = {
       settings: { ...toValue(settings), palette, avgColor },
       modelType: settings.modelType,

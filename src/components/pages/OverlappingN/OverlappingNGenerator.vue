@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { makeIndexedImage } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
-import { computed, markRaw, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { SLIDING_WINDOW_IMAGES, TILESET_IMAGES } from '../../../lib/images.ts'
 import { useOverlappingNStore } from '../../../lib/store/OverlappingNStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
-import { getImgElementImageData, imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
+import { imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
+import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import { makeImageDataAnalyzer } from '../../../lib/wfc/ImageDataAnalyzer.ts'
 import { type OverlappingNAttempt } from '../../../lib/wfc/OverlappingN/OverlappingNAttempt.ts'
 import { makeOverlappingNController } from '../../../lib/wfc/OverlappingN/OverlappingNController.ts'
 import { RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
+import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
 import WorkerAttemptRow from '../OverlappingN/WorkerAttemptRow.vue'
@@ -26,20 +27,24 @@ const attempts = ref<OverlappingNAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
-const indexedImage = computed(() => {
-  if (!imageDataSource.value) return null
-  return makeIndexedImage(imageDataSource.value)
-})
-const imageDataSource = shallowRef<ImageData | null>(null)
-const imageDataAnalysis = makeImageDataAnalyzer(imageDataSource, settings.value)
+const {
+  sourceImageDataUrlImage,
+  sourceIndexedImage,
+  setImageDataFromElement,
+  setImageDataFromFileInput,
+  sourceImageId,
+  sourceImageData,
+} = makeReactiveSourceImageData()
+
+const imageDataAnalysis = makeImageDataAnalyzer(sourceImageData, settings.value)
 
 const { ruleset } = imageDataAnalysis
 
 const controller = makeOverlappingNController({
   settings: store.settings,
-  imageDataSource,
+  imageDataSource: sourceImageData,
   ruleset,
-  indexedImage,
+  indexedImage: sourceIndexedImage,
   onBeforeRun() {
     attempts.value = []
   },
@@ -77,16 +82,6 @@ const {
   currentAttempt,
   finalAttempt,
 } = controller
-
-const imageDataSourceUrlImage = shallowRef<string | null>(null)
-
-watch(imageDataSource, () => {
-  if (!imageDataSource.value) {
-    imageDataSourceUrlImage.value = null
-    return
-  }
-  imageDataSourceUrlImage.value = imageDataToUrlImage(imageDataSource.value)
-})
 
 const patternImageUrls = computed(() => {
   const imageDataArray = imageDataAnalysis.patternImageDataArray.value
@@ -141,15 +136,6 @@ function draw(data: Uint8ClampedArray) {
   hasResult.value = true
 }
 
-function setImageDataFromFileInput(val: ImageData) {
-  imageDataSource.value = val
-}
-
-async function setImageDataFromElement(target: HTMLImageElement) {
-  const imageData = await getImgElementImageData(target as HTMLImageElement)
-  imageDataSource.value = markRaw(imageData)
-}
-
 const images = computed(() => {
   if (settings.value.rulesetType === RulesetType.SLIDING_WINDOW) {
     return SLIDING_WINDOW_IMAGES
@@ -165,15 +151,12 @@ const images = computed(() => {
       <div class="mb-1">
         <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
       </div>
-      <p>Examples</p>
-      <template v-for="image in images" :key="image.src">
-        <PixelImg
-          :src="image.src"
-          class="img-target"
-          :scale="scale"
-          @img-click="setImageDataFromElement($event)"
-        />
-      </template>
+      <InputImages
+        :images="images"
+        :scale="scale"
+        :selected-img-id="sourceImageId"
+        @img-click="setImageDataFromElement"
+      />
     </div>
     <div class="col-3">
       <OverlappingNSettings />
@@ -183,10 +166,10 @@ const images = computed(() => {
         </button>
       </div>
 
-      <div v-if="imageDataSourceUrlImage" class="mb-1">
+      <div v-if="sourceImageDataUrlImage" class="mb-1">
         <strong>Target Image: </strong>
         <p>
-          <PixelImg :src="imageDataSourceUrlImage" :scale="scale" />
+          <PixelImg :src="sourceImageDataUrlImage" :scale="scale" />
         </p>
         <div>
           <strong>Brittleness: </strong>
@@ -273,12 +256,6 @@ const images = computed(() => {
 <style lang="scss">
 .periodic {
   padding-left: 0.5rem;
-}
-
-.img-target {
-  cursor: pointer;
-  margin: 0.5rem 0.5rem 0 0;
-  display: inline-block;
 }
 
 .attempt-log {

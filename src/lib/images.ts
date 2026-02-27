@@ -1,4 +1,5 @@
 export type ImageFile = {
+  id: number
   src: string
   width: number
   height: number
@@ -16,10 +17,13 @@ type ProcessImageInput = {
   imageCounts: Record<string, number>
 }
 
+let idIncrement = 0
+
 const processImages = ({ images, imageCounts }: ProcessImageInput): ImageFile[] => {
   return Object.entries(images)
     .map(([path, meta]) => {
       return {
+        id: idIncrement++,
         src: meta.src,
         width: meta.width,
         height: meta.height,

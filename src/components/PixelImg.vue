@@ -40,8 +40,4 @@ const scaledWidth = computed(() => {
   image-rendering: -moz-crisp-edges;
   display: block;
 }
-
-.image-wrapper {
-  display: inline-block;
-}
 </style>
