@@ -2,7 +2,7 @@
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, useTemplateRef, watchEffect } from 'vue'
-import { ConvChainModelType } from '../../../lib/conv-chain/ConvChain.ts'
+import { ConvChainModelType } from '../../../lib/conv-chain/ConvChainModel.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
 import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'

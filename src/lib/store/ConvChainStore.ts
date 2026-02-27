@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
-import { ConvChainModelType } from '../conv-chain/ConvChain.ts'
+import { ConvChainModelType } from '../conv-chain/ConvChainModel.ts'
 import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
 
 export type ConvChainStoreSettings = {

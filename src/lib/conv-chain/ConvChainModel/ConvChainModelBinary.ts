@@ -2,7 +2,7 @@ import { type Color32, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
 import { IterationResult } from '../../_types.ts'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
-import type { ConvChainCreator, ConvChainOptions } from '../ConvChain.ts'
+import type { ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
 
 export const makeConvChainModelBinary: ConvChainCreator = async (
   {
@@ -13,7 +13,7 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
     maxIterations,
     indexedImage,
     seed,
-  }: ConvChainOptions,
+  }: ConvChainModelOptions,
 ) => {
   const totalCells = width * height
   const field = new Uint8Array(totalCells)

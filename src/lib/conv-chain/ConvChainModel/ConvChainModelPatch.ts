@@ -4,7 +4,7 @@ import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { getPatternHash, getPatternsFromIndexedImage } from '../../util/pattern.ts'
 import { generateSymmetries } from '../../util/symmetry.ts'
-import type { ConvChain, ConvChainCreator, ConvChainOptions } from '../ConvChain.ts'
+import type { ConvChainModel, ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
 
 export const makeConvChainModelPatch: ConvChainCreator = async (
   {
@@ -17,8 +17,10 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     seed,
     symmetry,
     periodicInput,
-  }: ConvChainOptions,
-): Promise<ConvChain> => {
+    guidanceField,
+    guidanceWeight = 2.0,
+  }: ConvChainModelOptions,
+): Promise<ConvChainModel> => {
   const totalCells = width * height
   const field = new Int32Array(totalCells)
   const prng = makeMulberry32(seed)
@@ -40,14 +42,14 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   const frequencies = getIndexedImageColorCounts(indexedImage)
   const totalPixels = sourceData.length
 
-  const pickWeightedColor = (): Color32 => {
+  const pickWeightedColor = (): number => {
     let r = prng() * totalPixels
     for (let i = 0; i < frequencies.length; i++) {
       const w = frequencies[i]!
-      if (r < w) return i as Color32
+      if (r < w) return i
       r -= w
     }
-    return 0 as Color32
+    return 0
   }
 
   const { markDirty, getVisualBuffer } = makeDirtyCheck(totalCells, (cellIndex) => {
@@ -66,16 +68,21 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     return getPatternHash(patchBuffer)
   }
 
-  const getEnergyDelta = (idx: number, tx: number, ty: number, oldVal: number, newVal: number): number => {
+  const getEnergyDelta = (
+    idx: number,
+    tx: number,
+    ty: number,
+    oldVal: number,
+    newVal: number
+  ): number => {
     let delta = 0
     for (let dy = 1 - N; dy <= 0; dy++) {
       for (let dx = 1 - N; dx <= 0; dx++) {
         const hOld = getHashAt(field, tx + dx, ty + dy, width, height)
-        // get hash if newValue used
         field[idx] = newVal
         const hNew = getHashAt(field, tx + dx, ty + dy, width, height)
-        // revert old value
         field[idx] = oldVal
+
         const wOld = patternWeights.get(hOld) || 0
         const wNew = patternWeights.get(hNew) || 0
         const logOld = wOld > 0 ? Math.log(wOld) : -10
@@ -83,7 +90,31 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
         delta += logNew - logOld
       }
     }
+
+    if (guidanceField) {
+      const guideVal = guidanceField[idx]
+      if (newVal === guideVal) {
+        delta += guidanceWeight
+      }
+      if (oldVal === guideVal) {
+        delta -= guidanceWeight
+      }
+    }
     return delta
+  }
+
+  const basePatterns = getPatternsFromIndexedImage(indexedImage, N, periodicInput)
+  for (const basePatch of basePatterns) {
+    for (const sym of generateSymmetries(basePatch, N, symmetry, true)) {
+      const currentWeight = patternWeights.get(sym.hash) || 0
+      patternWeights.set(sym.hash, currentWeight + 1)
+    }
+  }
+
+  for (let i = 0; i < totalCells; i++) {
+    shuffledCells[i] = i
+    field[i] = pickWeightedColor()
+    markDirty(i)
   }
 
   const step = (): IterationResult => {
@@ -136,20 +167,6 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
       }
     }
     return IterationResult.STEP
-  }
-
-  const basePatterns = getPatternsFromIndexedImage(indexedImage, N, periodicInput)
-  for (const basePatch of basePatterns) {
-    for (const sym of generateSymmetries(basePatch, N, symmetry, true)) {
-      const currentWeight = patternWeights.get(sym.hash) || 0
-      patternWeights.set(sym.hash, currentWeight + 1)
-    }
-  }
-
-  for (let i = 0; i < totalCells; i++) {
-    shuffledCells[i] = i
-    field[i] = pickWeightedColor()
-    markDirty(i)
   }
 
   return {

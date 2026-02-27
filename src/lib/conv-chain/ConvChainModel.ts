@@ -1,11 +1,18 @@
+import type { IndexedImage } from 'pixel-data-js'
 import type { IterationResult } from '../_types.ts'
-import type { ConvChainWorkerOptions } from './ConvChain.worker.ts'
+import type { ConvChainStoreSettings } from '../store/ConvChainStore.ts'
 import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 import { makeConvChainModelPatch } from './ConvChainModel/ConvChainModelPatch.ts'
 
-export type ConvChainOptions = Omit<ConvChainWorkerOptions, 'previewInterval' | 'modelType'>
+export type ConvChainOptions = ConvChainStoreSettings & {
+  guidanceField?: Int32Array,
+  guidanceWeight?: number,
+  indexedImage: IndexedImage,
+}
 
-export type ConvChain = {
+export type ConvChainModelOptions = Omit<ConvChainOptions, 'previewInterval' | 'modelType'>
+
+export type ConvChainModel = {
   step: () => IterationResult,
   getIteration: () => number,
   getProgress: () => number,
@@ -13,7 +20,7 @@ export type ConvChain = {
   getStabilityPercent: () => number,
 }
 
-export type ConvChainCreator = (opt: ConvChainOptions) => Promise<ConvChain>
+export type ConvChainCreator = (opt: ConvChainModelOptions) => Promise<ConvChainModel>
 
 export enum ConvChainModelType {
   BINARY,

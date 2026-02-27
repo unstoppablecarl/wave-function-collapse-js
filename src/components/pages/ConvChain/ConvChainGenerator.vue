@@ -36,7 +36,7 @@ const {
 } = makeCanvasRenderer(resultCanvasRef, store.settings)
 
 const controller = makeConvChainController({
-  indexedImage: sourceIndexedImage,
+  inputData: sourceIndexedImage,
   settings: store.settings,
   onStart() {
     progressPercent.value = 0
