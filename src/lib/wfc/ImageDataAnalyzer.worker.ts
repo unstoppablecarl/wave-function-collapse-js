@@ -14,7 +14,7 @@ export type ImageDataAnalyzerWorkerOptions = {
 }
 
 export type ImageDataAnalyzerWorkerResult = {
-  palette: Int32Array,
+  palette: Uint32Array,
   serializedRuleset: SerializedWFCRuleset,
 }
 

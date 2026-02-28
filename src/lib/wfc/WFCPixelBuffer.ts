@@ -7,7 +7,7 @@ export type WFCPixelBufferOptions = {
   width: number
   height: number
   patterns: Int32Array
-  palette: Int32Array
+  palette: Uint32Array
   bgColor: number,
   contradictionColor?: number,
 }
@@ -107,7 +107,7 @@ export const makeWFCPixelBuffer = (
  */
 export const extractPatternColors = (
   patterns: Int32Array,
-  palette: Int32Array,
+  palette: Uint32Array,
   T: number,
   N: number,
 ): Uint8Array => {

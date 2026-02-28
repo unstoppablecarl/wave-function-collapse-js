@@ -67,7 +67,7 @@ export function makePatternImageDataArray(
   patterns: Int32Array,
   T: number,
   N: number,
-  palette: Int32Array,
+  palette: Uint32Array,
 ): ImageData[] {
   const images: ImageData[] = []
   const patternLen = N * N
@@ -84,7 +84,7 @@ export function makePatternImageDataArray(
 export function makeOriginalPatternImageDataArray(
   patterns: Int32Array[],
   N: number,
-  palette: Int32Array,
+  palette: Uint32Array,
 ): ImageData[] {
   const images: ImageData[] = []
 
@@ -100,7 +100,7 @@ export function makeOriginalPatternImageDataArray(
 function createPatternImageData(
   pattern: Int32Array | Uint32Array,
   N: number,
-  palette: Int32Array,
+  palette: Uint32Array,
   offset: number = 0,
 ): ImageData {
   const patternLen = N * N
