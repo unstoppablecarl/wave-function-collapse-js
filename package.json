@@ -1,5 +1,6 @@
 {
   "name": "wfc-monorepo-root",
+  "packageManager": "pnpm@9.2.0",
   "private": true,
   "description": "Monorepo containing a Vue app and a TS library",
   "scripts": {
