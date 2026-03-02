@@ -73,7 +73,7 @@ const controller = makeOverlappingNController({
     })
   },
   onSuccess(_response, pixels) {
-    draw(pixels)
+    updateImageBuffer(pixels)
     hasResult.value = true
   },
 })
