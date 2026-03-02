@@ -1,0 +1,44 @@
+{
+  "name": "vue-app",
+  "packageManager": "pnpm@9.2.0",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "build:wasm": "wasm-pack build ../wfc-rust --target web --release",
+    "build:wasm-debug": "wasm-pack build ../wfc-rust --target web --debug",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@knadh/oat": "^0.2.0",
+    "@tweakpane/core": "^2.0.5",
+    "@tweakpane/plugin-essentials": "^0.2.1",
+    "pinia": "^3.0.4",
+    "pinia-simple-persist": "^0.0.8",
+    "pixel-data-js": "^0.10.1",
+    "pretty-bytes": "^7.1.0",
+    "pretty-ms": "^9.3.0",
+    "tweakpane": "^4.0.5",
+    "tweakpane-plugin-infodump": "^4.0.2",
+    "vue": "^3.5.25",
+    "vue-router": "4",
+    "@unstoppablecarl/wfc-js": "workspace:*",
+    "@unstoppablecarl/wfc-rust": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@vitejs/plugin-vue": "^6.0.2",
+    "@vue/tsconfig": "^0.8.1",
+    "sass-embedded": "^1.97.3",
+    "sharp": "^0.34.5",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-imagetools": "^10.0.0",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
+    "vue-tsc": "^3.1.5"
+  }
+}

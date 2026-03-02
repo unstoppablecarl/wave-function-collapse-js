@@ -1,41 +1,15 @@
 {
-  "name": "wavefunction-collapse-js",
-  "packageManager": "pnpm@9.2.0",
-  "version": "0.0.0",
-  "type": "module",
+  "name": "wfc-monorepo-root",
+  "private": true,
+  "description": "Monorepo containing a Vue app and a TS library",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "build:wasm": "wasm-pack build rust-wfc --target web --release",
-    "build:wasm-debug": "wasm-pack build rust-wfc --target web --debug",
-    "preview": "vite preview",
-    "typecheck": "vue-tsc --build --noEmit"
-  },
-  "dependencies": {
-    "@knadh/oat": "^0.2.0",
-    "@tweakpane/core": "^2.0.5",
-    "@tweakpane/plugin-essentials": "^0.2.1",
-    "pinia": "^3.0.4",
-    "pinia-simple-persist": "^0.0.8",
-    "pixel-data-js": "^0.10.1",
-    "pretty-bytes": "^7.1.0",
-    "pretty-ms": "^9.3.0",
-    "tweakpane": "^4.0.5",
-    "tweakpane-plugin-infodump": "^4.0.2",
-    "vue": "^3.5.25",
-    "vue-router": "4"
+    "dev": "pnpm -filter vue-app dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm run clean:ts && pnpm -r --parallel typecheck",
+    "clean:ts": "find . -name '*.tsbuildinfo' -delete"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "@vitejs/plugin-vue": "^6.0.2",
-    "@vue/tsconfig": "^0.8.1",
-    "sass-embedded": "^1.97.3",
-    "sharp": "^0.34.5",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-imagetools": "^10.0.0",
-    "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0",
-    "vue-tsc": "^3.1.5"
+    "typescript": "^5.0.0"
   }
 }

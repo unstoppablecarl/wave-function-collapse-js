@@ -1,0 +1,2 @@
+export type RNG = () => number
+

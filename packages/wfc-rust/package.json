@@ -1,0 +1,16 @@
+{
+  "name": "@unstoppablecarl/wfc-rust",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./pkg/rust_wfc.js",
+  "types": "./pkg/rust_wfc.d.ts",
+  "exports": {
+    ".": "./pkg/rust_wfc.js",
+    "./rust_wfc_bg.wasm": "./pkg/rust_wfc_bg.wasm"
+  },
+  "scripts": {
+    "build": "wasm-pack build --target web",
+    "prepare": "pnpm run build"
+  }
+}
