@@ -37,7 +37,6 @@ const {
 } = makeReactiveSourceImageData()
 
 const {
-  draw,
   clearCanvas,
   updateImageBuffer,
 } = makeCanvasRenderer(resultCanvasRef, store.settings)

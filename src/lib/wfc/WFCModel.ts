@@ -34,7 +34,6 @@ export const makeWFCModel = (
     startCoordX,
     startCoordY,
     fastLogFunction,
-    N,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -595,7 +594,6 @@ export const makeWFCModel = (
     propagate,
     createSnapshot,
     restoreSnapshot,
-    N,
   }
 }
 

@@ -47,6 +47,7 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
 
   return {
     ...model,
+    N: ruleset.N,
     syncVisuals: () => buffer.updateCells(model.getWave(), model.getObserved(), model.getChanges()),
     getImageBuffer: () => buffer.getVisualBuffer(),
     destroy: () => {
