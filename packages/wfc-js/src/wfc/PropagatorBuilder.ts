@@ -1,18 +1,20 @@
+import type { PatternIndex } from '../_types.ts'
 import { type Direction, DX, OPPOSITE_DIR } from '../util/direction.ts'
 import { makePropagator, type Propagator } from './Propagator.ts'
 
-export interface PropagatorBuilder<PatternId extends number> {
+export interface PropagatorBuilder<PatternId extends number = PatternIndex> {
   addAdjacency: (fromId: PatternId, toId: PatternId, dir: Direction) => void
   addBidirectional: (fromId: PatternId, toId: PatternId, dir: Direction) => void
+  setWeights: (patternId: PatternId, count: number) => void
   build: () => Propagator
 }
 
 export function makePropagatorBuilder<PatternId extends number>(T: number): PropagatorBuilder<PatternId> {
   const directionCount = DX.length
   const rules = new Set<bigint>()
+  const weights = new Float64Array(T).fill(1)
 
   const addAdjacency = (fromId: PatternId, toId: PatternId, dir: Direction) => {
-    // Pack: (dir << 32) | (from << 16) | to
     const key = (BigInt(dir) << 32n) | (BigInt(fromId) << 16n) | BigInt(toId)
     rules.add(key)
   }
@@ -21,6 +23,10 @@ export function makePropagatorBuilder<PatternId extends number>(T: number): Prop
     const oppositeDir = OPPOSITE_DIR[dir]! as Direction
     addAdjacency(fromId, toId, dir)
     addAdjacency(toId, fromId, oppositeDir)
+  }
+
+  const setWeights = (patternId: PatternId, count: number) => {
+    weights[patternId] = count
   }
 
   const build = (): Propagator => {
@@ -62,6 +68,7 @@ export function makePropagatorBuilder<PatternId extends number>(T: number): Prop
       data: propagatorData,
       offsets: propagatorOffsets,
       lengths: propagatorLengths,
+      weights,
       T,
     })
   }
@@ -69,6 +76,7 @@ export function makePropagatorBuilder<PatternId extends number>(T: number): Prop
   return {
     addAdjacency,
     addBidirectional,
+    setWeights,
     build,
   }
 }

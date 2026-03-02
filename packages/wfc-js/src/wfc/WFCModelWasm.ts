@@ -1,13 +1,22 @@
 import type { RNG } from '@unstoppablecarl/wfc-js'
 import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
 import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
+import type { Propagator } from './Propagator.ts'
 
-import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'
+export type WFCModelWasmOptions = {
+  width: number,
+  height: number,
+  periodicOutput: boolean,
+  startCoordBias: number,
+  startCoordX: number,
+  startCoordY: number,
+  maxSnapShots: number,
+  snapshotIntervalPercent: number,
+  propagator: Propagator,
+}
 
-export const makeOverlappingNModelWasm = async (
+export const makeWFCModelWasm = async (
   {
-    ruleset,
     width,
     height,
     periodicOutput,
@@ -16,16 +25,14 @@ export const makeOverlappingNModelWasm = async (
     startCoordY,
     maxSnapShots,
     snapshotIntervalPercent,
-    avgColor,
-    palette,
-    contradictionColor,
-  }: OverlappingNOptions): Promise<OverlappingNModel> => {
+    propagator,
+  }: WFCModelWasmOptions) => {
 
   const wasm = await init({
     module_or_path: wasmUrl,
   })
 
-  const { T, propagator } = ruleset
+  const { T } = propagator
 
   const model = new WFCModel(
     width,
@@ -42,17 +49,7 @@ export const makeOverlappingNModelWasm = async (
     maxSnapShots,
     snapshotIntervalPercent / 100,
   )
-  const buffer = makeWFCPixelBuffer({
-    palette,
-    T: T,
-    N: ruleset.N,
-    width: width,
-    height: height,
-    weights: propagator.weights,
-    patterns: ruleset.patterns,
-    bgColor: avgColor,
-    contradictionColor,
-  })
+
 
   function getObserved() {
     return new Int32Array(wasm.memory.buffer, model.observed_ptr(), width * height)
@@ -70,23 +67,19 @@ export const makeOverlappingNModelWasm = async (
   }
 
   return {
-    ruleset,
-    syncVisuals: () => buffer.updateCells(getWave(), getObserved(), getChanges()),
     singleIteration: (rng: RNG) => model.single_iteration_with_snapshots(rng()),
-    clear: () => {
-      buffer.clear()
-      model.clear()
-    },
+    clear: () => model.clear(),
     isGenerationComplete: () => model.is_generation_complete(),
     getFilledCount: () => model.get_filled_count(),
     getTotalCells: () => model.get_total_cells(),
     filledPercent: () => model.filled_percent(),
     getTotalMemoryUseBytes: () => model.get_total_memory_usage_bytes(),
-    getImageBuffer: () => buffer.getVisualBuffer(),
+    getChanges,
+    getWave,
+    getObserved,
     T,
     width,
     height,
-    N: ruleset.N,
     destroy: () => model.free(),
   }
 }

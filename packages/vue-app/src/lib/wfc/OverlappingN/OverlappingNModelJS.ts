@@ -16,7 +16,7 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     contradictionColor,
   }: OverlappingNOptions): Promise<OverlappingNModel> => {
 
-  const { T, N, propagator, weights } = ruleset
+  const { T, N, propagator } = ruleset
 
   const initialGround = -1
   const model = makeWFCModel({
@@ -24,7 +24,6 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     height,
     T,
     periodicOutput,
-    weights,
     propagator,
     initialGround,
     startCoordBias,
@@ -38,7 +37,7 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     N,
     width: width,
     height: height,
-    weights: ruleset.weights,
+    weights: propagator.weights,
     patterns: ruleset.patterns,
     bgColor: avgColor,
     contradictionColor,

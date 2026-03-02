@@ -9,7 +9,6 @@ export type WFCModelOptions = {
   // number of possible values
   T: number,
   periodicOutput: boolean,
-  weights: Float64Array,
   propagator: Propagator,
   initialGround: number,
   startCoordBias: number,
@@ -26,7 +25,6 @@ export const makeWFCModel = (
     T,
     propagator,
     periodicOutput,
-    weights,
     initialGround,
     startCoordBias,
     startCoordX,
@@ -121,6 +119,8 @@ export const makeWFCModel = (
 
   // The total sum of weightLogWeights for the entire source tileset.
   let sumOfWeightLogWeightsTotal = 0
+
+  const weights = propagator.weights
 
   for (let t = 0; t < T; t++) {
     const w = weights[t]!

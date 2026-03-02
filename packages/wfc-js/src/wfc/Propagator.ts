@@ -5,12 +5,23 @@ export type PropagatorOptions = {
   data: Int32Array,
   offsets: Int32Array,
   lengths: Int32Array,
+  weights?: Float64Array,
   T: number,
 }
 
 export type Propagator = ReturnType<typeof makePropagator>
 
-export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions) {
+export function makePropagator(
+  {
+    data,
+    offsets,
+    lengths,
+    T,
+    weights: providedWeights,
+  }: PropagatorOptions) {
+
+  const weights = providedWeights ?? new Float64Array(T).fill(1)
+
   function getValidPatternIds(pattern: PatternIndex, direction: Direction) {
     // Basic bounds safety
     if (direction < 0 || direction >= 4) {
@@ -46,7 +57,7 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
   }
 
   function getBrittleness() {
-    const brittlenessScores = new Float64Array(T)
+    const brittlenessScores = new Int32Array(T)
     const bottlenecks: number[] = []
 
     for (let t = 0 as PatternIndex; t < T; t++) {
@@ -90,6 +101,7 @@ export function makePropagator({ data, offsets, lengths, T }: PropagatorOptions)
     data,
     offsets,
     lengths,
+    weights,
     T,
     isCompatible,
     getValidPatternIds,
@@ -102,19 +114,18 @@ export type SerializedPropagator = {
   data: Int32Array | number[],
   offsets: Int32Array | number[],
   lengths: Int32Array | number[],
+  weights: Float64Array | number[],
   T: number,
 }
 
 export function serializePropagator(propagator: Propagator): SerializedPropagator {
-  const data = propagator.data
-  const offsets = propagator.offsets
-  const lengths = propagator.lengths
-  const T = propagator.T
+  const { data, offsets, lengths, weights, T } = propagator
 
   return {
     data,
     offsets,
     lengths,
+    weights,
     T,
   }
 }
@@ -133,12 +144,17 @@ export function deserializePropagator(serialized: SerializedPropagator): Propaga
     ? serialized.lengths
     : new Int32Array(serialized.lengths)
 
+  const weights = serialized.weights instanceof Float64Array
+    ? serialized.weights
+    : new Float64Array(serialized.weights)
+
   const T = serialized.T
 
   return makePropagator({
     data,
     offsets,
     lengths,
+    weights,
     T,
   })
 }
