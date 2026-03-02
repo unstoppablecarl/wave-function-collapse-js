@@ -1,13 +1,13 @@
-import { DX, DY } from '../util/direction.ts'
-import { getPatternHash } from '../util/pattern.ts'
-import { generateSymmetries } from '../util/symmetry.ts'
 import {
-  deserializePropagator,
-  makePropagator,
+  deserializePropagator, type Direction,
+  DX,
+  DY, makePropagatorBuilder, OPPOSITE_DIR,
   type Propagator,
   type SerializedPropagator,
   serializePropagator,
-} from './Propagator.ts'
+} from '@unstoppablecarl/wfc-js'
+import { getPatternHash } from '../util/pattern.ts'
+import { generateSymmetries } from '../util/symmetry.ts'
 
 /**
  * Wave Function Collapse Ruleset containing the adjacency constraints (propagator),
@@ -33,7 +33,6 @@ export type SerializedWFCRuleset = {
   patterns: Int32Array | number[],
   originalPatterns: (Int32Array | number[])[],
 }
-
 
 /**
  * Internal helper to generate unique D4 transformations of a source pattern.
@@ -115,45 +114,17 @@ export function makeWFCRuleset(
     }
   }
 
-  /** Checks if pattern t1 can be placed next to t2 in direction d */
-  const fastAgrees = (t1: number, t2: number, d: number): boolean => {
-    const oppositeDir = (d + 2) % 4
-    const h1 = edgeHashes[t1 * 4 + d]
-    const h2 = edgeHashes[t2 * 4 + oppositeDir]
-
-    return h1 === h2
-  }
-
-  const propagatorLengths = new Int32Array(4 * T)
-  let totalPropagatorSize = 0
+  const builder = makePropagatorBuilder(T)
 
   for (let d = 0; d < 4; d++) {
+    const dir = d as Direction
+    const oppDir = OPPOSITE_DIR[d]!
     for (let t1 = 0; t1 < T; t1++) {
-      let count = 0
-
+      const h1 = edgeHashes[t1 * 4 + dir]!
       for (let t2 = 0; t2 < T; t2++) {
-        if (fastAgrees(t1, t2, d)) {
-          count++
-        }
-      }
-
-      propagatorLengths[d * T + t1] = count
-      totalPropagatorSize += count
-    }
-  }
-
-  const propagatorData = new Int32Array(totalPropagatorSize)
-  const propagatorOffsets = new Int32Array(4 * T)
-  let propCursor = 0
-
-  for (let d = 0; d < 4; d++) {
-    for (let t1 = 0; t1 < T; t1++) {
-      const idx = d * T + t1
-      propagatorOffsets[idx] = propCursor
-
-      for (let t2 = 0; t2 < T; t2++) {
-        if (fastAgrees(t1, t2, d)) {
-          propagatorData[propCursor++] = t2
+        const h2 = edgeHashes[t2 * 4 + oppDir]!
+        if (h1 === h2) {
+          builder.addAdjacency(t1, t2, dir)
         }
       }
     }
@@ -161,23 +132,14 @@ export function makeWFCRuleset(
 
   const originalPatterns = originalPatternIndices.map(idx => {
     const start = idx * patternLen
-    const end = start + patternLen
-
-    return patterns.slice(start, end)
-  })
-
-  const propagator = makePropagator({
-    data: propagatorData,
-    offsets: propagatorOffsets,
-    lengths: propagatorLengths,
-    T,
+    return patterns.slice(start, start + patternLen)
   })
 
   return {
     N,
     T,
     NOverlap,
-    propagator,
+    propagator: builder.build(),
     originalPatterns,
     weights,
     patterns,
@@ -202,14 +164,11 @@ export function deserializeWFCRuleset(data: SerializedWFCRuleset): WFCRuleset {
   const originalPatterns = data.originalPatterns.map(p => {
     return p instanceof Int32Array ? p : new Int32Array(p)
   })
-
-  const propagator = deserializePropagator(data.propagator)
-
   return {
     N: data.N,
     T: data.T,
     NOverlap: data.NOverlap,
-    propagator,
+    propagator: deserializePropagator(data.propagator),
     weights,
     patterns,
     originalPatterns,

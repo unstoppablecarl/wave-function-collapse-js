@@ -1,5 +1,5 @@
 import type { IndexedImage } from 'pixel-data-js'
-import { DX, DY } from '../../util/direction.ts'
+import { DX, DY } from '@unstoppablecarl/wfc-js'
 import { makeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export type FragmentRulesetOptions = {

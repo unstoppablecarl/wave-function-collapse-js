@@ -7,7 +7,9 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm run clean:ts && pnpm -r --parallel typecheck",
-    "clean:ts": "find . -name '*.tsbuildinfo' -delete"
+    "clean:ts": "find . -name '*.tsbuildinfo' -delete",
+    "build:wasm": "wasm-pack build ../wfc-rust --target web --release",
+    "build:wasm-debug": "wasm-pack build ../wfc-rust --target web --debug"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

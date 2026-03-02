@@ -4,3 +4,7 @@ export enum IterationResult {
   STEP,
   FAIL
 }
+
+export type CellIndex = number & { readonly __brandPatternIndex: unique symbol; }
+export type PatternIndex = number & { readonly __brandPatternIndex: unique symbol; }
+export type RNG = () => number

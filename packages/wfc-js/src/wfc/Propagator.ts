@@ -1,5 +1,5 @@
+import type { PatternIndex } from '../_types.ts'
 import type { Direction } from '../util/direction.ts'
-import type { PatternIndex } from './_types.ts'
 
 export type PropagatorOptions = {
   data: Int32Array,

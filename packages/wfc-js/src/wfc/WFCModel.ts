@@ -1,8 +1,6 @@
-import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { type RNG } from '../_types.ts'
+import { type CellIndex, IterationResult, type PatternIndex, type RNG } from '../_types.ts'
 import { type Direction, DX, DY, OPPOSITE_DIR } from '../util/direction.ts'
 import { type FastLogFunction, makeFastLog } from '../util/fastLog.ts'
-import type { CellIndex, PatternIndex } from './_types.ts'
 import type { Propagator } from './Propagator.ts'
 
 export type WFCModelOptions = {

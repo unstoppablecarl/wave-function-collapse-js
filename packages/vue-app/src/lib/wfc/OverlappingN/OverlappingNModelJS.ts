@@ -1,4 +1,4 @@
-import { makeWFCModel } from '../WFCModel.ts'
+import { makeWFCModel } from '@unstoppablecarl/wfc-js'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { OverlappingNModel, OverlappingNModelCreator, OverlappingNOptions } from './OverlappingNModel.ts'
 
