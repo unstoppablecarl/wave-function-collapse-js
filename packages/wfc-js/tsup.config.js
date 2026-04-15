@@ -7,7 +7,9 @@ const defaultConfig = {
     'cjs',
     'esm',
   ],
-  // Ensure the compiler knows which project rules to follow
+  loader: {
+    '.wasm': 'file',
+  },
   tsconfig: 'tsconfig.json',
 }
 

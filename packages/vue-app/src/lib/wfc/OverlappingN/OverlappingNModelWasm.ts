@@ -1,10 +1,10 @@
-import type { RNG } from '@unstoppablecarl/wfc-js'
 import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
 import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
 
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'
 
+export type RNG = () => number
 export const makeOverlappingNModelWasm = async (
   {
     ruleset,

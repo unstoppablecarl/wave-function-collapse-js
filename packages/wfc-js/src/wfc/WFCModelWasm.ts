@@ -1,6 +1,6 @@
-import type { RNG } from '@unstoppablecarl/wfc-js'
 import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
 import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
+import type { RNG } from '../_types.ts'
 import type { Propagator } from './Propagator.ts'
 
 export type WFCModelWasmOptions = {
@@ -49,7 +49,6 @@ export const makeWFCModelWasm = async (
     maxSnapShots,
     snapshotIntervalPercent / 100,
   )
-
 
   function getObserved() {
     return new Int32Array(wasm.memory.buffer, model.observed_ptr(), width * height)
