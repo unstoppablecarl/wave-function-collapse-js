@@ -15,6 +15,8 @@ export type ConvChainStoreSettings = {
   modelType: ConvChainModelType,
   symmetry: number,
   periodicInput: boolean,
+  initialPatchCount: number,
+  initialPatchSize: number,
 }
 
 type SerializedData = {
@@ -30,13 +32,15 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     N: 2,
     width: 60,
     height: 60,
-    temperature: 1,
+    temperature: 2,
     maxIterations: 50,
     seed: 1,
     previewInterval: 10,
     modelType: ConvChainModelType.BINARY,
     symmetry: 1,
     periodicInput: true,
+    initialPatchCount: 4,
+    initialPatchSize: 4,
   })
 
   const state = {

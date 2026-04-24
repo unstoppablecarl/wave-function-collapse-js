@@ -57,6 +57,20 @@ onMounted(() => {
   })
   addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
 
+  const initialPatchCount = settingsFolder.addBinding(store.settings, 'initialPatchCount', {
+    min: 0,
+    step: 1,
+    label: 'initial patch count',
+  })
+  addInfo(initialPatchCount, 'The number of random patches to place before starting')
+
+  const initialPatchSize = settingsFolder.addBinding(store.settings, 'initialPatchSize', {
+    min: 0,
+    step: 1,
+    label: 'initial patch size',
+  })
+  addInfo(initialPatchSize, 'The size of initial patches')
+
   settingsFolder.addBinding(store.settings, 'temperature', {
     min: 0,
     step: 0.05,

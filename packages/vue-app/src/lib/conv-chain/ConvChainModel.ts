@@ -8,6 +8,8 @@ export type ConvChainOptions = ConvChainStoreSettings & {
   guidanceField?: Int32Array,
   guidanceWeight?: number,
   indexedImage: IndexedImage,
+  initialPatchCount?: number,
+  initialPatchSize?: number
 }
 
 export type ConvChainModelOptions = Omit<ConvChainOptions, 'previewInterval' | 'modelType'>
