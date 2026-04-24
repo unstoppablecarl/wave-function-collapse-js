@@ -2,7 +2,7 @@ import { IterationResult } from '@unstoppablecarl/wfc-js'
 import { type Color32 } from 'pixel-data-js'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
-import { getPatternHash, getPatternsFromIndexedImage } from '../../util/pattern.ts'
+import { getPatternsFromIndexedImage } from '../../util/pattern.ts'
 import { generateSymmetries } from '../../util/symmetry.ts'
 import type { ConvChainModel, ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
 
@@ -37,13 +37,15 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   let isStable = false
   let stabilityHistorySum = 0
   let historyIdx = 0
+  // Counts every cell update (frontier + sweep) so getProgress() moves
+  // immediately rather than staying at 0 during the initial frontier drain.
+  let totalSteps = 0
 
   const palette32 = indexedImage.palette
   const sourceData = indexedImage.data
   const sourceWidth = indexedImage.width
   const sourceHeight = indexedImage.height
   const stabilityHistory = new Uint8Array(totalCells)
-  const patternWeights = new Map<bigint, number>()
   const shuffledCells = new Int32Array(totalCells)
   const numColors = palette32.length
 
@@ -82,23 +84,62 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     return palette32[colorIndex]! as Color32
   })
 
-  const patchBuffer = new Int32Array(N * N)
-  const getHashAt = (data: Int32Array, x: number, y: number, w: number, h: number): bigint => {
-    for (let dy = 0; dy < N; dy++) {
-      const row = ((y + dy + h) % h) * w
-      for (let dx = 0; dx < N; dx++) {
-        patchBuffer[dx + dy * N] = data[row + (x + dx + w) % w]!
-      }
-    }
-    return getPatternHash(patchBuffer)
+  // --- Optimised pattern weight lookup ---
+  //
+  // Replace the BigInt polynomial hash with a 32-bit number hash using the
+  // same recurrence (h = h*31 + v) via Math.imul + >>> 0.  BigInt arithmetic
+  // in V8 is 10–50× slower than int32; this is the single biggest speedup.
+  //
+  // Precompute pow31[k] = 31^k mod 2^32.  This lets updateCell compute each
+  // overlapping patch's hash once (with the old cell value) and then derive
+  // every candidate colour's hash in O(1):
+  //   hashForColor_c = (baseHash + (c − oldVal) × pow31[N²−1−pos]) >>> 0
+  // reducing per-cell hash work from O(numColors × N⁴) to O(N⁴ + numColors × N²).
+
+  const N2 = N * N
+  const pow31 = new Uint32Array(N2)
+  pow31[0] = 1
+  for (let k = 1; k < N2; k++) {
+    pow31[k] = Math.imul(pow31[k - 1]!, 31) >>> 0
   }
 
+  // 32-bit polynomial hash of an N×N pattern in row-major order.
+  const getPatternHashNum = (p: Int32Array): number => {
+    let h = 0
+    for (let i = 0; i < N2; i++) {
+      h = (Math.imul(h, 31) + p[i]!) >>> 0
+    }
+    return h
+  }
+
+  // 32-bit polynomial hash of the N×N patch starting at (px, py) in data,
+  // with periodic boundary wrapping.  Same row-major iteration as
+  // getPatternHashNum so hashes agree between setup and query time.
+  const getHashNumAt = (data: Int32Array, px: number, py: number): number => {
+    let h = 0
+    for (let dy = 0; dy < N; dy++) {
+      const row = ((py + dy + height) % height) * width
+      for (let dx = 0; dx < N; dx++) {
+        h = (Math.imul(h, 31) + data[row + (px + dx + width) % width]!) >>> 0
+      }
+    }
+    return h
+  }
+
+  // Build hash → log(count) table.  Storing log weights directly avoids a
+  // Math.log call inside the hot Gibbs inner loop.
+  const logEPS = Math.log(EPS)
+  const patternWeightCounts = new Map<number, number>()
   const basePatterns = getPatternsFromIndexedImage(indexedImage, N, periodicInput)
   for (const basePatch of basePatterns) {
     for (const sym of generateSymmetries(basePatch, N, symmetry, true)) {
-      const currentWeight = patternWeights.get(sym.hash) || 0
-      patternWeights.set(sym.hash, currentWeight + 1)
+      const h = getPatternHashNum(sym.pattern)
+      patternWeightCounts.set(h, (patternWeightCounts.get(h) || 0) + 1)
     }
+  }
+  const patternLogWeights = new Map<number, number>()
+  for (const [h, count] of patternWeightCounts) {
+    patternLogWeights.set(h, Math.log(count))
   }
 
   // Fill with random noise, then stamp valid source patches as seeds.
@@ -134,35 +175,49 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   }
 
   // Core Gibbs update for one cell.  Returns 1 if the cell value changed.
+  //
+  // For each of the N² patches overlapping (tx, ty) we compute the patch hash
+  // once with the old cell value, then for each candidate colour derive the
+  // adjusted hash in O(1) via the precomputed power table — no full rehash per
+  // colour, no BigInt, no temporary patch buffer.
   const updateCell = (idx: number): 0 | 1 => {
     const tx = idx % width
     const ty = (idx / width) | 0
     const oldVal = field[idx]!
-    const progress = 1 - iteration / maxIterations
-    const t = temperature * progress
+    const t = temperature * (1 - iteration / maxIterations)
 
-    let maxLogW = -Infinity
-    for (let c = 0; c < numColors; c++) {
-      field[idx] = c
-      let logW = 0
-      for (let dy = 1 - N; dy <= 0; dy++) {
-        for (let dx = 1 - N; dx <= 0; dx++) {
-          const h = getHashAt(field, tx + dx, ty + dy, width, height)
-          const pw = patternWeights.get(h) || 0
-          logW += Math.log(pw > 0 ? pw : EPS)
+    colorLogWeights.fill(0)
+
+    for (let pdy = 1 - N; pdy <= 0; pdy++) {
+      for (let pdx = 1 - N; pdx <= 0; pdx++) {
+        // Test cell sits at position pos within the patch starting at (tx+pdx, ty+pdy).
+        // Its polynomial weight is pow31[N2-1-pos].
+        const pos = (-pdy) * N + (-pdx)
+        const powVal = pow31[N2 - 1 - pos]!
+
+        // Hash this patch with the old cell value — O(N²).
+        const baseHash = getHashNumAt(field, tx + pdx, ty + pdy)
+
+        // Derive each colour's hash in O(1): swap oldVal → c at position pos.
+        for (let c = 0; c < numColors; c++) {
+          const h = (baseHash + Math.imul(c - oldVal, powVal)) >>> 0
+          colorLogWeights[c] += patternLogWeights.get(h) ?? logEPS
         }
       }
-      if (guidanceField && c === guidanceField[idx]) {
-        logW += guidanceWeight
-      }
-      colorLogWeights[c] = logW
-      if (logW > maxLogW) maxLogW = logW
     }
-    field[idx] = oldVal
+
+    if (guidanceField) {
+      colorLogWeights[guidanceField[idx]!] += guidanceWeight
+    }
+
+    let maxLogW = colorLogWeights[0]!
+    for (let c = 1; c < numColors; c++) {
+      if (colorLogWeights[c]! > maxLogW) maxLogW = colorLogWeights[c]!
+    }
 
     let sum = 0
     for (let c = 0; c < numColors; c++) {
-      const p = Math.exp((colorLogWeights[c] - maxLogW) / t)
+      const p = Math.exp((colorLogWeights[c]! - maxLogW) / t)
       colorLogWeights[c] = p
       sum += p
     }
@@ -170,7 +225,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     let r = prng() * sum
     let newVal = numColors - 1
     for (let c = 0; c < numColors; c++) {
-      r -= colorLogWeights[c]
+      r -= colorLogWeights[c]!
       if (r <= 0) { newVal = c; break }
     }
 
@@ -214,6 +269,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
         changesInCurrentPass++
       }
       recordFlip(flipped)
+      totalSteps++
       return IterationResult.STEP
     }
 
@@ -226,6 +282,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
       changesInCurrentPass++
     }
     recordFlip(flipped)
+    totalSteps++
     iteration_i++
 
     if (iteration_i >= totalCells) {
@@ -250,7 +307,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   return {
     step,
     getIteration: () => iteration,
-    getProgress: () => (iteration + iteration_i / totalCells) / maxIterations,
+    getProgress: () => Math.min(totalSteps / (maxIterations * totalCells), 1),
     getStabilityPercent: () => 1 - (stabilityHistorySum / totalCells),
     getVisualBuffer,
   }
