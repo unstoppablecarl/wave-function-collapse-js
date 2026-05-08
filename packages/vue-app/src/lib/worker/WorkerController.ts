@@ -1,4 +1,4 @@
-import { type ComputedRef, type Reactive, ref, shallowRef } from 'vue'
+import { type ComputedRef, type Reactive, ref, ShallowRef, shallowRef } from 'vue'
 
 export enum BaseWorkerMsg {
   FAILURE = 'FAILURE',
@@ -34,6 +34,7 @@ export type GenericControllerOptions<
   TExtra = object,
 > = {
   settings: Reactive<TSettings>,
+  initialImageData: ShallowRef<ImageData | null>,
   inputData: ComputedRef<TData | null>,
   onStart?(): void,
   onPreview?(data: MsgPreview<TExtra>): void,
@@ -49,7 +50,7 @@ export function makeWorkerController<
   {
     settings,
     inputData,
-
+    initialImageData,
     onPreview,
     onSuccess,
     onError,
@@ -114,6 +115,7 @@ export function makeWorkerController<
 
     worker.postMessage({
       indexedImage: inputData.value,
+      initialImageData: initialImageData.value,
       ...settings,
     })
   }

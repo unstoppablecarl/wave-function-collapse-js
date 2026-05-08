@@ -17,6 +17,7 @@ export type ConvChainStoreSettings = {
   periodicInput: boolean,
   initialPatchCount: number,
   initialPatchSize: number,
+  lockInitialImageData: boolean,
 }
 
 type SerializedData = {
@@ -41,6 +42,7 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     periodicInput: true,
     initialPatchCount: 4,
     initialPatchSize: 4,
+    lockInitialImageData: false,
   })
 
   const state = {

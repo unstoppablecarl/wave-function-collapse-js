@@ -8,6 +8,7 @@ import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { useConvChainStore } from '../../../lib/store/ConvChainStore.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
+import { makeReactiveInitialStateImageData } from '../../../lib/vue/makeReactiveInitialStateImageData.ts'
 import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
@@ -32,10 +33,17 @@ const {
 } = makeReactiveSourceImageData()
 
 const {
+  initialImageData,
+  initialImageDataUrlImage,
+  setInitialImageDataFromFileInput,
+} = makeReactiveInitialStateImageData()
+
+const {
   updateImageBuffer,
 } = makeCanvasRenderer(resultCanvasRef, store.settings)
 
 const controller = makeConvChainController({
+  initialImageData,
   inputData: sourceIndexedImage,
   settings: store.settings,
   onStart() {
@@ -83,6 +91,16 @@ const images = SLIDING_WINDOW_IMAGES
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>
+      </div>
+
+      <div class="mb-1">
+        <label class="form-label">Initial State <span style="opacity: 0.5">(transparent ignored)</span></label>
+        <p>
+          <ImageFileInput @imageDataLoaded="setInitialImageDataFromFileInput" />
+        </p>
+        <p v-if="initialImageDataUrlImage">
+          <PixelImg :src="initialImageDataUrlImage" :scale="scale" />
+        </p>
       </div>
 
       <div v-if="sourceImageDataUrlImage" class="mb-1">

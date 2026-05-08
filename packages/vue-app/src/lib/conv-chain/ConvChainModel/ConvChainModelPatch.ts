@@ -1,10 +1,10 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { type Color32 } from 'pixel-data-js'
+import { type Color32, PixelData, unpackAlpha } from 'pixel-data-js'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import { getPatternsFromIndexedImage } from '../../util/pattern.ts'
 import { generateSymmetries } from '../../util/symmetry.ts'
-import type { ConvChainModel, ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
+import type { ConvChainCreator, ConvChainModel, ConvChainModelOptions } from '../ConvChainModel.ts'
 
 // Small weight for unseen patterns — keeps penalties on the same log scale as
 // seen-pattern weights (log(count)) rather than a hard floor that freezes the chain.
@@ -18,6 +18,8 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     temperature,
     maxIterations,
     indexedImage,
+    initialImageData,
+    lockInitialImageData,
     seed,
     symmetry,
     periodicInput,
@@ -28,6 +30,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   }: ConvChainModelOptions,
 ): Promise<ConvChainModel> => {
   const totalCells = width * height
+  const isInitialField = new Int32Array(totalCells)
   const field = new Int32Array(totalCells)
   const prng = makeMulberry32(seed)
 
@@ -61,6 +64,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
 
   const addToFrontier = (cellIdx: number) => {
     if (!inFrontier[cellIdx]) {
+      if (lockInitialImageData && isInitialField[cellIdx]) return
       inFrontier[cellIdx] = 1
       frontierQueue.push(cellIdx)
     }
@@ -149,7 +153,6 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   for (let i = 0; i < totalCells; i++) {
     shuffledCells[i] = i
     field[i] = (prng() * numColors) | 0
-    markDirty(i)
   }
 
   for (let p = 0; p < initialPatchCount; p++) {
@@ -162,7 +165,6 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
         const fx = (ox + dx) % width
         const fy = (oy + dy) % height
         field[fy * width + fx] = sourceData[(sy + dy) % sourceHeight * sourceWidth + (sx + dx) % sourceWidth]!
-        markDirty(fy * width + fx)
       }
     }
     // Seed the frontier from the full neighborhood of each stamped cell so
@@ -172,6 +174,27 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
         enqueueNeighborhood((ox + dx) % width, (oy + dy) % height)
       }
     }
+  }
+
+  if (initialImageData) {
+    const initialPixelData = new PixelData(initialImageData)
+    for (let y = 0; y < initialImageData.height; y++) {
+      for (let x = 0; x < initialImageData.width; x++) {
+        let cellIdx = y * width + x
+        const color = initialPixelData.data32[cellIdx] as Color32
+        if (unpackAlpha(color) !== 0) {
+          const index = indexedImage.palette.indexOf(color)
+          if (index !== -1) {
+            field[cellIdx] = index
+            isInitialField[index] = 1
+          }
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < totalCells; i++) {
+    markDirty(i)
   }
 
   // Core Gibbs update for one cell.  Returns 1 if the cell value changed.
@@ -226,7 +249,10 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     let newVal = numColors - 1
     for (let c = 0; c < numColors; c++) {
       r -= colorLogWeights[c]!
-      if (r <= 0) { newVal = c; break }
+      if (r <= 0) {
+        newVal = c
+        break
+      }
     }
 
     if (oldVal !== newVal) {

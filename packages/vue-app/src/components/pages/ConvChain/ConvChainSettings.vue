@@ -99,6 +99,10 @@ onMounted(() => {
     options: enumToOptions(ConvChainModelType),
   })
 
+  settingsFolder.addBinding(store.settings, 'lockInitialImageData',  {
+    label: 'Lock initial image data (if provided)',
+  })
+
   const outputFolder = pane.addFolder({
     title: 'output',
   })

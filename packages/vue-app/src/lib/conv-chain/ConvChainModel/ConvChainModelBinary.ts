@@ -1,5 +1,5 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { type Color32, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
+import { type Color32, PixelData, unpackAlpha, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
 import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../util/mulberry32.ts'
 import type { ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
@@ -12,10 +12,13 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
     temperature,
     maxIterations,
     indexedImage,
+    initialImageData,
+    lockInitialImageData,
     seed,
   }: ConvChainModelOptions,
 ) => {
   const totalCells = width * height
+  const isInitialField = new Int32Array(totalCells)
   const field = new Uint8Array(totalCells)
   const eps = 0.1
   let iteration = 0
@@ -37,15 +40,18 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
     return (((255 << 24) | (val << 16) | (val << 8) | val) >>> 0) as Color32
   })
 
+  const colorToBinary = (v: Color32) => {
+    const r = unpackRed(v)
+    const g = unpackGreen(v)
+    const b = unpackBlue(v)
+    return (r + g + b) / 3 > 128 ? 1 : 0
+  }
   const getSampleBit = (x: number, y: number): number => {
     const px = (x + sourceWidth) % sourceWidth
     const py = (y + sourceHeight) % sourceHeight
     const idx = sourceData[px + py * sourceWidth]!
     const v = palette[idx]! as Color32
-    const r = unpackRed(v)
-    const g = unpackGreen(v)
-    const b = unpackBlue(v)
-    return (r + g + b) / 3 > 128 ? 1 : 0
+    return colorToBinary(v)
   }
 
   // Pre-calculate weights safely
@@ -97,6 +103,23 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
   // Initial state
   for (let i = 0; i < totalCells; i++) {
     field[i] = prng() < 0.5 ? 1 : 0
+  }
+
+  if (initialImageData) {
+    const initialPixelData = new PixelData(initialImageData)
+    for (let y = 0; y < initialImageData.height; y++) {
+      for (let x = 0; x < initialImageData.width; x++) {
+        let index = y * width + x
+        const color = initialPixelData.data32[index] as Color32
+        if (unpackAlpha(color) !== 0) {
+          field[index] = colorToBinary(color)
+          isInitialField[index] = 1
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < totalCells; i++) {
     markDirty(i)
   }
 
@@ -107,6 +130,8 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
     const i = (prng() * width) | 0
     const j = (prng() * height) | 0
     const cellIdx = i + j * width
+
+    if (lockInitialImageData && isInitialField[cellIdx]) return IterationResult.STEP
 
     let logP = 0
     for (let y = j - N + 1; y <= j; y++) {
