@@ -2,53 +2,45 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
-import type { OverlappingNWorkerOptions } from '../wfc/OverlappingN/OverlappingN.worker.ts'
-import { ModelType, RulesetType } from '../wfc/OverlappingN/OverlappingNModel.ts'
+import { TextureSynthesisModelType } from './TextureSynthesisModel.ts'
 
-type exclude = 'palette' | 'avgColor'
-
-export type StoreSettings = Omit<OverlappingNWorkerOptions['settings'], exclude> & {
-  N: number,
-  NOverlap: number,
-  periodicInput: boolean,
-  initialGround: number,
+export type TextureSynthesisStoreSettings = {
+  width: number,
+  height: number,
+  N: number,             // L-neighbourhood radius (1..3)
+  K: number,             // K-coherence set size (Coherent; 4..16)
+  M: number,             // random candidates per cell (Harrison; 10..40)
+  polish: number,        // polish rounds (Harrison; 0..3)
+  temperature: number,   // softmax temperature (Full + Coherent; 0.05..0.3)
+  seed: number,
+  modelType: TextureSynthesisModelType,
+  lockInitialImageData: boolean,
+  previewInterval: number,
   symmetry: number,
-  modelType: ModelType,
-  rulesetType: RulesetType,
-  maxSnapShots: number,
-  snapshotIntervalPercent: number,
 }
 
 type SerializedData = {
   scale: number,
-  settings: StoreSettings
+  settings: TextureSynthesisStoreSettings
 }
 
-export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
+export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
 
   const scale = ref(4)
 
-  const settings = reactive<StoreSettings>({
+  const settings = reactive<TextureSynthesisStoreSettings>({
     N: 2,
-    NOverlap: 1,
+    K: 8,
+    M: 20,
     width: 60,
     height: 60,
-    periodicInput: true,
-    periodicOutput: true,
-    initialGround: -1,
-    symmetry: 2,
+    polish: 2,
+    temperature: 2,
     seed: 1,
-    maxAttempts: 10,
-    contradictionColor: 0xff0055,
-    maxRevertsPerAttempt: 100,
-    previewInterval: 100,
-    startCoordBias: 0.05,
-    startCoordX: 0.5,
-    startCoordY: 0.5,
-    modelType: ModelType.WASM,
-    rulesetType: RulesetType.SLIDING_WINDOW,
-    maxSnapShots: 10,
-    snapshotIntervalPercent: 5,
+    previewInterval: 10,
+    symmetry: 2,
+    lockInitialImageData: true,
+    modelType: TextureSynthesisModelType.FULL,
   })
 
   const state = {
@@ -87,13 +79,10 @@ export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
     return SYMMETRY_OPTIONS[settings.symmetry]?.description || ''
   })
 
-  const maxNOverlap = computed(() => settings.N - 1)
-
   return {
     $reset,
     $serializeState,
     $restoreState,
-    maxNOverlap,
     scale,
     settings,
     currentSymmetryDescription,

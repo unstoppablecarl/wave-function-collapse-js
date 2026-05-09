@@ -1,48 +1,54 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
-import { ConvChainModelType } from '../conv-chain/ConvChainModel.ts'
-import { SYMMETRY_OPTIONS } from '../symmetry-options.ts'
+import { SYMMETRY_OPTIONS } from '../../symmetry-options.ts'
+import type { OverlappingNWorkerOptions } from './OverlappingN.worker.ts'
+import { ModelType, RulesetType } from './OverlappingNModel.ts'
 
-export type ConvChainStoreSettings = {
-  seed: number,
-  width: number,
-  height: number,
+type exclude = 'palette' | 'avgColor'
+
+export type StoreSettings = Omit<OverlappingNWorkerOptions['settings'], exclude> & {
   N: number,
-  temperature: number,
-  maxIterations: number,
-  previewInterval: number,
-  modelType: ConvChainModelType,
-  symmetry: number,
+  NOverlap: number,
   periodicInput: boolean,
-  initialPatchCount: number,
-  initialPatchSize: number,
-  lockInitialImageData: boolean,
+  initialGround: number,
+  symmetry: number,
+  modelType: ModelType,
+  rulesetType: RulesetType,
+  maxSnapShots: number,
+  snapshotIntervalPercent: number,
 }
 
 type SerializedData = {
   scale: number,
-  settings: ConvChainStoreSettings
+  settings: StoreSettings
 }
 
-export const useConvChainStore = defineStore('conv-chain', () => {
+export const useOverlappingNStore = defineStore('wfc-overlapping-n', () => {
 
   const scale = ref(4)
 
-  const settings = reactive<ConvChainStoreSettings>({
+  const settings = reactive<StoreSettings>({
     N: 2,
+    NOverlap: 1,
     width: 60,
     height: 60,
-    temperature: 2,
-    maxIterations: 50,
-    seed: 1,
-    previewInterval: 10,
-    modelType: ConvChainModelType.BINARY,
-    symmetry: 1,
     periodicInput: true,
-    initialPatchCount: 4,
-    initialPatchSize: 4,
-    lockInitialImageData: false,
+    periodicOutput: true,
+    initialGround: -1,
+    symmetry: 2,
+    seed: 1,
+    maxAttempts: 10,
+    contradictionColor: 0xff0055,
+    maxRevertsPerAttempt: 100,
+    previewInterval: 100,
+    startCoordBias: 0.05,
+    startCoordX: 0.5,
+    startCoordY: 0.5,
+    modelType: ModelType.WASM,
+    rulesetType: RulesetType.SLIDING_WINDOW,
+    maxSnapShots: 10,
+    snapshotIntervalPercent: 5,
   })
 
   const state = {
@@ -81,10 +87,13 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     return SYMMETRY_OPTIONS[settings.symmetry]?.description || ''
   })
 
+  const maxNOverlap = computed(() => settings.N - 1)
+
   return {
     $reset,
     $serializeState,
     $restoreState,
+    maxNOverlap,
     scale,
     settings,
     currentSymmetryDescription,

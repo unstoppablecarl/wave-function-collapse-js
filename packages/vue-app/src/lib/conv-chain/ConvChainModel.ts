@@ -1,6 +1,6 @@
 import type { IterationResult } from '@unstoppablecarl/wfc-js'
 import type { IndexedImage } from 'pixel-data-js'
-import type { ConvChainStoreSettings } from '../store/ConvChainStore.ts'
+import type { ConvChainStoreSettings } from './ConvChainStore.ts'
 import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 import { makeConvChainModelPatch } from './ConvChainModel/ConvChainModelPatch.ts'
 

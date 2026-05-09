@@ -3,9 +3,9 @@
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { onUnmounted, ref } from 'vue'
-import { makeConvChainController } from '../../../lib/conv-chain/ConvChainController.ts'
 import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
-import { useConvChainStore } from '../../../lib/conv-chain/ConvChainStore.ts'
+import { makeTextureSynthesisController } from '../../../lib/texture-synthesis/TextureSynthesisController.ts'
+import { useTextureSynthesisStore } from '../../../lib/texture-synthesis/TextureSynthesisStore.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import { makeReactiveInitialStateImageData } from '../../../lib/vue/makeReactiveInitialStateImageData.ts'
@@ -14,9 +14,9 @@ import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
-import ConvChainSettings from './ConvChainSettings.vue'
+import TextureSynthesisSettings from './TextureSynthesisSettings.vue'
 
-const store = useConvChainStore()
+const store = useTextureSynthesisStore()
 const { scale, settings } = storeToRefs(store)
 
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
@@ -42,7 +42,7 @@ const {
   updateImageBuffer,
 } = makeCanvasRenderer(resultCanvasRef, store.settings)
 
-const controller = makeConvChainController({
+const controller = makeTextureSynthesisController({
   initialImageData,
   inputData: sourceIndexedImage,
   settings: store.settings,
@@ -85,7 +85,7 @@ const images = SLIDING_WINDOW_IMAGES
       />
     </div>
     <div class="col-3">
-      <ConvChainSettings />
+      <TextureSynthesisSettings />
 
       <div class="hstack">
         <button @click="controller.run()" :disabled="running" class="ms-auto">

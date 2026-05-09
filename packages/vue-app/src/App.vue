@@ -5,6 +5,7 @@
     <h1>Wave Function Collapse JS</h1>
     <RouterLink to="/" class="link">Overlapping N</RouterLink>
     <RouterLink to="/conv-chain" class="link">Conv Chain</RouterLink>
+    <RouterLink to="/texture-synthesis" class="link">Texture Synthesis</RouterLink>
 
   </div>
   <div class="container">
@@ -36,7 +37,7 @@
   }
 
   .router-link-active {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 

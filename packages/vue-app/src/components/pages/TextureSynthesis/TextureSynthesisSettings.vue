@@ -2,12 +2,12 @@
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, useTemplateRef, watchEffect } from 'vue'
-import { ConvChainModelType } from '../../../lib/conv-chain/ConvChainModel.ts'
-import { useConvChainStore } from '../../../lib/conv-chain/ConvChainStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
+import { TextureSynthesisModelType } from '../../../lib/texture-synthesis/TextureSynthesisModel.ts'
+import { useTextureSynthesisStore } from '../../../lib/texture-synthesis/TextureSynthesisStore.ts'
 import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
 
-const store = useConvChainStore()
+const store = useTextureSynthesisStore()
 const paneRef = useTemplateRef('paneRef')
 
 onMounted(() => {
@@ -50,37 +50,6 @@ onMounted(() => {
     step: 1,
   })
 
-  const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
-    min: 0,
-    step: 1,
-    label: 'periodic in',
-  })
-  addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
-
-  const initialPatchCount = settingsFolder.addBinding(store.settings, 'initialPatchCount', {
-    min: 0,
-    step: 1,
-    label: 'initial patch count',
-  })
-  addInfo(initialPatchCount, 'The number of random patches to place before starting')
-
-  const initialPatchSize = settingsFolder.addBinding(store.settings, 'initialPatchSize', {
-    min: 0,
-    step: 1,
-    label: 'initial patch size',
-  })
-  addInfo(initialPatchSize, 'The size of initial patches')
-
-  settingsFolder.addBinding(store.settings, 'temperature', {
-    min: 0,
-    step: 0.05,
-  })
-
-  settingsFolder.addBinding(store.settings, 'maxIterations', {
-    min: 1,
-    step: 1,
-  })
-
   settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
   })
@@ -95,12 +64,50 @@ onMounted(() => {
     symmetryDesc.element.innerText = store.currentSymmetryDescription
   })
 
-  settingsFolder.addBinding(store.settings, 'modelType', {
-    options: enumToOptions(ConvChainModelType),
+  settingsFolder.addBinding(store.settings, 'lockInitialImageData', {
+    label: 'Lock initial image data (if provided)',
   })
 
-  settingsFolder.addBinding(store.settings, 'lockInitialImageData',  {
-    label: 'Lock initial image data (if provided)',
+  settingsFolder.addBinding(store.settings, 'modelType', {
+    options: enumToOptions(TextureSynthesisModelType),
+  })
+
+  const k = settingsFolder.addBinding(store.settings, 'K', {
+    min: 4,
+    max: 16,
+    step: 1,
+    label: 'coherence set size',
+  })
+
+  const temperature = settingsFolder.addBinding(store.settings, 'temperature', {
+    min: 0,
+    step: 0.05,
+  })
+
+  watchEffect(() => {
+    let show = store.settings.modelType === TextureSynthesisModelType.COHERENT
+    k.hidden = !show
+    temperature.hidden = !show
+  })
+
+  const m = settingsFolder.addBinding(store.settings, 'M', {
+    min: 10,
+    max: 40,
+    step: 1,
+    label: 'random candidates per cell',
+  })
+
+  const polish = settingsFolder.addBinding(store.settings, 'polish', {
+    min: 0,
+    max: 10,
+    step: 1,
+    label: 'polish rounds',
+  })
+
+  watchEffect(() => {
+    let show = store.settings.modelType === TextureSynthesisModelType.HARRISON
+    m.hidden = !show
+    polish.hidden = !show
   })
 
   const outputFolder = pane.addFolder({

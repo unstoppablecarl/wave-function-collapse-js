@@ -1,6 +1,6 @@
 import { type IndexedImage, indexedImageToAverageColor } from 'pixel-data-js'
 import { type ComputedRef, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
-import type { StoreSettings } from '../../store/OverlappingNStore.ts'
+import type { StoreSettings } from './OverlappingNStore.ts'
 import { serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 import {
   type MsgAttemptFailure,
