@@ -1,8 +1,8 @@
 import { makeWFCModel } from '@unstoppablecarl/wfc-js'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import type { OverlappingNModel, OverlappingNModelCreator, OverlappingNOptions } from './OverlappingNModel.ts'
+import type { WFCModel, WFCModelCreator, WFCOptions } from '../WFCModel.ts'
 
-export const makeOverlappingNJS: OverlappingNModelCreator = async (
+export const makeWFCJS: WFCModelCreator = async (
   {
     width,
     height,
@@ -14,7 +14,7 @@ export const makeOverlappingNJS: OverlappingNModelCreator = async (
     palette,
     avgColor,
     contradictionColor,
-  }: OverlappingNOptions): Promise<OverlappingNModel> => {
+  }: WFCOptions): Promise<WFCModel> => {
 
   const { T, N, propagator } = ruleset
 

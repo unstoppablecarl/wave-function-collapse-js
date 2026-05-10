@@ -1,13 +1,13 @@
 <script setup lang="ts">
 
 const { attempt } = defineProps<{
-  attempt: OverlappingNWorkerAttempt
+  attempt: WFCWorkerAttempt
 }>()
 
 import prettyMilliseconds from 'pretty-ms'
 import prettyBytes from 'pretty-bytes'
+import type { WFCWorkerAttempt } from '../../../generators/wfc/WFCController.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
-import type { OverlappingNWorkerAttempt } from '../../../generators/wfc/OverlappingN/OverlappingNAttempt.ts'
 </script>
 <template>
   <div class="row mb-1 attempt-row">

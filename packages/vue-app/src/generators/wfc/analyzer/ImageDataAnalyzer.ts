@@ -1,8 +1,8 @@
 import { ref, shallowRef, type ShallowRef, watch } from 'vue'
-import type { StoreSettings } from './OverlappingN/OverlappingNStore.ts'
+import type { StoreSettings } from '../WFCStore.ts'
 import type { ImageDataAnalyzerWorkerOptions, ImageDataAnalyzerWorkerResult } from './ImageDataAnalyzer.worker.ts'
 import { makeOriginalPatternImageDataArray, makePatternImageDataArray } from './PatternSheetRenderer.ts'
-import { deserializeWFCRuleset, type WFCRuleset } from './WFCRuleset.ts'
+import { deserializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export function makeImageDataAnalyzer(
   imageDataSource: ShallowRef<ImageData | null>,

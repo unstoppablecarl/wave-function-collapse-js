@@ -3,27 +3,29 @@ import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { SLIDING_WINDOW_IMAGES, TILESET_IMAGES } from '../../../lib/images.ts'
-import { useOverlappingNStore } from '../../../generators/wfc/OverlappingN/OverlappingNStore.ts'
+import { useWFCStore } from '../../../generators/wfc/WFCStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
 import { imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
-import { makeImageDataAnalyzer } from '../../../generators/wfc/ImageDataAnalyzer.ts'
-import { type OverlappingNAttempt } from '../../../generators/wfc/OverlappingN/OverlappingNAttempt.ts'
-import { makeOverlappingNController } from '../../../generators/wfc/OverlappingN/OverlappingNController.ts'
-import { RulesetType } from '../../../generators/wfc/OverlappingN/OverlappingNModel.ts'
+import { makeImageDataAnalyzer } from '../../../generators/wfc/analyzer/ImageDataAnalyzer.ts'
+import {
+  makeWFCController,
+  type WFCAttempt,
+} from '../../../generators/wfc/WFCController.ts'
+import { RulesetType } from '../../../generators/wfc/WFCModel.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
 import PixelImg from '../../PixelImg.vue'
 import WorkerAttemptRow from './WorkerAttemptRow.vue'
-import OverlappingNSettings from './OverlappingNSettings.vue'
+import WfcSettings from './WFCSettings.vue'
 
-const store = useOverlappingNStore()
+const store = useWFCStore()
 const { settings, scale } = storeToRefs(store)
 
-const attempts = ref<OverlappingNAttempt[]>([])
+const attempts = ref<WFCAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
@@ -45,7 +47,7 @@ const imageDataAnalysis = makeImageDataAnalyzer(sourceImageData, settings.value)
 
 const { ruleset } = imageDataAnalysis
 
-const controller = makeOverlappingNController({
+const controller = makeWFCController({
   settings: store.settings,
   imageDataSource: sourceImageData,
   ruleset,
@@ -144,7 +146,7 @@ const images = computed(() => {
       />
     </div>
     <div class="col-3">
-      <OverlappingNSettings />
+      <WfcSettings />
       <div class="hstack">
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate

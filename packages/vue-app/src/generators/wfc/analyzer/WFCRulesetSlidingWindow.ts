@@ -2,7 +2,7 @@ import type { IndexedImage } from 'pixel-data-js'
 import { getPatternsFromIndexedImage } from '../../../lib/util/pattern.ts'
 import { makeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
-export type OverlappingNSlidingWindowRulesetOptions = {
+export type WFCRulesetOptions = {
   indexedImage: IndexedImage,
   N: number,
   NOverlap: number,
@@ -17,7 +17,7 @@ export function makeOverlappingNSlidingWindowRuleset(
     indexedImage,
     symmetry,
     periodicInput,
-  }: OverlappingNSlidingWindowRulesetOptions,
+  }: WFCRulesetOptions,
 ): WFCRuleset {
   const sourcePatterns = getPatternsFromIndexedImage(indexedImage, N, periodicInput)
 

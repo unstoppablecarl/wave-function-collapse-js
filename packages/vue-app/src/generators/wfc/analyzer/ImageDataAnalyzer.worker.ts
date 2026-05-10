@@ -1,8 +1,8 @@
 import { makeIndexedImage } from 'pixel-data-js'
-import { RulesetType } from './OverlappingN/OverlappingNModel.ts'
-import { makeFragmentRuleset } from './OverlappingN/OverlappingNRulesetFragment.ts'
-import { makeOverlappingNSlidingWindowRuleset } from './OverlappingN/OverlappingNRulesetSlidingWindow.ts'
-import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from './WFCRuleset.ts'
+import { RulesetType } from '../WFCModel.ts'
+import { makeFragmentRuleset } from './WFCRulesetFragment.ts'
+import { makeOverlappingNSlidingWindowRuleset } from './WFCRulesetSlidingWindow.ts'
+import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export type ImageDataAnalyzerWorkerOptions = {
   imageData: ImageData,

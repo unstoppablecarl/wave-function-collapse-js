@@ -1,9 +1,9 @@
 import { IterationResult, type RNG } from '@unstoppablecarl/wfc-js'
-import type { WFCRuleset } from '../WFCRuleset.ts'
-import { makeOverlappingNJS } from './OverlappingNModelJS.ts'
-import { makeOverlappingNModelWasm } from './OverlappingNModelWasm.ts'
+import type { WFCRuleset } from './WFCRuleset.ts'
+import { makeWFCJS } from './WFCModel/WFCModelJS.ts'
+import { makeWFCModelWasm } from './WFCModel/WFCModelWasm.ts'
 
-export type OverlappingNOptions = {
+export type WFCOptions = {
   ruleset: WFCRuleset,
   width: number,
   height: number,
@@ -18,7 +18,7 @@ export type OverlappingNOptions = {
   contradictionColor: number,
 }
 
-export type OverlappingNModel = {
+export type WFCModel = {
   singleIteration: (rng: RNG) => IterationResult,
   clear: () => void,
   isGenerationComplete: () => boolean,
@@ -36,16 +36,16 @@ export type OverlappingNModel = {
   getImageBuffer: () => Uint8ClampedArray,
 }
 
-export type OverlappingNModelCreator = (opt: OverlappingNOptions) => Promise<OverlappingNModel>
+export type WFCModelCreator = (opt: WFCOptions) => Promise<WFCModel>
 
 export enum ModelType {
   JS,
   WASM
 }
 
-export const ModelTypeFactory: Record<ModelType, OverlappingNModelCreator> = {
-  [ModelType.JS]: makeOverlappingNJS,
-  [ModelType.WASM]: makeOverlappingNModelWasm,
+export const ModelTypeFactory: Record<ModelType, WFCModelCreator> = {
+  [ModelType.JS]: makeWFCJS,
+  [ModelType.WASM]: makeWFCModelWasm,
 }
 
 export enum RulesetType {

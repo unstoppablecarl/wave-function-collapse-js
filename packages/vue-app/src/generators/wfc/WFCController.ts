@@ -1,19 +1,18 @@
 import { type IndexedImage, indexedImageToAverageColor } from 'pixel-data-js'
-import { type ComputedRef, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
-import type { StoreSettings } from './OverlappingNStore.ts'
-import { serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
+import { type ComputedRef, reactive, type Reactive, type Ref, ref, type ShallowRef, shallowRef, toValue } from 'vue'
 import {
   type MsgAttemptFailure,
   type MsgAttemptPreview,
   type MsgAttemptStart,
   type MsgAttemptSuccess,
-  type OverlappingNWorkerOptions,
+  type WFCWorkerOptions,
   WorkerMsg,
   type WorkerResponse,
-} from './OverlappingN.worker.ts'
-import { makeOverlappingNAttempt, resetOverlappingNAttempt } from './OverlappingNAttempt.ts'
+} from './WFC.worker.ts'
+import { serializeWFCRuleset, type WFCRuleset } from './WFCRuleset.ts'
+import type { StoreSettings } from './WFCStore.ts'
 
-export type OverlappingNControllerOptions = {
+export type WFCControllerOptions = {
   settings: Reactive<StoreSettings>,
   ruleset: Ref<WFCRuleset | null>,
   indexedImage: ComputedRef<IndexedImage | null>,
@@ -25,7 +24,7 @@ export type OverlappingNControllerOptions = {
   onSuccess?(response: MsgAttemptSuccess, pixels: Uint8ClampedArray): void,
 }
 
-export function makeOverlappingNController(
+export function makeWFCController(
   {
     settings,
     onPreview,
@@ -36,7 +35,7 @@ export function makeOverlappingNController(
     ruleset,
     indexedImage,
     imageDataSource,
-  }: OverlappingNControllerOptions,
+  }: WFCControllerOptions,
 ) {
   let worker: Worker | null = null
 
@@ -44,12 +43,12 @@ export function makeOverlappingNController(
   const hasResult = ref(false)
   const errorMessage = shallowRef<{ title: string, message: string } | null>(null)
 
-  const currentAttempt = makeOverlappingNAttempt()
-  const finalAttempt = makeOverlappingNAttempt()
+  const currentAttempt = makeWFCAttempt()
+  const finalAttempt = makeWFCAttempt()
 
   const handlers: Partial<Record<WorkerMsg, (data: any) => void>> = {
     [WorkerMsg.ATTEMPT_START]: (data: MsgAttemptStart) => {
-      resetOverlappingNAttempt(currentAttempt, data.attempt)
+      resetWFCAttempt(currentAttempt, data.attempt)
       onAttemptStart?.(data)
     },
 
@@ -100,14 +99,14 @@ export function makeOverlappingNController(
     terminateWorker()
     running.value = true
 
-    worker = new Worker(new URL('./OverlappingN.worker.ts', import.meta.url), {
+    worker = new Worker(new URL('./WFC.worker.ts', import.meta.url), {
       type: 'module',
     })
 
     const { palette } = indexedImage.value
 
     const avgColor = indexedImageToAverageColor(indexedImage.value)
-    const opts: OverlappingNWorkerOptions = {
+    const opts: WFCWorkerOptions = {
       settings: { ...toValue(settings), palette, avgColor },
       modelType: settings.modelType,
       serializedRuleset: serializeWFCRuleset(ruleset.value),
@@ -144,4 +143,35 @@ export function makeOverlappingNController(
     currentAttempt,
     imageDataSource,
   }
+}
+
+export type WFCAttempt = Omit<WFCWorkerAttempt, 'startedAt'> & {
+  encoded: string,
+}
+export type WFCWorkerAttempt = {
+  attempt: number,
+  startedAt: number,
+  reverts: number,
+  elapsedTime: number,
+  filledPercent: number,
+  totalMemoryUseBytes: number,
+}
+
+export function makeWFCAttempt() {
+  return reactive<WFCWorkerAttempt>({
+    attempt: 0,
+    startedAt: 0,
+    filledPercent: 0,
+    elapsedTime: 0,
+    reverts: 0,
+    totalMemoryUseBytes: 0,
+  })
+}
+
+export function resetWFCAttempt(result: WFCWorkerAttempt, attempt: number) {
+  result.attempt = attempt
+  result.filledPercent = 0
+  result.startedAt = performance.now()
+  result.elapsedTime = 0
+  result.reverts = 0
 }

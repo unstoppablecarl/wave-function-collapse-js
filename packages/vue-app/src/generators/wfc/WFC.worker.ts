@@ -1,7 +1,7 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
-import { deserializeWFCRuleset, type SerializedWFCRuleset } from '../WFCRuleset.ts'
-import { ModelType, ModelTypeFactory, type OverlappingNOptions } from './OverlappingNModel.ts'
+import { makeMulberry32 } from '../../lib/util/mulberry32.ts'
+import { deserializeWFCRuleset, type SerializedWFCRuleset } from './WFCRuleset.ts'
+import { ModelType, ModelTypeFactory, type WFCOptions } from './WFCModel.ts'
 
 export enum WorkerMsg {
   ATTEMPT_START = 'ATTEMPT_START',
@@ -51,10 +51,10 @@ export type WorkerResponse =
   | MsgAttemptFinalFailure
   | MsgError
 
-export type OverlappingNWorkerOptions = {
+export type WFCWorkerOptions = {
   modelType: ModelType,
   serializedRuleset: SerializedWFCRuleset,
-  settings: Omit<OverlappingNOptions, 'ruleset'> & {
+  settings: Omit<WFCOptions, 'ruleset'> & {
     seed: number,
     maxAttempts: number,
     maxRevertsPerAttempt: number,
@@ -64,7 +64,7 @@ export type OverlappingNWorkerOptions = {
 }
 
 const ctx: DedicatedWorkerGlobalScope = self as any
-ctx.onmessage = async (e: MessageEvent<OverlappingNWorkerOptions>) => {
+ctx.onmessage = async (e: MessageEvent<WFCWorkerOptions>) => {
   const postMsg = <T extends WorkerMsg>(
     type: T,
     extra: Omit<Extract<WorkerResponse, { type: T }>, 'type'>,

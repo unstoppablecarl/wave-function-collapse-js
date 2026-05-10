@@ -1,11 +1,12 @@
-import init, { WFCModel } from 'packages/wfc-rust'
-import wasmUrl from 'pkg/rust_wfc_bg.wasm?url'
+import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
+
+import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
 
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'
+import type { WFCModel as Model, WFCOptions } from '../WFCModel.ts'
 
 export type RNG = () => number
-export const makeOverlappingNModelWasm = async (
+export const makeWFCModelWasm = async (
   {
     ruleset,
     width,
@@ -19,7 +20,7 @@ export const makeOverlappingNModelWasm = async (
     avgColor,
     palette,
     contradictionColor,
-  }: OverlappingNOptions): Promise<OverlappingNModel> => {
+  }: WFCOptions): Promise<Model> => {
 
   const wasm = await init({
     module_or_path: wasmUrl,
