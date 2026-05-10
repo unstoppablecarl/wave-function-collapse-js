@@ -1,5 +1,5 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { type Color32, PixelData, unpackAlpha } from 'pixel-data-js'
+import { type Color32, makePixelData, unpackAlpha } from 'pixel-data-js'
 import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import { getPatternsFromIndexedImage } from '../../../lib/util/pattern.ts'
@@ -30,8 +30,8 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   }: ConvChainModelOptions,
 ): Promise<ConvChainModel> => {
   const totalCells = width * height
-  const isInitialField = new Int32Array(totalCells)
-  const field = new Int32Array(totalCells)
+  const isInitialField = new Uint32Array(totalCells)
+  const field = new Uint32Array(totalCells)
   const prng = makeMulberry32(seed)
 
   let iteration = 0
@@ -46,8 +46,8 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
 
   const palette32 = indexedImage.palette
   const sourceData = indexedImage.data
-  const sourceWidth = indexedImage.width
-  const sourceHeight = indexedImage.height
+  const sourceWidth = indexedImage.w
+  const sourceHeight = indexedImage.h
   const stabilityHistory = new Uint8Array(totalCells)
   const shuffledCells = new Int32Array(totalCells)
   const numColors = palette32.length
@@ -108,7 +108,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   }
 
   // 32-bit polynomial hash of an N×N pattern in row-major order.
-  const getPatternHashNum = (p: Int32Array): number => {
+  const getPatternHashNum = (p: Uint32Array): number => {
     let h = 0
     for (let i = 0; i < N2; i++) {
       h = (Math.imul(h, 31) + p[i]!) >>> 0
@@ -119,7 +119,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   // 32-bit polynomial hash of the N×N patch starting at (px, py) in data,
   // with periodic boundary wrapping.  Same row-major iteration as
   // getPatternHashNum so hashes agree between setup and query time.
-  const getHashNumAt = (data: Int32Array, px: number, py: number): number => {
+  const getHashNumAt = (data: Uint32Array, px: number, py: number): number => {
     let h = 0
     for (let dy = 0; dy < N; dy++) {
       const row = ((py + dy + height) % height) * width
@@ -177,11 +177,11 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   }
 
   if (initialImageData) {
-    const initialPixelData = new PixelData(initialImageData)
+    const initialPixelData = makePixelData(initialImageData)
     for (let y = 0; y < initialImageData.height; y++) {
       for (let x = 0; x < initialImageData.width; x++) {
         let cellIdx = y * width + x
-        const color = initialPixelData.data32[cellIdx] as Color32
+        const color = initialPixelData.data[cellIdx] as Color32
         if (unpackAlpha(color) !== 0) {
           const index = indexedImage.palette.indexOf(color)
           if (index !== -1) {

@@ -1,6 +1,6 @@
 import { getPatternHash } from './pattern.ts'
 
-export function* generateSymmetries(base: Int32Array, N: number, symmetry: number, allowDuplicates = false) {
+export function* generateSymmetries(base: Uint32Array, N: number, symmetry: number, allowDuplicates = false) {
   const seenHashes = new Set<bigint>()
   let current = base
 
@@ -48,9 +48,9 @@ export function* generateSymmetries(base: Int32Array, N: number, symmetry: numbe
 
 /** * Rotates a square Int32Array pattern 90 degrees clockwise.
  */
-export const rotate = (p: Int32Array, N: number): Int32Array => {
+export const rotate = (p: Uint32Array, N: number): Uint32Array => {
   const patternLen = N * N
-  const res = new Int32Array(patternLen)
+  const res = new Uint32Array(patternLen)
 
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
@@ -64,9 +64,9 @@ export const rotate = (p: Int32Array, N: number): Int32Array => {
 /**
  * Reflects a square Int32Array pattern horizontally.
  */
-export const reflect = (p: Int32Array, N: number): Int32Array => {
+export const reflect = (p: Uint32Array, N: number): Uint32Array => {
   const patternLen = N * N
-  const res = new Int32Array(patternLen)
+  const res = new Uint32Array(patternLen)
 
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {

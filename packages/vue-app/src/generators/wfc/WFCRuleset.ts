@@ -41,12 +41,12 @@ export type SerializedWFCRuleset = {
 export function makeWFCRuleset(
   N: number,
   symmetry: number,
-  sourcePatterns: Int32Array[],
+  sourcePatterns: Uint32Array[],
   NOverlap: number = 1,
 ): WFCRuleset {
   const patternLen = N * N
   const weightsMap = new Map<bigint, number>()
-  const patternsList: Int32Array[] = []
+  const patternsList: Uint32Array[] = []
   const originalPatternIndices: number[] = []
   const overlap = N - NOverlap
 

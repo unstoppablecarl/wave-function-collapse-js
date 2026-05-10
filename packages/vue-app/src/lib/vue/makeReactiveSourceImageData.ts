@@ -1,4 +1,4 @@
-import { makeIndexedImage } from 'pixel-data-js'
+import { makeIndexedImageFromImageData } from 'pixel-data-js'
 import { computed, markRaw, ref, shallowRef, watch } from 'vue'
 import { getImgElementImageData, imageDataToUrlImage } from '../util/ImageData.ts'
 
@@ -7,7 +7,6 @@ export function makeReactiveSourceImageData() {
   const sourceImageId = ref(0)
   const sourceImageData = shallowRef<ImageData | null>(null)
   const sourceImageDataUrlImage = shallowRef<string | null>(null)
-
 
   watch(sourceImageData, () => {
     if (!sourceImageData.value) {
@@ -19,7 +18,7 @@ export function makeReactiveSourceImageData() {
 
   const sourceIndexedImage = computed(() => {
     if (!sourceImageData.value) return null
-    return makeIndexedImage(sourceImageData.value)
+    return makeIndexedImageFromImageData(sourceImageData.value)
   })
 
   async function setImageDataFromElement(target: HTMLImageElement, imgId: number) {
@@ -33,7 +32,7 @@ export function makeReactiveSourceImageData() {
     sourceImageData.value = val
   }
 
-  function clearSourceImage(){
+  function clearSourceImage() {
     sourceImageId.value = -1
     sourceImageData.value = null
   }

@@ -1,5 +1,5 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
-import { type Color32, PixelData, unpackAlpha, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
+import { type Color32, makePixelData, unpackAlpha, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
 import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import type { ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
@@ -25,8 +25,8 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
   let pixelIndex = 0
 
   const prng = makeMulberry32(seed)
-  const sourceWidth = indexedImage.width
-  const sourceHeight = indexedImage.height
+  const sourceWidth = indexedImage.w
+  const sourceHeight = indexedImage.h
   const sourceData = indexedImage.data
   const palette = indexedImage.palette
 
@@ -106,11 +106,11 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
   }
 
   if (initialImageData) {
-    const initialPixelData = new PixelData(initialImageData)
+    const initialPixelData = makePixelData(initialImageData)
     for (let y = 0; y < initialImageData.height; y++) {
       for (let x = 0; x < initialImageData.width; x++) {
         let index = y * width + x
-        const color = initialPixelData.data32[index] as Color32
+        const color = initialPixelData.data[index] as Color32
         if (unpackAlpha(color) !== 0) {
           field[index] = colorToBinary(color)
           isInitialField[index] = 1

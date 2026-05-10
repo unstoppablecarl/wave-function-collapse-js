@@ -1,5 +1,5 @@
-import type { IndexedImage } from 'pixel-data-js'
 import { DX, DY } from '@unstoppablecarl/wfc-js'
+import type { IndexedImage } from 'pixel-data-js'
 import { makeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export type FragmentRulesetOptions = {
@@ -13,7 +13,7 @@ export function makeFragmentRuleset(
     symmetry,
   }: FragmentRulesetOptions,
 ): WFCRuleset {
-  const { data, width, height } = indexedImage
+  const { data, w, h } = indexedImage
   const visited = new Uint8Array(data.length)
   const fragments: { x: number, y: number, id: number }[][] = []
   const fragmentBounds: { w: number, h: number, minX: number, minY: number }[] = []
@@ -28,15 +28,15 @@ export function makeFragmentRuleset(
     const stack = [i]
     visited[i] = 1
 
-    let minX = i % width
+    let minX = i % w
     let maxX = minX
-    let minY = Math.floor(i / width)
+    let minY = Math.floor(i / w)
     let maxY = minY
 
     while (stack.length > 0) {
       const currIdx = stack.pop()!
-      const cx = currIdx % width
-      const cy = Math.floor(currIdx / width)
+      const cx = currIdx % w
+      const cy = Math.floor(currIdx / w)
       const cId = data[currIdx]!
 
       fragmentPixels.push({
@@ -54,8 +54,8 @@ export function makeFragmentRuleset(
         const nx = cx + DX[d]!
         const ny = cy + DY[d]!
 
-        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-          const nIdx = ny * width + nx
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          const nIdx = ny * w + nx
           if (!visited[nIdx] && data[nIdx] !== 0) {
             visited[nIdx] = 1
             stack.push(nIdx)
@@ -98,13 +98,13 @@ export function makeFragmentRuleset(
 
   const N = firstW
   const patternLen = N * N
-  const sourcePatterns: Int32Array[] = []
+  const sourcePatterns: Uint32Array[] = []
 
   // 3. Create patterns (No offsets needed since islands are already N x N)
   for (let i = 0; i < fragments.length; i++) {
     const fragmentPixels = fragments[i]!
     const bounds = fragmentBounds[i]!
-    const pattern = new Int32Array(patternLen)
+    const pattern = new Uint32Array(patternLen)
 
     for (const p of fragmentPixels) {
       const px = p.x - bounds.minX

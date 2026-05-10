@@ -23,7 +23,8 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
     seed,
   }) => {
   const totalCells = width * height
-  const SW = indexedImage.width, SH = indexedImage.height
+  const SW = indexedImage.w
+  const SH = indexedImage.h
   const { data: sourceData, nSyms } = makeSymmetricSource(indexedImage.data, SW, SH, symmetry)
   const blockSize = SW * SH
   const sourceArea = nSyms * blockSize

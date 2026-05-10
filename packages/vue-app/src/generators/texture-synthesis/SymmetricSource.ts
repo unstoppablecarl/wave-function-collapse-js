@@ -10,16 +10,16 @@
 import { getPatternHash } from '../../lib/util/pattern.ts'
 
 export const makeSymmetricSource = (
-  src: Int32Array,
+  src: Uint32Array,
   SW: number,
   SH: number,
   symmetry: number,
-): { data: Int32Array, nSyms: number } => {
+): { data: Uint32Array, nSyms: number } => {
   const block = SW * SH
   const seen = new Set<bigint>()
-  const transforms: Int32Array[] = []
+  const transforms: Uint32Array[] = []
 
-  const tryAdd = (t: Int32Array): void => {
+  const tryAdd = (t: Uint32Array): void => {
     const h = getPatternHash(t)
     if (!seen.has(h)) { seen.add(h); transforms.push(t) }
   }
@@ -30,19 +30,19 @@ export const makeSymmetricSource = (
   // Dimension-preserving (works for any rectangle) ----------------------------
   if (cap >= 1) tryAdd(src)
   if (cap >= 2) {
-    const t = new Int32Array(block)
+    const t = new Uint32Array(block)
     for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++)
       t[y * SW + x] = src[y * SW + (SW - 1 - x)]!  // horizontal flip
     tryAdd(t)
   }
   if (cap >= 3) {
-    const t = new Int32Array(block)
+    const t = new Uint32Array(block)
     for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++)
       t[y * SW + x] = src[(SH - 1 - y) * SW + x]!  // vertical flip
     tryAdd(t)
   }
   if (cap >= 4) {
-    const t = new Int32Array(block)
+    const t = new Uint32Array(block)
     for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++)
       t[y * SW + x] = src[(SH - 1 - y) * SW + (SW - 1 - x)]!  // 180°
     tryAdd(t)
@@ -52,25 +52,25 @@ export const makeSymmetricSource = (
   if (square) {
     const N = SW
     if (cap >= 5) {
-      const t = new Int32Array(block)
+      const t = new Uint32Array(block)
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
         t[y * N + x] = src[x * N + y]!  // transpose
       tryAdd(t)
     }
     if (cap >= 6) {
-      const t = new Int32Array(block)
+      const t = new Uint32Array(block)
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
         t[y * N + x] = src[(N - 1 - x) * N + (N - 1 - y)]!  // anti-transpose
       tryAdd(t)
     }
     if (cap >= 7) {
-      const t = new Int32Array(block)
+      const t = new Uint32Array(block)
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
         t[y * N + x] = src[(N - 1 - x) * N + y]!  // 90° CW
       tryAdd(t)
     }
     if (cap >= 8) {
-      const t = new Int32Array(block)
+      const t = new Uint32Array(block)
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
         t[y * N + x] = src[x * N + (N - 1 - y)]!  // 90° CCW
       tryAdd(t)
@@ -78,7 +78,7 @@ export const makeSymmetricSource = (
   }
 
   const nSyms = transforms.length
-  const data = new Int32Array(nSyms * block)
+  const data = new Uint32Array(nSyms * block)
   for (let t = 0; t < nSyms; t++) data.set(transforms[t]!, t * block)
   return { data, nSyms }
 }

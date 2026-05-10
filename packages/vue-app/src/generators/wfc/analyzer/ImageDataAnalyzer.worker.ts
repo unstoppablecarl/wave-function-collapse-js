@@ -1,8 +1,8 @@
-import { makeIndexedImage } from 'pixel-data-js'
+import { makeIndexedImageFromImageData } from 'pixel-data-js'
 import { RulesetType } from '../WFCModel.ts'
+import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 import { makeFragmentRuleset } from './WFCRulesetFragment.ts'
 import { makeOverlappingNSlidingWindowRuleset } from './WFCRulesetSlidingWindow.ts'
-import { type SerializedWFCRuleset, serializeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export type ImageDataAnalyzerWorkerOptions = {
   imageData: ImageData,
@@ -21,7 +21,7 @@ export type ImageDataAnalyzerWorkerResult = {
 const ctx: DedicatedWorkerGlobalScope = self as any
 ctx.onmessage = async (e: MessageEvent<ImageDataAnalyzerWorkerOptions>) => {
   const { imageData, N, symmetry, periodicInput, rulesetType, NOverlap } = e.data
-  const indexedImage = makeIndexedImage(imageData)
+  const indexedImage = makeIndexedImageFromImageData(imageData)
 
   let ruleset: WFCRuleset
 
