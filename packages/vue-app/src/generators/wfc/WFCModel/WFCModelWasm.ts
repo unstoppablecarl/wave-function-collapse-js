@@ -1,9 +1,8 @@
-import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
-
+import init, { WFCModel as RustWFCModel } from '@unstoppablecarl/wfc-rust'
 import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
 
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
-import type { WFCModel as Model, WFCOptions } from '../WFCModel.ts'
+import type { WFCModel, WFCOptions } from '../WFCModel.ts'
 
 export type RNG = () => number
 export const makeWFCModelWasm = async (
@@ -20,7 +19,7 @@ export const makeWFCModelWasm = async (
     avgColor,
     palette,
     contradictionColor,
-  }: WFCOptions): Promise<Model> => {
+  }: WFCOptions): Promise<WFCModel> => {
 
   const wasm = await init({
     module_or_path: wasmUrl,
@@ -28,7 +27,7 @@ export const makeWFCModelWasm = async (
 
   const { T, propagator } = ruleset
 
-  const model = new WFCModel(
+  const model = new RustWFCModel(
     width,
     height,
     T,
