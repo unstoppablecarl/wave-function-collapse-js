@@ -2,9 +2,20 @@ import type { IndexedImage } from 'pixel-data-js'
 import type { WorkerModelInterface } from '../../lib/worker/Worker.ts'
 import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 import { makeConvChainModelPatch } from './ConvChainModel/ConvChainModelPatch.ts'
-import type { ConvChainStoreSettings } from './ConvChainStore.ts'
 
-export type ConvChainOptions = ConvChainStoreSettings & {
+export type ConvChainOptions = {
+  seed: number,
+  width: number,
+  height: number,
+  N: number,
+  temperature: number,
+  maxIterations: number,
+  previewInterval: number,
+  modelType: ConvChainModelType,
+  symmetry: number,
+  periodicInput: boolean,
+  lockInitialImageData: boolean,
+
   guidanceField?: Int32Array,
   guidanceWeight?: number,
   indexedImage: IndexedImage,

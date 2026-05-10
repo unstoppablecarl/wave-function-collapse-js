@@ -23,6 +23,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     seed,
     symmetry,
     periodicInput,
+    // a per-cell preferred color map that softly biases the ConvChain sampler toward those colors during generation.
     guidanceField,
     guidanceWeight = 2.0,
     initialPatchCount = 4,

@@ -1,24 +1,16 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
-import { ConvChainModelType } from './ConvChainModel.ts'
 import { SYMMETRY_OPTIONS } from '../../lib/symmetry-options.ts'
+import { ConvChainModelType, type ConvChainOptions } from './ConvChainModel.ts'
 
-export type ConvChainStoreSettings = {
-  seed: number,
-  width: number,
-  height: number,
-  N: number,
-  temperature: number,
-  maxIterations: number,
-  previewInterval: number,
-  modelType: ConvChainModelType,
-  symmetry: number,
-  periodicInput: boolean,
-  initialPatchCount: number,
-  initialPatchSize: number,
-  lockInitialImageData: boolean,
-}
+type Exclude =
+  | 'guidanceWeight'
+  | 'guidanceField'
+  | 'indexedImage'
+  | 'initialImageData'
+
+export type ConvChainStoreSettings = Omit<Required<ConvChainOptions>, Exclude>
 
 type SerializedData = {
   scale: number,
@@ -31,11 +23,11 @@ export const useConvChainStore = defineStore('conv-chain', () => {
 
   const settings = reactive<ConvChainStoreSettings>({
     N: 2,
+    seed: 1,
     width: 60,
     height: 60,
     temperature: 2,
     maxIterations: 50,
-    seed: 1,
     previewInterval: 10,
     modelType: ConvChainModelType.BINARY,
     symmetry: 1,
