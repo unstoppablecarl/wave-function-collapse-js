@@ -15,6 +15,8 @@ export type WFCModelOptions = {
   startCoordX: number,
   startCoordY: number,
   fastLogFunction?: FastLogFunction,
+  snapshotIntervalPercent: number,
+  maxSnapshots: number,
 }
 
 export const makeWFCModel = (
@@ -30,6 +32,8 @@ export const makeWFCModel = (
     startCoordX,
     startCoordY,
     fastLogFunction,
+    snapshotIntervalPercent,
+    maxSnapshots,
   }: WFCModelOptions,
 ) => {
   const N_CELLS = width * height
@@ -446,12 +450,10 @@ export const makeWFCModel = (
 
   const singleIterationWithSnapShots = (
     rng: RNG,
-    snapshotIntervalPercent = 0.05,
-    maxSnapshots = 10,
   ): IterationResult => {
     const progress = filledPercent()
 
-    if (progress > lastCheckpointPercent + snapshotIntervalPercent) {
+    if (progress > lastCheckpointPercent + (snapshotIntervalPercent / 100)) {
       history.push(createSnapshot())
       lastCheckpointPercent = progress
       if (history.length > maxSnapshots) history.shift()
@@ -571,9 +573,10 @@ export const makeWFCModel = (
     }
   }
 
+  console.log({ maxSnapshots, snapshotIntervalPercent })
+
   return {
-    singleIteration,
-    singleIterationWithSnapShots,
+    singleIteration: singleIterationWithSnapShots,
     clear,
     isGenerationComplete: () => generationComplete,
     getObserved: () => observed,

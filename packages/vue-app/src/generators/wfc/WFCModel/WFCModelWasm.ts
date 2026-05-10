@@ -14,7 +14,7 @@ export const makeWFCModelWasm = async (
     startCoordBias,
     startCoordX,
     startCoordY,
-    maxSnapShots,
+    maxSnapshots,
     snapshotIntervalPercent,
     avgColor,
     palette,
@@ -39,7 +39,7 @@ export const makeWFCModelWasm = async (
     startCoordBias,
     startCoordX,
     startCoordY,
-    maxSnapShots,
+    maxSnapshots,
     snapshotIntervalPercent / 100,
   )
   const buffer = makeWFCPixelBuffer({

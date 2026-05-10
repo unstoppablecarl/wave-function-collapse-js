@@ -11,7 +11,7 @@ export type WFCOptions = {
   startCoordBias: number,
   startCoordX: number,
   startCoordY: number,
-  maxSnapShots: number,
+  maxSnapshots: number,
   snapshotIntervalPercent: number,
   avgColor: number,
   palette: Uint32Array,

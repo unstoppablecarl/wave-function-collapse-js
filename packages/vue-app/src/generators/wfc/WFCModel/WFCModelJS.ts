@@ -14,6 +14,8 @@ export const makeWFCJS: WFCModelCreator = async (
     palette,
     avgColor,
     contradictionColor,
+    maxSnapshots,
+    snapshotIntervalPercent,
   }: WFCOptions): Promise<WFCModel> => {
 
   const { T, N, propagator } = ruleset
@@ -29,6 +31,8 @@ export const makeWFCJS: WFCModelCreator = async (
     startCoordBias,
     startCoordX,
     startCoordY,
+    maxSnapshots,
+    snapshotIntervalPercent,
   })
 
   const buffer = makeWFCPixelBuffer({

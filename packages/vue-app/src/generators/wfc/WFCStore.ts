@@ -15,7 +15,7 @@ export type StoreSettings = Omit<WFCWorkerOptions['settings'], exclude> & {
   symmetry: number,
   modelType: ModelType,
   rulesetType: RulesetType,
-  maxSnapShots: number,
+  maxSnapshots: number,
   snapshotIntervalPercent: number,
 }
 
@@ -47,7 +47,7 @@ export const useWFCStore = defineStore('wfc', () => {
     startCoordY: 0.5,
     modelType: ModelType.WASM,
     rulesetType: RulesetType.SLIDING_WINDOW,
-    maxSnapShots: 10,
+    maxSnapshots: 10,
     snapshotIntervalPercent: 5,
   })
 
