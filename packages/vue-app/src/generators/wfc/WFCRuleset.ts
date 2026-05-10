@@ -9,8 +9,8 @@ import {
   type SerializedPropagator,
   serializePropagator,
 } from '@unstoppablecarl/wfc-js'
-import { getPatternHash } from '../util/pattern.ts'
-import { generateSymmetries } from '../util/symmetry.ts'
+import { getPatternHash } from '../../lib/util/pattern.ts'
+import { generateSymmetries } from '../../lib/util/symmetry.ts'
 
 /**
  * Wave Function Collapse Ruleset containing the adjacency constraints (propagator),

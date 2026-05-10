@@ -1,5 +1,5 @@
-import init, { WFCModel } from '@unstoppablecarl/wfc-rust'
-import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
+import init, { WFCModel } from 'packages/wfc-rust'
+import wasmUrl from 'pkg/rust_wfc_bg.wasm?url'
 
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { OverlappingNModel, OverlappingNOptions } from './OverlappingNModel.ts'

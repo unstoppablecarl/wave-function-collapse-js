@@ -1,7 +1,7 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
 import { type Color32, PixelData, unpackAlpha, unpackBlue, unpackGreen, unpackRed } from 'pixel-data-js'
-import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
-import { makeMulberry32 } from '../../util/mulberry32.ts'
+import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
+import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import type { ConvChainCreator, ConvChainModelOptions } from '../ConvChainModel.ts'
 
 export const makeConvChainModelBinary: ConvChainCreator = async (

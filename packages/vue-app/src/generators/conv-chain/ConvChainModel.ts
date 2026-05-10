@@ -1,5 +1,5 @@
 import type { IndexedImage } from 'pixel-data-js'
-import type { WorkerModelInterface } from '../worker/Worker.ts'
+import type { WorkerModelInterface } from '../../lib/worker/Worker.ts'
 import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 import { makeConvChainModelPatch } from './ConvChainModel/ConvChainModelPatch.ts'
 import type { ConvChainStoreSettings } from './ConvChainStore.ts'

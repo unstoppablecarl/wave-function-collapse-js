@@ -3,10 +3,10 @@ import { SliderTextController } from '@tweakpane/core'
 import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, reactive, useTemplateRef, watch, watchEffect } from 'vue'
-import { useOverlappingNStore } from '../../../lib/wfc/OverlappingN/OverlappingNStore.ts'
+import { useOverlappingNStore } from '../../../generators/wfc/OverlappingN/OverlappingNStore.ts'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
 import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
-import { ModelType, RulesetType } from '../../../lib/wfc/OverlappingN/OverlappingNModel.ts'
+import { ModelType, RulesetType } from '../../../generators/wfc/OverlappingN/OverlappingNModel.ts'
 
 const store = useOverlappingNStore()
 const paneRef = useTemplateRef('paneRef')

@@ -1,5 +1,5 @@
 import type { IndexedImage } from 'pixel-data-js'
-import type { WorkerModelInterface } from '../worker/Worker.ts'
+import type { WorkerModelInterface } from '../../lib/worker/Worker.ts'
 import { makeTextureSynthesisModelCoherent } from './TextureSynthesisModel/TextureSynthesisModelCoherent.ts'
 import { makeTextureSynthesisModelFull } from './TextureSynthesisModel/TextureSynthesisModelFull.ts'
 import { makeTextureSynthesisModelHarrison } from './TextureSynthesisModel/TextureSynthesisModelHarrison.ts'

@@ -1,6 +1,6 @@
 import type { IndexedImage } from 'pixel-data-js'
 import type { ConvChainStoreSettings } from './ConvChainStore.ts'
-import { type GenericControllerOptions, makeWorkerController } from '../worker/WorkerController.ts'
+import { type GenericControllerOptions, makeWorkerController } from '../../lib/worker/WorkerController.ts'
 
 export type ConvChainControllerOptions = GenericControllerOptions<IndexedImage, ConvChainStoreSettings, MsgExtra>
 

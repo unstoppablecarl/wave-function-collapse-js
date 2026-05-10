@@ -1,9 +1,9 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
 import { type Color32, PixelData, unpackAlpha } from 'pixel-data-js'
-import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
-import { makeMulberry32 } from '../../util/mulberry32.ts'
-import { getPatternsFromIndexedImage } from '../../util/pattern.ts'
-import { generateSymmetries } from '../../util/symmetry.ts'
+import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
+import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
+import { getPatternsFromIndexedImage } from '../../../lib/util/pattern.ts'
+import { generateSymmetries } from '../../../lib/util/symmetry.ts'
 import type { ConvChainCreator, ConvChainModel, ConvChainModelOptions } from '../ConvChainModel.ts'
 
 // Small weight for unseen patterns — keeps penalties on the same log scale as

@@ -7,7 +7,7 @@
 // Lookups into the returned data are global indices in [0, nSyms * SW * SH);
 // neighbourhood reads must stay within the source's block (each block is
 // independently periodic) — see the "decode block, wrap inside" pattern below.
-import { getPatternHash } from '../util/pattern.ts'
+import { getPatternHash } from '../../lib/util/pattern.ts'
 
 export const makeSymmetricSource = (
   src: Int32Array,

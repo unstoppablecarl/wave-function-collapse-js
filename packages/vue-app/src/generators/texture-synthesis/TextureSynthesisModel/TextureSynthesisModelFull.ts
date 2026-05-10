@@ -1,7 +1,7 @@
 import { IterationResult } from '@unstoppablecarl/wfc-js'
 import { type Color32 } from 'pixel-data-js'
-import { makeDirtyCheck } from '../../util/DirtyCheck.ts'
-import { makeMulberry32 } from '../../util/mulberry32.ts'
+import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
+import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import { makeSymmetricSource } from '../SymmetricSource.ts'
 import type { TextureSynthesisCreator } from '../TextureSynthesisModel.ts'
 

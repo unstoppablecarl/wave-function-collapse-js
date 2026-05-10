@@ -1,5 +1,5 @@
 import type { IndexedImage } from 'pixel-data-js'
-import { getPatternsFromIndexedImage } from '../../util/pattern.ts'
+import { getPatternsFromIndexedImage } from '../../../lib/util/pattern.ts'
 import { makeWFCRuleset, type WFCRuleset } from '../WFCRuleset.ts'
 
 export type OverlappingNSlidingWindowRulesetOptions = {

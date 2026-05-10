@@ -3,8 +3,8 @@ import { Pane } from 'tweakpane'
 import * as InfodumpPlugin from 'tweakpane-plugin-infodump'
 import { onMounted, useTemplateRef, watchEffect } from 'vue'
 import { SYMMETRY_DROPDOWN } from '../../../lib/symmetry-options.ts'
-import { TextureSynthesisModelType } from '../../../lib/texture-synthesis/TextureSynthesisModel.ts'
-import { useTextureSynthesisStore } from '../../../lib/texture-synthesis/TextureSynthesisStore.ts'
+import { TextureSynthesisModelType } from '../../../generators/texture-synthesis/TextureSynthesisModel.ts'
+import { useTextureSynthesisStore } from '../../../generators/texture-synthesis/TextureSynthesisStore.ts'
 import { addInfo, enumToOptions } from '../../../lib/util/tweak-pane.ts'
 
 const store = useTextureSynthesisStore()

@@ -1,6 +1,6 @@
 import type { IndexedImage } from 'pixel-data-js'
 import type { TextureSynthesisStoreSettings } from './TextureSynthesisStore.ts'
-import { type GenericControllerOptions, makeWorkerController } from '../worker/WorkerController.ts'
+import { type GenericControllerOptions, makeWorkerController } from '../../lib/worker/WorkerController.ts'
 
 export type TextureSynthesisControllerOptions = GenericControllerOptions<IndexedImage, TextureSynthesisStoreSettings, MsgExtra>
 

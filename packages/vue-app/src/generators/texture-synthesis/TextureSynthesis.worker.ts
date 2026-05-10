@@ -1,4 +1,4 @@
-import { makeWorkerHandler } from '../worker/Worker.ts'
+import { makeWorkerHandler } from '../../lib/worker/Worker.ts'
 import { TextureSynthesisModelTypeFactory, type TextureSynthesisOptions } from './TextureSynthesisModel.ts'
 
 const ctx: DedicatedWorkerGlobalScope = self as any
