@@ -1,9 +1,9 @@
-import type { IterationResult } from '@unstoppablecarl/wfc-js'
 import type { IndexedImage } from 'pixel-data-js'
-import type { TextureSynthesisStoreSettings } from './TextureSynthesisStore.ts'
-import { makeTextureSynthesisModelFull } from './TextureSynthesisModel/TextureSynthesisModelFull.ts'
+import type { WorkerModelInterface } from '../worker/Worker.ts'
 import { makeTextureSynthesisModelCoherent } from './TextureSynthesisModel/TextureSynthesisModelCoherent.ts'
+import { makeTextureSynthesisModelFull } from './TextureSynthesisModel/TextureSynthesisModelFull.ts'
 import { makeTextureSynthesisModelHarrison } from './TextureSynthesisModel/TextureSynthesisModelHarrison.ts'
+import type { TextureSynthesisStoreSettings } from './TextureSynthesisStore.ts'
 
 export type TextureSynthesisOptions = TextureSynthesisStoreSettings & {
   indexedImage: IndexedImage,
@@ -11,13 +11,7 @@ export type TextureSynthesisOptions = TextureSynthesisStoreSettings & {
 
 export type TextureSynthesisModelOptions = Omit<TextureSynthesisOptions, 'previewInterval' | 'modelType'>
 
-export type TextureSynthesisModel = {
-  step: () => IterationResult,
-  getIteration: () => number,
-  getProgress: () => number,
-  getVisualBuffer: () => Uint8ClampedArray,
-  getStabilityPercent: () => number,
-}
+export type TextureSynthesisModel = WorkerModelInterface
 
 export type TextureSynthesisCreator = (opt: TextureSynthesisModelOptions) => Promise<TextureSynthesisModel>
 

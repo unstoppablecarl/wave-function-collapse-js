@@ -1,8 +1,8 @@
-import type { IterationResult } from '@unstoppablecarl/wfc-js'
 import type { IndexedImage } from 'pixel-data-js'
-import type { ConvChainStoreSettings } from './ConvChainStore.ts'
+import type { WorkerModelInterface } from '../worker/Worker.ts'
 import { makeConvChainModelBinary } from './ConvChainModel/ConvChainModelBinary.ts'
 import { makeConvChainModelPatch } from './ConvChainModel/ConvChainModelPatch.ts'
+import type { ConvChainStoreSettings } from './ConvChainStore.ts'
 
 export type ConvChainOptions = ConvChainStoreSettings & {
   guidanceField?: Int32Array,
@@ -15,13 +15,7 @@ export type ConvChainOptions = ConvChainStoreSettings & {
 
 export type ConvChainModelOptions = Omit<ConvChainOptions, 'previewInterval' | 'modelType'>
 
-export type ConvChainModel = {
-  step: () => IterationResult,
-  getIteration: () => number,
-  getProgress: () => number,
-  getVisualBuffer: () => Uint8ClampedArray,
-  getStabilityPercent: () => number,
-}
+export type ConvChainModel = WorkerModelInterface
 
 export type ConvChainCreator = (opt: ConvChainModelOptions) => Promise<ConvChainModel>
 

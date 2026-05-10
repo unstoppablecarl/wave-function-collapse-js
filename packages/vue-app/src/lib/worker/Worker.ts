@@ -7,6 +7,7 @@ export interface WorkerModelInterface {
   getProgress(): number
   getStabilityPercent(): number
   getVisualBuffer(): Uint8ClampedArray
+  getIteration: () => number,
 }
 
 export function makeWorkerHandler<
