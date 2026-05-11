@@ -32,6 +32,7 @@ export const useConvChainStore = defineStore('conv-chain', () => {
     modelType: ConvChainModelType.BINARY,
     symmetry: 1,
     periodicInput: true,
+    periodicOutput: true,
     initialPatchCount: 4,
     initialPatchSize: 4,
     lockInitialImageData: false,

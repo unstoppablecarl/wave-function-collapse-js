@@ -23,6 +23,7 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
     seed,
     symmetry,
     periodicInput,
+    periodicOutput,
     // a per-cell preferred color map that softly biases the ConvChain sampler toward those colors during generation.
     guidanceField,
     guidanceWeight = 2.0,
@@ -77,9 +78,15 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   const enqueueNeighborhood = (cx: number, cy: number) => {
     for (let dy = -(N - 1); dy <= N - 1; dy++) {
       for (let dx = -(N - 1); dx <= N - 1; dx++) {
-        const nx = ((cx + dx) % width + width) % width
-        const ny = ((cy + dy) % height + height) % height
-        addToFrontier(ny * width + nx)
+        if (periodicOutput) {
+          const nx = ((cx + dx) % width + width) % width
+          const ny = ((cy + dy) % height + height) % height
+          addToFrontier(ny * width + nx)
+        } else {
+          const nx = cx + dx
+          const ny = cy + dy
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) addToFrontier(ny * width + nx)
+        }
       }
     }
   }
@@ -123,9 +130,12 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
   const getHashNumAt = (data: Uint32Array, px: number, py: number): number => {
     let h = 0
     for (let dy = 0; dy < N; dy++) {
-      const row = ((py + dy + height) % height) * width
+      const row = periodicOutput
+        ? ((py + dy + height) % height) * width
+        : (py + dy) * width
       for (let dx = 0; dx < N; dx++) {
-        h = (Math.imul(h, 31) + data[row + (px + dx + width) % width]!) >>> 0
+        const col = periodicOutput ? (px + dx + width) % width : px + dx
+        h = (Math.imul(h, 31) + data[row + col]!) >>> 0
       }
     }
     return h
@@ -214,6 +224,10 @@ export const makeConvChainModelPatch: ConvChainCreator = async (
 
     for (let pdy = 1 - N; pdy <= 0; pdy++) {
       for (let pdx = 1 - N; pdx <= 0; pdx++) {
+        if (!periodicOutput) {
+          const px = tx + pdx, py = ty + pdy
+          if (px < 0 || py < 0 || px + N - 1 >= width || py + N - 1 >= height) continue
+        }
         // Test cell sits at position pos within the patch starting at (tx+pdx, ty+pdy).
         // Its polynomial weight is pow31[N2-1-pos].
         const pos = (-pdy) * N + (-pdx)

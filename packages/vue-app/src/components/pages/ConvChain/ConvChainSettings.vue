@@ -51,11 +51,13 @@ onMounted(() => {
   })
 
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
-    min: 0,
-    step: 1,
-    label: 'periodic in',
+    label: 'periodic input',
   })
   addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
+
+  settingsFolder.addBinding(store.settings, 'periodicOutput', {
+    label: 'periodic output',
+  })
 
   const initialPatchCount = settingsFolder.addBinding(store.settings, 'initialPatchCount', {
     min: 0,

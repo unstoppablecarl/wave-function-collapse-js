@@ -14,6 +14,7 @@ export type ConvChainOptions = {
   modelType: ConvChainModelType,
   symmetry: number,
   periodicInput: boolean,
+  periodicOutput: boolean,
   lockInitialImageData: boolean,
 
   guidanceField?: Int32Array,

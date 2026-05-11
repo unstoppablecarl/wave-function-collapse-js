@@ -14,6 +14,7 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
     indexedImage,
     initialImageData,
     lockInitialImageData,
+    periodicOutput,
     seed,
   }: ConvChainModelOptions,
 ) => {
@@ -88,10 +89,12 @@ export const makeConvChainModelBinary: ConvChainCreator = async (
   const getLogWeightAt = (i: number, j: number): number => {
     let res = 0
     for (let y = 0; y < N; y++) {
-      const fy = (j + y + height) % height
+      const fy = periodicOutput ? (j + y + height) % height : j + y
+      if (!periodicOutput && (fy < 0 || fy >= height)) continue
       const row = fy * width
       for (let x = 0; x < N; x++) {
-        const fx = (i + x + width) % width
+        const fx = periodicOutput ? (i + x + width) % width : i + x
+        if (!periodicOutput && (fx < 0 || fx >= width)) continue
         if (field[row + fx] === 1) {
           res |= (1 << (y * N + x))
         }
