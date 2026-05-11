@@ -3,6 +3,7 @@ import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../../lib/symmetry-options.ts'
 import { makePersistedImageData, makePersistedSourceImageData } from '../../lib/vue/makePersistedImage.ts'
+import { setupSourceImageHMR } from '../../lib/vue/setupSourceImageHMR.ts'
 import type { WFCWorkerOptions } from './WFC.worker.ts'
 import { ModelType, RulesetType } from './WFCModel.ts'
 
@@ -59,13 +60,13 @@ export const useWFCStore = defineStore('wfc', () => {
     periodicOutput: true,
     symmetry: 2,
     seed: 1,
+    previewInterval: 100,
     modelType: ModelType.WASM,
     NOverlap: 1,
     initialGround: -1,
     maxAttempts: 10,
     contradictionColor: 0xff0055,
     maxRevertsPerAttempt: 100,
-    previewInterval: 100,
     startCoordBias: 0.05,
     startCoordX: 0.5,
     startCoordY: 0.5,
@@ -118,18 +119,7 @@ export const useWFCStore = defineStore('wfc', () => {
 
   const maxNOverlap = computed(() => settings.N - 1)
 
-  if (import.meta.hot) {
-    import.meta.hot.on('vite:afterUpdate', async () => {
-      const id = sourceImageId.value
-      if (id < 0) return
-      const { SLIDING_WINDOW_IMAGES: sw, TILESET_IMAGES: ts } = await import('../../lib/images.ts')
-      const img = [...sw, ...ts].find(i => i.id === id)
-      if (!img || img.src === sourceImagePresetSrc.value) return
-      const el = new Image()
-      el.src = img.src
-      await setSourceImageFromElement(el, id)
-    })
-  }
+  setupSourceImageHMR(sourceImageId, sourceImagePresetSrc, setSourceImageFromElement)
 
   return {
     $reset,
