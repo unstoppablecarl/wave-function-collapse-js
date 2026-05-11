@@ -25,7 +25,10 @@ export type TextureSynthesisStoreSettings = {
 
 type SerializedData = {
   scale: number,
-  settings: TextureSynthesisStoreSettings
+  settings: TextureSynthesisStoreSettings,
+  sourceImageDataUrl: string | null,
+  sourceImageId: number,
+  initialImageDataUrl: string | null,
 }
 
 export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
@@ -71,11 +74,17 @@ export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
   const state = {
     scale,
     settings,
+    sourceImageDataUrl,
+    sourceImageId,
+    initialImageDataUrl,
   }
 
   const defaults: SerializedData = {
     scale: scale.value,
     settings: { ...toRaw(settings) },
+    sourceImageDataUrl: null,
+    sourceImageId: -1,
+    initialImageDataUrl: null,
   }
 
   const mapper = makeSimplePersistMapper<SerializedData>(
@@ -121,6 +130,7 @@ export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
     setSourceImageFromFileInput,
     clearSourceImage,
     initialImageData,
+    initialImageDataUrl,
     setInitialImageData,
     clearInitialImageData,
   }
