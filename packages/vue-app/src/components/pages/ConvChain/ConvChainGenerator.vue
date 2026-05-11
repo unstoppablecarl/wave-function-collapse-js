@@ -36,6 +36,7 @@ const {
   initialImageData,
   initialImageDataUrlImage,
   setInitialImageDataFromFileInput,
+  clearInitialImage
 } = makeReactiveInitialStateImageData()
 
 const {
@@ -99,6 +100,9 @@ const images = SLIDING_WINDOW_IMAGES
           <ImageFileInput @imageDataLoaded="setInitialImageDataFromFileInput" />
         </p>
         <p v-if="initialImageDataUrlImage">
+          <button @click="clearInitialImage" :disabled="running" data-variant="danger" class="small">
+            Clear
+          </button>
           <PixelImg :src="initialImageDataUrlImage" :scale="scale" />
         </p>
       </div>
