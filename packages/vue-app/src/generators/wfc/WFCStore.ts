@@ -11,6 +11,7 @@ export type StoreSettings = Omit<WFCWorkerOptions['settings'], exclude> & {
   N: number,
   NOverlap: number,
   periodicInput: boolean,
+  periodicOutput: boolean,
   initialGround: number,
   symmetry: number,
   modelType: ModelType,
