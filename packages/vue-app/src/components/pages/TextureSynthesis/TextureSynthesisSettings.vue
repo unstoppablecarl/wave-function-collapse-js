@@ -50,6 +50,10 @@ onMounted(() => {
     step: 1,
   })
 
+  settingsFolder.addBinding(store.settings, 'periodicInput', {
+    label: 'periodic input',
+  })
+
   settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
   })

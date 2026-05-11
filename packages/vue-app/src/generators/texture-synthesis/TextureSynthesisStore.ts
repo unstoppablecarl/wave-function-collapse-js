@@ -14,6 +14,7 @@ export type TextureSynthesisStoreSettings = {
   temperature: number,   // softmax temperature (Coherent; 0.05..0.3)
   seed: number,
   modelType: TextureSynthesisModelType,
+  periodicInput: boolean,
   periodicOutput: boolean,
   lockInitialImageData: boolean,
   previewInterval: number,
@@ -40,6 +41,7 @@ export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
     seed: 1,
     previewInterval: 10,
     symmetry: 2,
+    periodicInput: true,
     periodicOutput: true,
     lockInitialImageData: true,
     modelType: TextureSynthesisModelType.HARRISON,

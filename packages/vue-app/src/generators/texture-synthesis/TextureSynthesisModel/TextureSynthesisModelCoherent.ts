@@ -63,6 +63,7 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
     N,
     K,
     temperature,
+    periodicInput,
     periodicOutput,
     lockInitialImageData,
     initialImageData,
@@ -111,6 +112,11 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
   const resolveNeighbor = periodicOutput
     ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
     : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
+
+  // Returns offset within a source block, or -1 if out of bounds (non-periodic)
+  const resolveSourceCoord = periodicInput
+    ? (sx: number, sy: number) => ((sy % SH + SH) % SH) * SW + (sx % SW + SW) % SW
+    : (sx: number, sy: number) => (sx < 0 || sx >= SW || sy < 0 || sy >= SH) ? -1 : sy * SW + sx
 
   if (initialImageData) {
     applyInitialState(initialImageData, palette32, sourceData, result, origins, isInitialField, width)
@@ -395,9 +401,9 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
         if (nIdx < 0) continue
         const oRef = origins[nIdx]!
         if (oRef === -1) continue
-        const sx2 = ((sx + dx) % SW + SW) % SW
-        const sy2 = ((sy + dy) % SH + SH) % SH
-        sum += sourceData[tBase + sy2 * SW + sx2]! === sourceData[oRef]! ? 1 : -1
+        const srcOff = resolveSourceCoord(sx + dx, sy + dy)
+        if (srcOff < 0) continue
+        sum += sourceData[tBase + srcOff]! === sourceData[oRef]! ? 1 : -1
       }
     }
     return sum
@@ -422,9 +428,9 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
           const p = coherenceSets[csBase + k]!
           const pBase = ((p / blockSize) | 0) * blockSize
           const localP = p - pBase
-          const cx = ((localP % SW) - dx + SW) % SW
-          const cy = (((localP / SW) | 0) - dy + SH) % SH
-          const c = pBase + cy * SW + cx                 // global index
+          const srcOff2 = resolveSourceCoord((localP % SW) - dx, ((localP / SW) | 0) - dy)
+          if (srcOff2 < 0) continue
+          const c = pBase + srcOff2                      // global index
           if (seenStamp[c] === stamp) continue
           seenStamp[c] = stamp
           candIdxArr[n] = c

@@ -19,6 +19,7 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
     N,
     M,
     polish,
+    periodicInput,
     periodicOutput,
     lockInitialImageData,
     initialImageData,
@@ -48,6 +49,11 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
   const resolveNeighbor = periodicOutput
     ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
     : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
+
+  // Returns offset within a source block, or -1 if out of bounds (non-periodic)
+  const resolveSourceCoord = periodicInput
+    ? (sx: number, sy: number) => ((sy % SH + SH) % SH) * SW + (sx % SW + SW) % SW
+    : (sx: number, sy: number) => (sx < 0 || sx >= SW || sy < 0 || sy >= SH) ? -1 : sy * SW + sx
 
   const shuffle = new Int32Array(totalCells)
   for (let i = 0; i < totalCells; i++) shuffle[i] = i
@@ -128,9 +134,9 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
         if (nIdx < 0) continue
         const oRef = origins[nIdx]!
         if (oRef === -1) continue
-        const sx2 = ((sx + dx) % SW + SW) % SW
-        const sy2 = ((sy + dy) % SH + SH) % SH
-        sum += sourceData[tBase + sy2 * SW + sx2]! === sourceData[oRef]! ? 1 : -1
+        const srcOff = resolveSourceCoord(sx + dx, sy + dy)
+        if (srcOff < 0) continue
+        sum += sourceData[tBase + srcOff]! === sourceData[oRef]! ? 1 : -1
       }
     }
     return sum
@@ -156,9 +162,9 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
       const localOrigin = origin - tBase
       const dxOff = fx - (np % width)
       const dyOff = fy - ((np / width) | 0)
-      const cx = (((localOrigin % SW) + dxOff) % SW + SW) % SW
-      const cy = ((((localOrigin / SW) | 0) + dyOff) % SH + SH) % SH
-      candidates[nCand++] = tBase + cy * SW + cx
+      const srcOff = resolveSourceCoord((localOrigin % SW) + dxOff, ((localOrigin / SW) | 0) + dyOff)
+      if (srcOff < 0) continue
+      candidates[nCand++] = tBase + srcOff
     }
     for (let m = 0; m < M; m++) candidates[nCand++] = (prng() * sourceArea) | 0
 
