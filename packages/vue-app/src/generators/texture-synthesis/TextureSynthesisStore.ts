@@ -60,11 +60,12 @@ export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
     seed: 1,
     previewInterval: 10,
     modelType: TextureSynthesisModelType.HARRISON,
+    lockInitialImageData: true,
+
     K: 8,
     M: 20,
     polish: 2,
     temperature: 2,
-    lockInitialImageData: true,
   })
 
   const state = {

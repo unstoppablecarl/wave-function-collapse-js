@@ -54,14 +54,15 @@ export const useWFCStore = defineStore('wfc', () => {
 
   const settings = reactive<StoreSettings>({
     N: 2,
+    seed: 1,
     width: 60,
     height: 60,
     periodicInput: true,
     periodicOutput: true,
     symmetry: 2,
-    seed: 1,
     previewInterval: 100,
     modelType: ModelType.WASM,
+
     NOverlap: 1,
     initialGround: -1,
     maxAttempts: 10,

@@ -20,22 +20,22 @@ type SerializedData = {
 export const useConvChainStore = defineStore('conv-chain', () => {
 
   const scale = ref(4)
-
   const settings = reactive<ConvChainStoreSettings>({
     N: 2,
     seed: 1,
     width: 60,
     height: 60,
-    temperature: 2,
-    maxIterations: 50,
-    previewInterval: 10,
-    modelType: ConvChainModelType.BINARY,
-    symmetry: 1,
     periodicInput: true,
     periodicOutput: true,
+    symmetry: 1,
+    previewInterval: 10,
+    modelType: ConvChainModelType.BINARY,
+    lockInitialImageData: false,
+
+    temperature: 2,
+    maxIterations: 50,
     initialPatchCount: 4,
     initialPatchSize: 4,
-    lockInitialImageData: false,
   })
 
   const state = {
