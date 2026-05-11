@@ -33,8 +33,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
       pinia-simple-persist:
-        specifier: ^0.0.8
-        version: 0.0.8(pinia@3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)))(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
+        specifier: ^0.1.0
+        version: 0.1.0(pinia@3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)))(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
       pixel-data-js:
         specifier: ^0.38.0
         version: 0.38.0
@@ -1010,8 +1010,8 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
-  pinia-simple-persist@0.0.8:
-    resolution: {integrity: sha512-RhOnmShFXlwZKsPQVPckHLuxcyRtE5QXvR2hBqmQ2YiNJ2nYn6OiQHz9oC+WZSqSYfd05AvnZBETXxYyzuFLig==}
+  pinia-simple-persist@0.1.0:
+    resolution: {integrity: sha512-qV9OahrmkdGbKtL6rSMias6pzNjYMozZ0+QoZ8NB2ZmejvhxATeJCf+i4FkM1aHWrVu2MimyLtwrFe1jxl4iDQ==}
     peerDependencies:
       pinia: '>=2.2.2'
       typescript: '*'
@@ -2086,7 +2086,7 @@ snapshots:
 
   picomatch@4.0.3: {}
 
-  pinia-simple-persist@0.0.8(pinia@3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)))(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)):
+  pinia-simple-persist@0.1.0(pinia@3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)))(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3)):
     dependencies:
       pinia: 3.0.4(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
       vue: 3.5.28(typescript@5.9.3)
