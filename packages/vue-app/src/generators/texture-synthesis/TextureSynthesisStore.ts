@@ -11,7 +11,7 @@ export type TextureSynthesisStoreSettings = {
   K: number,             // K-coherence set size (Coherent; 4..16)
   M: number,             // random candidates per cell (Harrison; 10..40)
   polish: number,        // polish rounds (Harrison; 0..3)
-  temperature: number,   // softmax temperature (Full + Coherent; 0.05..0.3)
+  temperature: number,   // softmax temperature (Coherent; 0.05..0.3)
   seed: number,
   modelType: TextureSynthesisModelType,
   periodicOutput: boolean,
@@ -42,7 +42,7 @@ export const useTextureSynthesisStore = defineStore('texture-synthesis', () => {
     symmetry: 2,
     periodicOutput: true,
     lockInitialImageData: true,
-    modelType: TextureSynthesisModelType.FULL,
+    modelType: TextureSynthesisModelType.HARRISON,
   })
 
   const state = {
