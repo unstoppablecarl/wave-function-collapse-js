@@ -34,6 +34,16 @@ export function putImageDataScaled(ctx: CanvasRenderingContext2D, imageData: Ima
   ctx.drawImage(offCanvas, 0, 0, imageData.width * scale, imageData.height * scale)
 }
 
+export async function dataUrlToImageData(url: string): Promise<ImageData> {
+  const img = new Image()
+  img.src = url
+  await imgLoaded(img)
+  const canvas = new OffscreenCanvas(img.naturalWidth, img.naturalHeight)
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(img, 0, 0)
+  return ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight)
+}
+
 export function imageDataToUrlImage(imgData: ImageData): string {
   const canvas = document.createElement('canvas')
   canvas.width = imgData.width

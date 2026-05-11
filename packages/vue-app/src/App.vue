@@ -2,8 +2,8 @@
 </script>
 <template>
   <div class="nav">
-    <h1>Wave Function Collapse JS</h1>
-    <RouterLink to="/" class="link">Overlapping N</RouterLink>
+    <h1>Texture Generator JS</h1>
+    <RouterLink to="/" class="link">Wave Function Collapse</RouterLink>
     <RouterLink to="/conv-chain" class="link">Conv Chain</RouterLink>
     <RouterLink to="/texture-synthesis" class="link">Texture Synthesis</RouterLink>
 

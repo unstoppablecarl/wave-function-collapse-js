@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../../lib/symmetry-options.ts'
+import { makePersistedImageData, makePersistedIndexedImage } from '../../lib/vue/makePersistedImage.ts'
 import type { WFCWorkerOptions } from './WFC.worker.ts'
 import { ModelType, RulesetType } from './WFCModel.ts'
 
@@ -22,12 +23,21 @@ export type StoreSettings = Omit<WFCWorkerOptions['settings'], exclude> & {
 
 type SerializedData = {
   scale: number,
-  settings: StoreSettings
+  settings: StoreSettings,
+  sourceImageDataUrl: string | null,
+  initialImageDataUrl: string | null,
 }
 
 export const useWFCStore = defineStore('wfc', () => {
 
   const scale = ref(4)
+  const sourceImageDataUrl = ref<string | null>(null)
+  const initialImageDataUrl = ref<string | null>(null)
+
+  const { indexedImage: sourceIndexedImage, set: setSourceImage, clear: clearSourceImage } =
+    makePersistedIndexedImage(sourceImageDataUrl)
+  const { imageData: initialImageData, set: setInitialImageData, clear: clearInitialImageData } =
+    makePersistedImageData(initialImageDataUrl)
 
   const settings = reactive<StoreSettings>({
     N: 2,
@@ -55,11 +65,15 @@ export const useWFCStore = defineStore('wfc', () => {
   const state = {
     scale,
     settings,
+    sourceImageDataUrl,
+    initialImageDataUrl,
   }
 
   const defaults: SerializedData = {
     scale: scale.value,
     settings: { ...toRaw(settings) },
+    sourceImageDataUrl: null,
+    initialImageDataUrl: null,
   }
 
   const mapper = makeSimplePersistMapper<SerializedData>(
@@ -98,6 +112,12 @@ export const useWFCStore = defineStore('wfc', () => {
     scale,
     settings,
     currentSymmetryDescription,
+    sourceIndexedImage,
+    setSourceImage,
+    clearSourceImage,
+    initialImageData,
+    setInitialImageData,
+    clearInitialImageData,
   }
 }, {
   persist: true,
