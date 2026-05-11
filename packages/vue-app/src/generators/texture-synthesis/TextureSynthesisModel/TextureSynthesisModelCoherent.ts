@@ -62,6 +62,7 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
     N,
     K,
     temperature,
+    periodicOutput,
     indexedImage,
     symmetry,
     seed,
@@ -102,6 +103,10 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
   const prng = makeMulberry32(seed)
+
+  const resolveNeighbor = periodicOutput
+    ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
+    : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
 
   // Random source samples for visual feedback during the analysis phases.
   // origins stays -1 so synthesis still treats every cell as unfilled.
@@ -378,9 +383,9 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
     for (let dy = -N; dy <= 0; dy++) {
       const dxEnd = dy === 0 ? -1 : N
       for (let dx = -N; dx <= dxEnd; dx++) {
-        const ox2 = ((ox + dx) % width + width) % width
-        const oy2 = ((oy + dy) % height + height) % height
-        const oRef = origins[oy2 * width + ox2]!
+        const nIdx = resolveNeighbor(ox + dx, oy + dy)
+        if (nIdx < 0) continue
+        const oRef = origins[nIdx]!
         if (oRef === -1) continue
         const sx2 = ((sx + dx) % SW + SW) % SW
         const sy2 = ((sy + dy) % SH + SH) % SH
@@ -398,9 +403,9 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue
-        const nx = ((ox + dx) % width + width) % width
-        const ny = ((oy + dy) % height + height) % height
-        const origin = origins[ny * width + nx]!
+        const nIdx2 = resolveNeighbor(ox + dx, oy + dy)
+        if (nIdx2 < 0) continue
+        const origin = origins[nIdx2]!
         if (origin === -1) continue
 
         const csBase = origin * Keff

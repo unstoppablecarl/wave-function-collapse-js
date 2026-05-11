@@ -68,6 +68,10 @@ onMounted(() => {
     label: 'Lock initial image data (if provided)',
   })
 
+  settingsFolder.addBinding(store.settings, 'periodicOutput', {
+    label: 'periodic output',
+  })
+
   settingsFolder.addBinding(store.settings, 'modelType', {
     options: enumToOptions(TextureSynthesisModelType),
   })
@@ -123,7 +127,6 @@ onMounted(() => {
     min: 0,
     step: 1,
   })
-
 })
 </script>
 <template>

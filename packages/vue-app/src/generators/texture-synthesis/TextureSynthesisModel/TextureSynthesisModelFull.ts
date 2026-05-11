@@ -15,6 +15,7 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
     height,
     N,
     temperature,
+    periodicOutput,
     indexedImage,
     symmetry,
     seed,
@@ -30,6 +31,10 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
   const prng = makeMulberry32(seed)
+
+  const resolveNeighbor = periodicOutput
+    ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
+    : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
 
   const candScore = new Float64Array(sourceArea)
 
@@ -51,9 +56,9 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
       for (let dy = -N; dy <= 0; dy++) {
         const dxEnd = dy === 0 ? -1 : N
         for (let dx = -N; dx <= dxEnd; dx++) {
-          const ox2 = ((ox + dx) % width + width) % width
-          const oy2 = ((oy + dy) % height + height) % height
-          const oRef = origins[oy2 * width + ox2]!
+          const nIdx = resolveNeighbor(ox + dx, oy + dy)
+          if (nIdx < 0) continue
+          const oRef = origins[nIdx]!
           if (oRef === -1) continue
           const sx2 = ((sx + dx) % SW + SW) % SW
           const sy2 = ((sy + dy) % SH + SH) % SH

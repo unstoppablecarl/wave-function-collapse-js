@@ -18,6 +18,7 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
     N,
     M,
     polish,
+    periodicOutput,
     indexedImage,
     symmetry,
     seed,
@@ -35,6 +36,10 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
   const prng = makeMulberry32(seed)
+
+  const resolveNeighbor = periodicOutput
+    ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
+    : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
 
   const shuffle = new Int32Array(totalCells)
   for (let i = 0; i < totalCells; i++) shuffle[i] = i
@@ -75,20 +80,20 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
       const len = 2 * r
       for (let s = 0; s < len; s++) {
         if (found < k) {
-          const p = (((y0 % height) + height) % height) * width + (((x0 % width) + width) % width)
-          if (origins[p]! !== -1) neighbors[found++] = p
+          const p = resolveNeighbor(x0, y0)
+          if (p >= 0 && origins[p]! !== -1) neighbors[found++] = p
         }
         if (found < k) {
-          const p = (((y1 % height) + height) % height) * width + (((x1 % width) + width) % width)
-          if (origins[p]! !== -1) neighbors[found++] = p
+          const p = resolveNeighbor(x1, y1)
+          if (p >= 0 && origins[p]! !== -1) neighbors[found++] = p
         }
         if (found < k) {
-          const p = (((y2 % height) + height) % height) * width + (((x2 % width) + width) % width)
-          if (origins[p]! !== -1) neighbors[found++] = p
+          const p = resolveNeighbor(x2, y2)
+          if (p >= 0 && origins[p]! !== -1) neighbors[found++] = p
         }
         if (found < k) {
-          const p = (((y3 % height) + height) % height) * width + (((x3 % width) + width) % width)
-          if (origins[p]! !== -1) neighbors[found++] = p
+          const p = resolveNeighbor(x3, y3)
+          if (p >= 0 && origins[p]! !== -1) neighbors[found++] = p
         }
         y0++
         x1++
@@ -111,9 +116,9 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
     for (let dy = -N; dy <= N; dy++) {
       for (let dx = -N; dx <= N; dx++) {
         if (dx === 0 && dy === 0) continue
-        const fx2 = ((fx + dx) % width + width) % width
-        const fy2 = ((fy + dy) % height + height) % height
-        const oRef = origins[fy2 * width + fx2]!
+        const nIdx = resolveNeighbor(fx + dx, fy + dy)
+        if (nIdx < 0) continue
+        const oRef = origins[nIdx]!
         if (oRef === -1) continue
         const sx2 = ((sx + dx) % SW + SW) % SW
         const sy2 = ((sy + dy) % SH + SH) % SH
