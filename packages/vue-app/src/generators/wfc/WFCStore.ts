@@ -7,7 +7,7 @@ import { setupSourceImageHMR } from '../../lib/vue/setupSourceImageHMR.ts'
 import type { WFCWorkerOptions } from './WFC.worker.ts'
 import { ModelType, RulesetType } from './WFCModel.ts'
 
-type exclude = 'palette' | 'avgColor'
+type exclude = 'palette' | 'avgColor' | 'initialImageData'
 
 export type StoreSettings = Omit<WFCWorkerOptions['settings'], exclude> & {
   N: number,
@@ -74,6 +74,7 @@ export const useWFCStore = defineStore('wfc', () => {
     rulesetType: RulesetType.SLIDING_WINDOW,
     maxSnapshots: 10,
     snapshotIntervalPercent: 5,
+    lockInitialImageData: false,
   })
 
   const state = {
@@ -138,6 +139,7 @@ export const useWFCStore = defineStore('wfc', () => {
     setSourceImageFromFileInput,
     clearSourceImage,
     initialImageData,
+    initialImageDataUrl,
     setInitialImageData,
     clearInitialImageData,
   }

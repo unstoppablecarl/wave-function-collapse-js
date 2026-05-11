@@ -22,7 +22,7 @@ import WorkerAttemptRow from './WorkerAttemptRow.vue'
 import WfcSettings from './WFCSettings.vue'
 
 const store = useWFCStore()
-const { settings, scale, sourceImageData, sourceIndexedImage } = storeToRefs(store)
+const { settings, scale, sourceImageData, sourceIndexedImage, initialImageData } = storeToRefs(store)
 
 const attempts = ref<WFCAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
@@ -40,6 +40,7 @@ const {
 const controller = makeWFCController({
   settings: store.settings,
   imageDataSource: sourceImageData,
+  initialImageData,
   ruleset,
   indexedImage: sourceIndexedImage,
   onBeforeRun() {
@@ -142,6 +143,19 @@ const images = computed(() => {
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>
+      </div>
+
+      <div class="mb-1">
+        <label class="form-label">Initial State <span style="opacity: 0.5">(transparent ignored)</span></label>
+        <p>
+          <ImageFileInput @imageDataLoaded="store.setInitialImageData" />
+        </p>
+        <p v-if="store.initialImageDataUrl">
+          <button @click="store.clearInitialImageData" :disabled="running" data-variant="danger" class="small">
+            Clear
+          </button>
+          <PixelImg :src="store.initialImageDataUrl" :scale="scale" />
+        </p>
       </div>
 
       <div v-if="store.sourceImageDataUrl" class="mb-1">

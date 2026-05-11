@@ -22,6 +22,12 @@ onMounted(() => {
     title: 'Display',
   })
 
+  displayFolder.addBinding(store, 'scale', {
+    min: 1,
+    max: 10,
+    step: 1,
+  })
+
   const preview = displayFolder.addBinding(store.settings, 'previewInterval', {
     min: 0,
     max: 1000,
@@ -29,12 +35,6 @@ onMounted(() => {
     label: 'Preview',
   })
   addInfo(preview, 'How many steps between each frame draw')
-
-  displayFolder.addBinding(store, 'scale', {
-    min: 1,
-    max: 10,
-    step: 1,
-  })
 
   const contradictionColor = displayFolder.addBinding(store.settings, 'contradictionColor', {
     view: 'color',
@@ -52,25 +52,6 @@ onMounted(() => {
     step: 1,
   })
   addInfo(N, 'In the Wave Function Collapse (WFC) algorithm, N represents the pattern size (or "kernel size"). It is the dimension of the small squares the algorithm extracts from your input image to use as its "building blocks."')
-
-  const NOverlap = settingsFolder.addBinding(store.settings, 'NOverlap', {
-    min: 1,
-    max: 10,
-    step: 1,
-  })
-  addInfo(NOverlap, 'The margin of edge pixels that do not have to overlap with existing pixels to place a pattern.')
-
-  watchEffect(() => {
-    const stc = NOverlap.controller.valueController as SliderTextController
-    stc.sliderController.props.set('max', store.maxNOverlap)
-  })
-
-  const initialGround = settingsFolder.addBinding(store.settings, 'initialGround', {
-    min: -1,
-    step: 1,
-    label: 'ground',
-  })
-  addInfo(initialGround, 'Forces the bottom row of the output to match a specific pattern from the input. -1 will disable ground')
 
   settingsFolder.addBinding(store.settings, 'seed', {
     min: 0,
@@ -90,6 +71,44 @@ onMounted(() => {
     label: 'periodic out',
   })
   addInfo(periodicOutput, 'Outputs a seamless texture')
+
+  const symmetry = settingsFolder.addBinding(store.settings, 'symmetry', {
+    options: SYMMETRY_DROPDOWN,
+  })
+  const symmetryLabel = addInfo(symmetry, '')
+
+  watchEffect(() => {
+    symmetryLabel.title = store.currentSymmetryDescription
+  })
+
+  const lockInitialImageData = settingsFolder.addBinding(store.settings, 'lockInitialImageData', {
+    label: 'lock initial',
+  })
+  addInfo(lockInitialImageData, 'Re-apply initial state image after every attempt reset')
+
+  const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
+    options: enumToOptions(ModelType),
+  })
+  addInfo(modelType, 'Rust -> Web Assembly, or JS')
+
+  const NOverlap = settingsFolder.addBinding(store.settings, 'NOverlap', {
+    min: 1,
+    max: 10,
+    step: 1,
+  })
+  addInfo(NOverlap, 'The margin of edge pixels that do not have to overlap with existing pixels to place a pattern.')
+
+  watchEffect(() => {
+    const stc = NOverlap.controller.valueController as SliderTextController
+    stc.sliderController.props.set('max', store.maxNOverlap)
+  })
+
+  const initialGround = settingsFolder.addBinding(store.settings, 'initialGround', {
+    min: -1,
+    step: 1,
+    label: 'ground',
+  })
+  addInfo(initialGround, 'Forces the bottom row of the output to match a specific pattern from the input. -1 will disable ground')
 
   settingsFolder.addBinding(store.settings, 'maxAttempts', {
     min: 0,
@@ -118,25 +137,6 @@ onMounted(() => {
     label: 'max reverts',
   })
   addInfo(revertsPerAttempt, 'When encountering a contradiction, revert to a previous valid state and try again.')
-
-  settingsFolder.addBinding(store.settings, 'symmetry', {
-    options: SYMMETRY_DROPDOWN,
-  })
-
-  const symmetryDesc = settingsFolder.addBlade({
-    view: 'infodump',
-    content: 'adfs',
-    markdown: false,
-  })
-
-  watchEffect(() => {
-    symmetryDesc.element.innerText = store.currentSymmetryDescription
-  })
-
-  const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
-    options: enumToOptions(ModelType),
-  })
-  addInfo(modelType, 'Rust -> Web Assembly, or JS')
 
   const rulesetType = settingsFolder.addBinding(store.settings, 'rulesetType', {
     options: [

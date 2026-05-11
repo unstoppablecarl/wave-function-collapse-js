@@ -39,42 +39,45 @@ onMounted(() => {
     title: 'Settings',
   })
 
-  settingsFolder.addBinding(store.settings, 'N', {
+  const N = settingsFolder.addBinding(store.settings, 'N', {
     min: 0,
     max: 10,
     step: 1,
   })
+  addInfo(N, 'N represents the pattern size. It is the dimension of the small squares the algorithm extracts from your input image to use as its building blocks.')
 
   settingsFolder.addBinding(store.settings, 'seed', {
     min: 0,
     step: 1,
   })
 
-  settingsFolder.addBinding(store.settings, 'periodicInput', {
-    label: 'periodic input',
+  const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
+    min: 0,
+    step: 1,
+    label: 'periodic in',
   })
+  addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
 
-  settingsFolder.addBinding(store.settings, 'symmetry', {
+  const periodicOutput = settingsFolder.addBinding(store.settings, 'periodicOutput', {
+    min: 0,
+    step: 1,
+    label: 'periodic out',
+  })
+  addInfo(periodicOutput, 'Outputs a seamless texture')
+
+  const symmetry = settingsFolder.addBinding(store.settings, 'symmetry', {
     options: SYMMETRY_DROPDOWN,
   })
-
-  const symmetryDesc = settingsFolder.addBlade({
-    view: 'infodump',
-    content: 'adfs',
-    markdown: false,
-  })
+  const symmetryLabel = addInfo(symmetry, '')
 
   watchEffect(() => {
-    symmetryDesc.element.innerText = store.currentSymmetryDescription
+    symmetryLabel.title = store.currentSymmetryDescription
   })
 
-  settingsFolder.addBinding(store.settings, 'lockInitialImageData', {
-    label: 'Lock initial image data (if provided)',
+  const lockInitialImageData = settingsFolder.addBinding(store.settings, 'lockInitialImageData', {
+    label: 'lock initial',
   })
-
-  settingsFolder.addBinding(store.settings, 'periodicOutput', {
-    label: 'periodic output',
-  })
+  addInfo(lockInitialImageData, 'Re-apply initial state image after every attempt reset')
 
   settingsFolder.addBinding(store.settings, 'modelType', {
     options: enumToOptions(TextureSynthesisModelType),

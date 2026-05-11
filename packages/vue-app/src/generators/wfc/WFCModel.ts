@@ -16,6 +16,8 @@ export type WFCOptions = {
   avgColor: number,
   palette: Uint32Array,
   contradictionColor: number,
+  initialImageData?: ImageData,
+  lockInitialImageData?: boolean,
 }
 
 export type WFCModel = {

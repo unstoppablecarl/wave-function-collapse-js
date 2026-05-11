@@ -3,6 +3,8 @@ import { BindingApi } from '@tweakpane/core'
 export function addInfo(target: BindingApi, message: string) {
   const labelEl = target.controller.view.element.querySelector('.tp-lblv_l') as HTMLElement
   labelEl.title = message
+
+  return labelEl
 }
 
 export function enumToOptions(target: Record<any, any>) {

@@ -1,6 +1,7 @@
-import { makeWFCModel } from '@unstoppablecarl/wfc-js'
+import { IterationResult, makeWFCModel } from '@unstoppablecarl/wfc-js'
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { WFCModel, WFCModelCreator, WFCOptions } from '../WFCModel.ts'
+import { applyInitialImage } from './applyInitialImage.ts'
 
 export const makeWFCJS: WFCModelCreator = async (
   {
@@ -16,6 +17,8 @@ export const makeWFCJS: WFCModelCreator = async (
     contradictionColor,
     maxSnapshots,
     snapshotIntervalPercent,
+    initialImageData,
+    lockInitialImageData,
   }: WFCOptions): Promise<WFCModel> => {
 
   const { T, N, propagator } = ruleset
@@ -47,8 +50,29 @@ export const makeWFCJS: WFCModelCreator = async (
     contradictionColor,
   })
 
+  const originalClear = model.clear.bind(model)
+
+  function applyLock() {
+    applyInitialImage(model.ban, model.propagate, initialImageData!, width, height, T, N, ruleset.patterns, palette)
+  }
+
+  function clear() {
+    originalClear()
+    if (initialImageData) applyLock()
+  }
+
+  function singleIteration(rng: () => number) {
+    const result = model.singleIteration(rng)
+    if (lockInitialImageData && initialImageData && result === IterationResult.REVERT) {
+      applyLock()
+    }
+    return result
+  }
+
   return {
     ...model,
+    clear,
+    singleIteration,
     N: ruleset.N,
     syncVisuals: () => buffer.updateCells(model.getWave(), model.getObserved(), model.getChanges()),
     getImageBuffer: () => buffer.getVisualBuffer(),

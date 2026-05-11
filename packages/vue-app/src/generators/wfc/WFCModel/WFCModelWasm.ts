@@ -1,8 +1,9 @@
-import init, { WFCModel as RustWFCModel } from '@unstoppablecarl/wfc-rust'
+import init, { IterationResult, WFCModel as RustWFCModel } from '@unstoppablecarl/wfc-rust'
 import wasmUrl from '@unstoppablecarl/wfc-rust/rust_wfc_bg.wasm?url'
 
 import { makeWFCPixelBuffer } from '../WFCPixelBuffer.ts'
 import type { WFCModel, WFCOptions } from '../WFCModel.ts'
+import { applyInitialImage } from './applyInitialImage.ts'
 
 export type RNG = () => number
 export const makeWFCModelWasm = async (
@@ -19,6 +20,8 @@ export const makeWFCModelWasm = async (
     avgColor,
     palette,
     contradictionColor,
+    initialImageData,
+    lockInitialImageData,
   }: WFCOptions): Promise<WFCModel> => {
 
   const wasm = await init({
@@ -69,14 +72,39 @@ export const makeWFCModelWasm = async (
     return model.get_changes() as unknown as Int32Array<ArrayBuffer>
   }
 
+  function applyLock() {
+    applyInitialImage(
+      (cell, pattern) => model.ban(cell, pattern),
+      () => model.propagate(),
+      initialImageData!,
+      width,
+      height,
+      T,
+      ruleset.N,
+      ruleset.patterns,
+      palette,
+    )
+  }
+
+  function clear() {
+    buffer.clear()
+    model.clear()
+    if (initialImageData) applyLock()
+  }
+
+  function singleIteration(rng: RNG) {
+    const result = model.single_iteration_with_snapshots(rng()) as unknown as IterationResult
+    if (lockInitialImageData && initialImageData && result === IterationResult.REVERT) {
+      applyLock()
+    }
+    return result
+  }
+
   return {
     ruleset,
     syncVisuals: () => buffer.updateCells(getWave(), getObserved(), getChanges()),
-    singleIteration: (rng: RNG) => model.single_iteration_with_snapshots(rng()),
-    clear: () => {
-      buffer.clear()
-      model.clear()
-    },
+    singleIteration,
+    clear,
     isGenerationComplete: () => model.is_generation_complete(),
     getFilledCount: () => model.get_filled_count(),
     getTotalCells: () => model.get_total_cells(),

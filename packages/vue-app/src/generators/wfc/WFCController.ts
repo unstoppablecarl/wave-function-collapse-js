@@ -16,7 +16,8 @@ export type WFCControllerOptions = {
   settings: Reactive<StoreSettings>,
   ruleset: Ref<WFCRuleset | null>,
   indexedImage: ComputedRef<IndexedImage | null>,
-  imageDataSource: ShallowRef<ImageData | null>
+  imageDataSource: ShallowRef<ImageData | null>,
+  initialImageData: ShallowRef<ImageData | null>,
   onBeforeRun?(): void,
   onPreview?(response: MsgAttemptPreview, pixels: Uint8ClampedArray): void,
   onAttemptStart?(response: MsgAttemptStart): void,
@@ -35,6 +36,7 @@ export function makeWFCController(
     ruleset,
     indexedImage,
     imageDataSource,
+    initialImageData,
   }: WFCControllerOptions,
 ) {
   let worker: Worker | null = null
@@ -107,7 +109,12 @@ export function makeWFCController(
 
     const avgColor = indexedImageToAverageColor(indexedImage.value)
     const opts: WFCWorkerOptions = {
-      settings: { ...toValue(settings), palette, avgColor },
+      settings: {
+        ...toValue(settings),
+        palette,
+        avgColor,
+        initialImageData: initialImageData.value ?? undefined,
+      },
       modelType: settings.modelType,
       serializedRuleset: serializeWFCRuleset(ruleset.value),
     }

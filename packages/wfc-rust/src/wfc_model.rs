@@ -405,4 +405,10 @@ impl WFCModel {
 
         bytes
     }
+
+    pub fn ban(&mut self, cell_idx: usize, pattern_idx: usize) {
+        use crate::wfc_model::cell::CellIndex;
+        use crate::wfc_model::pattern_collection::PatternIndex;
+        self.state.ban(CellIndex { base: cell_idx }, PatternIndex { base: pattern_idx });
+    }
 }
