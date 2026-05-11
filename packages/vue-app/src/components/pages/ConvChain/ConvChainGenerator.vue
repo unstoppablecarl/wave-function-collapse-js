@@ -8,8 +8,6 @@ import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { useConvChainStore } from '../../../generators/conv-chain/ConvChainStore.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
-import { makeReactiveInitialStateImageData } from '../../../lib/vue/makeReactiveInitialStateImageData.ts'
-import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
@@ -17,27 +15,12 @@ import PixelImg from '../../PixelImg.vue'
 import ConvChainSettings from './ConvChainSettings.vue'
 
 const store = useConvChainStore()
-const { scale, settings } = storeToRefs(store)
+const { scale, settings, sourceIndexedImage, initialImageData } = storeToRefs(store)
 
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const progressPercent = ref(0)
 const elapsedTime = ref(0)
 const stabilityPercent = ref(0)
-
-const {
-  sourceImageDataUrlImage,
-  sourceIndexedImage,
-  setImageDataFromElement,
-  setImageDataFromFileInput,
-  sourceImageId,
-} = makeReactiveSourceImageData()
-
-const {
-  initialImageData,
-  initialImageDataUrlImage,
-  setInitialImageDataFromFileInput,
-  clearInitialImage
-} = makeReactiveInitialStateImageData()
 
 const {
   updateImageBuffer,
@@ -76,13 +59,13 @@ const images = SLIDING_WINDOW_IMAGES
   <div class="row">
     <div class="col-2">
       <div class="mb-1">
-        <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
+        <ImageFileInput @imageDataLoaded="store.setSourceImageFromFileInput" />
       </div>
       <InputImages
         :images="images"
         :scale="scale"
-        :selected-img-id="sourceImageId"
-        @img-click="setImageDataFromElement"
+        :selected-img-id="store.sourceImageId"
+        @img-click="store.setSourceImageFromElement"
       />
     </div>
     <div class="col-3">
@@ -97,20 +80,20 @@ const images = SLIDING_WINDOW_IMAGES
       <div class="mb-1">
         <label class="form-label">Initial State <span style="opacity: 0.5">(transparent ignored)</span></label>
         <p>
-          <ImageFileInput @imageDataLoaded="setInitialImageDataFromFileInput" />
+          <ImageFileInput @imageDataLoaded="store.setInitialImageData" />
         </p>
-        <p v-if="initialImageDataUrlImage">
-          <button @click="clearInitialImage" :disabled="running" data-variant="danger" class="small">
+        <p v-if="store.initialImageDataUrl">
+          <button @click="store.clearInitialImageData" :disabled="running" data-variant="danger" class="small">
             Clear
           </button>
-          <PixelImg :src="initialImageDataUrlImage" :scale="scale" />
+          <PixelImg :src="store.initialImageDataUrl" :scale="scale" />
         </p>
       </div>
 
-      <div v-if="sourceImageDataUrlImage" class="mb-1">
+      <div v-if="store.sourceImageDataUrl" class="mb-1">
         <strong>Target Image: </strong>
         <p>
-          <PixelImg :src="sourceImageDataUrlImage" :scale="scale" />
+          <PixelImg :src="store.sourceImageDataUrl" :scale="scale" />
         </p>
       </div>
     </div>
