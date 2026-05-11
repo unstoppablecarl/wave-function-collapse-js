@@ -59,16 +59,12 @@ onMounted(() => {
   })
 
   const periodicInput = settingsFolder.addBinding(store.settings, 'periodicInput', {
-    min: 0,
-    step: 1,
-    label: 'periodic in',
+    label: 'periodic input',
   })
   addInfo(periodicInput, 'The algorithm treats the input image like a seamless texture')
 
   const periodicOutput = settingsFolder.addBinding(store.settings, 'periodicOutput', {
-    min: 0,
-    step: 1,
-    label: 'periodic out',
+    label: 'periodic output',
   })
   addInfo(periodicOutput, 'Outputs a seamless texture')
 
@@ -84,7 +80,7 @@ onMounted(() => {
   const lockInitialImageData = settingsFolder.addBinding(store.settings, 'lockInitialImageData', {
     label: 'lock initial',
   })
-  addInfo(lockInitialImageData, 'Re-apply initial state image after every attempt reset')
+  addInfo(lockInitialImageData, 'Lock initial image data')
 
   const modelType = settingsFolder.addBinding(store.settings, 'modelType', {
     options: enumToOptions(ModelType),
