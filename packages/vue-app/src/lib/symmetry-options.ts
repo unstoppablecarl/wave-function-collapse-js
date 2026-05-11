@@ -13,7 +13,7 @@ export const SYMMETRY_OPTIONS: Record<number, SymmetryDetail> = {
   7: { name: 'Near Full', description: 'Includes seven of the eight possible D4 symmetries.' },
   8: {
     name: 'Full Dihedral (D4)',
-    description: 'All 8 variations (4 rotations × 2 reflections). Ideal for top-down textures.',
+    description: 'All 8 variations (4 rotations × 2 reflections).',
   },
 }
 
