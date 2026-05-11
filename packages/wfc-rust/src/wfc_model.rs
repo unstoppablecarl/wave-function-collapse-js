@@ -48,6 +48,12 @@ pub struct WFCState {
 #[derive(Clone)]
 pub struct WaveSnapshot {
     wave_data: Vec<u64>,
+    compatible_data: Vec<u16>,
+    entropy_counts: Vec<i32>,
+    entropy_weights: Vec<f64>,
+    entropy_log_weights: Vec<f64>,
+    entropy_values: Vec<f64>,
+    observed_data: Vec<i32>,
     cells_collapsed_indices: Vec<CellIndex>,
     tried_pattern: PatternIndex,
     target_cell: CellIndex,
@@ -94,7 +100,6 @@ pub struct WFCModel {
     last_snapshot_progress: f64,
     to_ban_queue: Vec<(CellIndex, PatternIndex)>,
 
-    t_count: usize,
 }
 
 #[wasm_bindgen]
@@ -140,7 +145,6 @@ impl WFCModel {
             propagator,
             spatial_priority: SpatialPriority::new(width, height, start_bias, start_x, start_y),
             state,
-            t_count,
             generation_complete: false,
             last_snapshot_progress: 0.0,
             to_ban_queue: Vec::with_capacity(1024),
@@ -164,8 +168,17 @@ impl WFCModel {
             self.history.remove(0);
         }
 
+        let (entropy_counts, entropy_weights, entropy_log_weights, entropy_values) =
+            self.state.entropy_tracker.clone_state();
+
         let snapshot = WaveSnapshot {
             wave_data: self.state.wave.clone_data(),
+            compatible_data: self.state.compatible.clone_data(),
+            entropy_counts,
+            entropy_weights,
+            entropy_log_weights,
+            entropy_values,
+            observed_data: self.state.observed.data.clone(),
             cells_collapsed_indices: self.cells_collapsed.get_uncollapsed_cells().to_vec(),
             tried_pattern: t,
             target_cell: i,
@@ -250,21 +263,17 @@ impl WFCModel {
 
     pub fn revert(&mut self) -> bool {
         if let Some(s) = self.history.pop() {
-            // 1. Restore Wave
             self.state.wave.set_data(&s);
-
-            // 2. Reset counts and Entropy
-            self.state.compatible.reset(&self.propagator);
-            self.state.entropy_tracker.reset();
-            self.state.observed.fill(-1);
-
-            // 3. The "Heavy Lifter": Rebuild state from the Wave
-            self.rebuild_state_from_wave();
-
-            // 4. Restore the uncollapsed cell list
+            self.state.compatible.set_data(&s.compatible_data);
+            self.state.entropy_tracker.restore_state(
+                &s.entropy_counts,
+                &s.entropy_weights,
+                &s.entropy_log_weights,
+                &s.entropy_values,
+            );
+            self.state.observed.data.copy_from_slice(&s.observed_data);
             self.cells_collapsed.reset_from_snapshot(&s.cells_collapsed_indices);
 
-            // 5. Cleanup and re-apply the triggering ban
             self.to_ban_queue.clear();
             self.state.stack.clear();
             self.last_snapshot_progress = s.last_snapshot_progress;
@@ -276,58 +285,6 @@ impl WFCModel {
         }
 
         false
-    }
-
-    fn rebuild_state_from_wave(&mut self) {
-        let n_cells = self.n_cells;
-        let t_count = self.t_count;
-
-        for i in 0..n_cells {
-            let cell_idx = CellIndex { base: i };
-
-            // We only need to propagate cells that have had patterns removed
-            if self.state.wave.is_fully_undetermined(cell_idx, &self.state.entropy_tracker) {
-                continue;
-            }
-
-            for t in 0..t_count {
-                let pattern_idx = PatternIndex { base: t };
-                if !self.state.wave.is_candidate(cell_idx, pattern_idx) {
-                    // If the pattern is banned in the wave,
-                    // update the neighbor counts
-                    self.manually_propagate_ban(cell_idx, pattern_idx);
-                    self.state.entropy_tracker.ban_pattern(cell_idx, pattern_idx);
-                }
-            }
-
-            if self.state.entropy_tracker.pattern_determined(cell_idx) {
-                let p = self.state.wave.find_remaining_pattern(cell_idx);
-                self.state.observed[cell_idx] = p;
-            }
-        }
-    }
-
-    fn manually_propagate_ban(&mut self, cell_idx: CellIndex, pattern_idx: PatternIndex) {
-        let coords = self.cell.get_coords(cell_idx);
-        let (x1, y1) = (coords.0, coords.1);
-
-        for &d in &DIRECTIONS {
-            let info = d.info();
-            let neighbor_coords = self.wrap_coords(x1 + info.dx, y1 + info.dy);
-
-            if let Some((x2, y2)) = neighbor_coords {
-                let neighbor_cell = self.cell.get_index(x2, y2);
-                let opp_dir = info.opposite;
-
-                let propagator = &self.propagator;
-                let compatible = &mut self.state.compatible;
-
-                // Update neighbor counts for all patterns supported by the banned pattern
-                propagator.for_each_compatible_pattern(pattern_idx, d, |t2| {
-                    compatible.decrement(neighbor_cell, t2, opp_dir);
-                });
-            }
-        }
     }
 
     #[inline(always)]

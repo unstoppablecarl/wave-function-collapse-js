@@ -122,6 +122,28 @@ impl EntropyTracker {
         self.entropies.fill(self.init_entropy);
     }
 
+    pub fn clone_state(&self) -> (Vec<i32>, Vec<f64>, Vec<f64>, Vec<f64>) {
+        (
+            self.possible_pattern_count.data.clone(),
+            self.weights.data.clone(),
+            self.log_weights.data.clone(),
+            self.entropies.data.clone(),
+        )
+    }
+
+    pub fn restore_state(
+        &mut self,
+        counts: &[i32],
+        weights: &[f64],
+        log_weights: &[f64],
+        entropies: &[f64],
+    ) {
+        self.possible_pattern_count.data.copy_from_slice(counts);
+        self.weights.data.copy_from_slice(weights);
+        self.log_weights.data.copy_from_slice(log_weights);
+        self.entropies.data.copy_from_slice(entropies);
+    }
+
     #[inline(always)]
     pub fn get_cell_entropy(&self, target: CellIndex) -> f64 {
         self.entropies[target]

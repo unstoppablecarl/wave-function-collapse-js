@@ -84,6 +84,14 @@ impl Compatible {
         self.decrement_by_index(idx)
     }
 
+    pub fn clone_data(&self) -> Vec<u16> {
+        self.data.clone()
+    }
+
+    pub fn set_data(&mut self, data: &[u16]) {
+        self.data.copy_from_slice(data);
+    }
+
     pub fn reset(&mut self, propagator: &Propagator) {
         let t_count = self.t_count;
         let cells_per_dir = self.cells_per_dir;

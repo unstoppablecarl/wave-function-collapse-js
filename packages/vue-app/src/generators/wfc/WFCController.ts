@@ -118,6 +118,12 @@ export function makeWFCController(
       handlers[response.type]?.(response)
       currentAttempt.elapsedTime = performance.now() - currentAttempt.startedAt
     }
+
+    worker.onerror = (e) => {
+      console.error('WFC worker crashed:', e.message, e)
+      errorMessage.value = { title: 'Worker Crashed', message: e.message ?? 'Unknown error' }
+      completeWorker()
+    }
   }
 
   function terminateWorker() {
