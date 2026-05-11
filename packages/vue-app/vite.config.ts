@@ -7,7 +7,7 @@ import wasm from 'vite-plugin-wasm'
 import { ColorCountPlugin } from './src/lib/util/ViteImageColorCountPlugin.ts'
 
 export default defineConfig({
-  base: '/wave-function-collapse-js/',
+  base: '/texture-generator-js/',
   build: {
     outDir: 'dist',
     sourcemap: true,
