@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, reactive, ref, toRaw } from 'vue'
 import { SYMMETRY_OPTIONS } from '../../lib/symmetry-options.ts'
-import { makePersistedImageData, makePersistedIndexedImage } from '../../lib/vue/makePersistedImage.ts'
+import { makePersistedImageData, makePersistedSourceImageData } from '../../lib/vue/makePersistedImage.ts'
 import type { WFCWorkerOptions } from './WFC.worker.ts'
 import { ModelType, RulesetType } from './WFCModel.ts'
 
@@ -25,6 +25,7 @@ type SerializedData = {
   scale: number,
   settings: StoreSettings,
   sourceImageDataUrl: string | null,
+  sourceImageId: number,
   initialImageDataUrl: string | null,
 }
 
@@ -32,23 +33,35 @@ export const useWFCStore = defineStore('wfc', () => {
 
   const scale = ref(4)
   const sourceImageDataUrl = ref<string | null>(null)
+  const sourceImageId = ref(-1)
   const initialImageDataUrl = ref<string | null>(null)
 
-  const { indexedImage: sourceIndexedImage, set: setSourceImage, clear: clearSourceImage } =
-    makePersistedIndexedImage(sourceImageDataUrl)
-  const { imageData: initialImageData, set: setInitialImageData, clear: clearInitialImageData } =
-    makePersistedImageData(initialImageDataUrl)
+  const {
+    sourceIndexedImage,
+    sourceImageData,
+    sourceImagePresetSrc,
+    setSourceImageFromFileInput,
+    setSourceImageFromElement,
+    clearSourceImage,
+  } = makePersistedSourceImageData(sourceImageDataUrl, sourceImageId)
+
+  const {
+    imageData: initialImageData,
+    set: setInitialImageData,
+    clear: clearInitialImageData,
+  } = makePersistedImageData(initialImageDataUrl)
 
   const settings = reactive<StoreSettings>({
     N: 2,
-    NOverlap: 1,
     width: 60,
     height: 60,
     periodicInput: true,
     periodicOutput: true,
-    initialGround: -1,
     symmetry: 2,
     seed: 1,
+    modelType: ModelType.WASM,
+    NOverlap: 1,
+    initialGround: -1,
     maxAttempts: 10,
     contradictionColor: 0xff0055,
     maxRevertsPerAttempt: 100,
@@ -56,7 +69,6 @@ export const useWFCStore = defineStore('wfc', () => {
     startCoordBias: 0.05,
     startCoordX: 0.5,
     startCoordY: 0.5,
-    modelType: ModelType.WASM,
     rulesetType: RulesetType.SLIDING_WINDOW,
     maxSnapshots: 10,
     snapshotIntervalPercent: 5,
@@ -66,6 +78,7 @@ export const useWFCStore = defineStore('wfc', () => {
     scale,
     settings,
     sourceImageDataUrl,
+    sourceImageId,
     initialImageDataUrl,
   }
 
@@ -73,6 +86,7 @@ export const useWFCStore = defineStore('wfc', () => {
     scale: scale.value,
     settings: { ...toRaw(settings) },
     sourceImageDataUrl: null,
+    sourceImageId: -1,
     initialImageDataUrl: null,
   }
 
@@ -104,6 +118,19 @@ export const useWFCStore = defineStore('wfc', () => {
 
   const maxNOverlap = computed(() => settings.N - 1)
 
+  if (import.meta.hot) {
+    import.meta.hot.on('vite:afterUpdate', async () => {
+      const id = sourceImageId.value
+      if (id < 0) return
+      const { SLIDING_WINDOW_IMAGES: sw, TILESET_IMAGES: ts } = await import('../../lib/images.ts')
+      const img = [...sw, ...ts].find(i => i.id === id)
+      if (!img || img.src === sourceImagePresetSrc.value) return
+      const el = new Image()
+      el.src = img.src
+      await setSourceImageFromElement(el, id)
+    })
+  }
+
   return {
     $reset,
     $serializeState,
@@ -112,8 +139,12 @@ export const useWFCStore = defineStore('wfc', () => {
     scale,
     settings,
     currentSymmetryDescription,
+    sourceImageData,
     sourceIndexedImage,
-    setSourceImage,
+    sourceImageDataUrl,
+    sourceImageId,
+    setSourceImageFromElement,
+    setSourceImageFromFileInput,
     clearSourceImage,
     initialImageData,
     setInitialImageData,

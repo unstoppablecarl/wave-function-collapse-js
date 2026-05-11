@@ -8,7 +8,6 @@ import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util
 import { imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
-import { makeReactiveSourceImageData } from '../../../lib/vue/makeReactiveSourceImageData.ts'
 import { makeImageDataAnalyzer } from '../../../generators/wfc/analyzer/ImageDataAnalyzer.ts'
 import {
   makeWFCController,
@@ -23,29 +22,20 @@ import WorkerAttemptRow from './WorkerAttemptRow.vue'
 import WfcSettings from './WFCSettings.vue'
 
 const store = useWFCStore()
-const { settings, scale } = storeToRefs(store)
+const { settings, scale, sourceImageData, sourceIndexedImage } = storeToRefs(store)
 
 const attempts = ref<WFCAttempt[]>([])
 const resultCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 const tileGridCanvasRef = ref<InstanceType<typeof PixelCanvasRender> | null>(null)
 
-const {
-  sourceImageDataUrlImage,
-  sourceIndexedImage,
-  setImageDataFromElement,
-  setImageDataFromFileInput,
-  sourceImageId,
-  sourceImageData,
-} = makeReactiveSourceImageData()
+const imageDataAnalysis = makeImageDataAnalyzer(sourceImageData, settings.value)
+
+const { ruleset } = imageDataAnalysis
 
 const {
   clearCanvas,
   updateImageBuffer,
 } = makeCanvasRenderer(resultCanvasRef, store.settings)
-
-const imageDataAnalysis = makeImageDataAnalyzer(sourceImageData, settings.value)
-
-const { ruleset } = imageDataAnalysis
 
 const controller = makeWFCController({
   settings: store.settings,
@@ -131,18 +121,19 @@ const images = computed(() => {
   return TILESET_IMAGES
 })
 
+
 </script>
 <template>
   <div class="row">
     <div class="col-2">
       <div class="mb-1">
-        <ImageFileInput @imageDataLoaded="setImageDataFromFileInput" />
+        <ImageFileInput @imageDataLoaded="store.setSourceImageFromFileInput" />
       </div>
       <InputImages
         :images="images"
         :scale="scale"
-        :selected-img-id="sourceImageId"
-        @img-click="setImageDataFromElement"
+        :selected-img-id="store.sourceImageId"
+        @img-click="store.setSourceImageFromElement"
       />
     </div>
     <div class="col-3">
@@ -153,10 +144,10 @@ const images = computed(() => {
         </button>
       </div>
 
-      <div v-if="sourceImageDataUrlImage" class="mb-1">
+      <div v-if="store.sourceImageDataUrl" class="mb-1">
         <strong>Target Image: </strong>
         <p>
-          <PixelImg :src="sourceImageDataUrlImage" :scale="scale" />
+          <PixelImg :src="store.sourceImageDataUrl" :scale="scale" />
         </p>
         <div>
           <strong>Brittleness: </strong>
