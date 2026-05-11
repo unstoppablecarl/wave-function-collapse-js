@@ -7,6 +7,7 @@ import type { TextureSynthesisStoreSettings } from './TextureSynthesisStore.ts'
 
 export type TextureSynthesisOptions = TextureSynthesisStoreSettings & {
   indexedImage: IndexedImage,
+  initialImageData?: ImageData,
 }
 
 export type TextureSynthesisModelOptions = Omit<TextureSynthesisOptions, 'previewInterval' | 'modelType'>

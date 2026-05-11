@@ -4,6 +4,7 @@ import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import { makeSymmetricSource } from '../SymmetricSource.ts'
 import type { TextureSynthesisCreator } from '../TextureSynthesisModel.ts'
+import { applyInitialState } from './applyInitialState.ts'
 
 // Harrison resynthesis. (polish + 1) passes over a shuffled output. Each cell's
 // origin is updated by argmax over: (a) one prediction from each of the up-to-8
@@ -19,6 +20,8 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
     M,
     polish,
     periodicOutput,
+    lockInitialImageData,
+    initialImageData,
     indexedImage,
     symmetry,
     seed,
@@ -35,7 +38,12 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
 
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
+  const isInitialField = new Uint8Array(totalCells)
   const prng = makeMulberry32(seed)
+
+  if (initialImageData) {
+    applyInitialState(initialImageData, palette32, sourceData, result, origins, isInitialField, width)
+  }
 
   const resolveNeighbor = periodicOutput
     ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
@@ -134,6 +142,7 @@ export const makeTextureSynthesisModelHarrison: TextureSynthesisCreator = async 
   const totalStepsTarget = (polish + 1) * totalCells
 
   const synthesizeCell = (f: number): void => {
+    if (lockInitialImageData && isInitialField[f]) return
     const fx = f % width
     const fy = (f / width) | 0
     const wantNeighbours = round > 0 ? NEIGHBOR_COUNT : Math.min(NEIGHBOR_COUNT, counter)

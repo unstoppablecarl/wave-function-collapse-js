@@ -4,6 +4,7 @@ import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import { makeSymmetricSource } from '../SymmetricSource.ts'
 import type { TextureSynthesisCreator } from '../TextureSynthesisModel.ts'
+import { applyInitialState } from './applyInitialState.ts'
 
 // Brute-force search over every source position for each output cell, in raster
 // scan order. Slow (O(W*H*SW*SH*N^2)) but the highest-quality baseline and the
@@ -16,6 +17,8 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
     N,
     temperature,
     periodicOutput,
+    lockInitialImageData,
+    initialImageData,
     indexedImage,
     symmetry,
     seed,
@@ -30,7 +33,12 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
 
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
+  const isInitialField = new Uint8Array(totalCells)
   const prng = makeMulberry32(seed)
+
+  if (initialImageData) {
+    applyInitialState(initialImageData, palette32, sourceData, result, origins, isInitialField, width)
+  }
 
   const resolveNeighbor = periodicOutput
     ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
@@ -43,6 +51,7 @@ export const makeTextureSynthesisModelFull: TextureSynthesisCreator = async (
   })
 
   const synthesizeCell = (idx: number): void => {
+    if (lockInitialImageData && isInitialField[idx]) return
     const ox = idx % width
     const oy = (idx / width) | 0
 

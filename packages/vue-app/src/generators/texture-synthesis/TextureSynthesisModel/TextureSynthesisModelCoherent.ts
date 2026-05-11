@@ -4,6 +4,7 @@ import { makeDirtyCheck } from '../../../lib/util/DirtyCheck.ts'
 import { makeMulberry32 } from '../../../lib/util/mulberry32.ts'
 import { makeSymmetricSource } from '../SymmetricSource.ts'
 import type { TextureSynthesisCreator } from '../TextureSynthesisModel.ts'
+import { applyInitialState } from './applyInitialState.ts'
 
 // Coherent synthesis with chunked, PCA-accelerated K-coherence analysis.
 //
@@ -63,6 +64,8 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
     K,
     temperature,
     periodicOutput,
+    lockInitialImageData,
+    initialImageData,
     indexedImage,
     symmetry,
     seed,
@@ -102,11 +105,16 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
 
   const result = new Int32Array(totalCells)
   const origins = new Int32Array(totalCells).fill(-1)
+  const isInitialField = new Uint8Array(totalCells)
   const prng = makeMulberry32(seed)
 
   const resolveNeighbor = periodicOutput
     ? (nx: number, ny: number) => ((ny % height + height) % height) * width + (nx % width + width) % width
     : (nx: number, ny: number) => (nx < 0 || nx >= width || ny < 0 || ny >= height) ? -1 : ny * width + nx
+
+  if (initialImageData) {
+    applyInitialState(initialImageData, palette32, sourceData, result, origins, isInitialField, width)
+  }
 
   // Random source samples for visual feedback during the analysis phases.
   // origins stays -1 so synthesis still treats every cell as unfilled.
@@ -396,6 +404,7 @@ export const makeTextureSynthesisModelCoherent: TextureSynthesisCreator = async 
   }
 
   const synthesizeCell = (idx: number): void => {
+    if (lockInitialImageData && isInitialField[idx]) return
     const ox = idx % width, oy = (idx / width) | 0
     stamp++
     let n = 0
