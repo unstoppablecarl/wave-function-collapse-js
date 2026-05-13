@@ -1,7 +1,7 @@
-import type { IndexedImage } from 'pixel-data-js'
+import { imageDataToDataUrl, type IndexedImage } from 'pixel-data-js'
 import { makeIndexedImageFromImageData } from 'pixel-data-js'
 import { computed, type Ref, shallowRef, watch } from 'vue'
-import { dataUrlToImageData, getImgElementImageData, imageDataToUrlImage } from '../util/ImageData.ts'
+import { dataUrlToImageData, getImgElementImageData } from '../util/ImageData.ts'
 
 export function makePersistedSourceImageData(
   sourceImageDataUrl: Ref<string | null>,
@@ -56,7 +56,7 @@ export function makePersistedImageData(urlRef: Ref<string | null>) {
     imageData,
     set(data: ImageData) {
       imageData.value = data
-      urlRef.value = imageDataToUrlImage(data)
+      urlRef.value = imageDataToDataUrl(data)
     },
     clear() {
       imageData.value = null
@@ -81,7 +81,7 @@ export function makePersistedIndexedImage(urlRef: Ref<string | null>) {
     indexedImage,
     set(data: ImageData) {
       imageData.value = data
-      urlRef.value = imageDataToUrlImage(data)
+      urlRef.value = imageDataToDataUrl(data)
     },
     clear() {
       imageData.value = null

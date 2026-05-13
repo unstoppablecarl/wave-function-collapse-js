@@ -1,6 +1,6 @@
-import { makeIndexedImageFromImageData } from 'pixel-data-js'
+import { imageDataToDataUrl, makeIndexedImageFromImageData } from 'pixel-data-js'
 import { computed, markRaw, ref, shallowRef, watch } from 'vue'
-import { getImgElementImageData, imageDataToUrlImage } from '../util/ImageData.ts'
+import { getImgElementImageData } from '../util/ImageData.ts'
 
 export function makeReactiveSourceImageData() {
 
@@ -13,7 +13,7 @@ export function makeReactiveSourceImageData() {
       sourceImageDataUrlImage.value = null
       return
     }
-    sourceImageDataUrlImage.value = imageDataToUrlImage(sourceImageData.value)
+    sourceImageDataUrlImage.value = imageDataToDataUrl(sourceImageData.value)
   })
 
   const sourceIndexedImage = computed(() => {

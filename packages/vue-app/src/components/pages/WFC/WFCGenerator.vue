@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { imageDataToDataUrl } from 'pixel-data-js'
 import prettyMilliseconds from 'pretty-ms'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { SLIDING_WINDOW_IMAGES, TILESET_IMAGES } from '../../../lib/images.ts'
 import { useWFCStore } from '../../../generators/wfc/WFCStore.ts'
 import { drawTileGridToCanvas, getTileGridToCanvasSize } from '../../../lib/util/drawTilesToCanvas.ts'
-import { imageDataToUrlImage } from '../../../lib/util/ImageData.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import { makeImageDataAnalyzer } from '../../../generators/wfc/analyzer/ImageDataAnalyzer.ts'
@@ -80,7 +80,7 @@ const {
 
 const patternImageUrls = computed(() => {
   const imageDataArray = imageDataAnalysis.patternImageDataArray.value
-  return imageDataArray.map(id => imageDataToUrlImage(id))
+  return imageDataArray.map(id => imageDataToDataUrl(id))
 })
 
 const tileGridSize = shallowRef({ width: 0, height: 0 })

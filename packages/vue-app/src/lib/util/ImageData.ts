@@ -44,15 +44,6 @@ export async function dataUrlToImageData(url: string): Promise<ImageData> {
   return ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight)
 }
 
-export function imageDataToUrlImage(imgData: ImageData): string {
-  const canvas = document.createElement('canvas')
-  canvas.width = imgData.width
-  canvas.height = imgData.height
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-  ctx.putImageData(imgData, 0, 0)
-  return canvas.toDataURL()
-}
-
 /**
  * Scans ImageData for separate rectangular areas divided by transparency.
  * Throws an error if a non-rectangular shape is encountered.

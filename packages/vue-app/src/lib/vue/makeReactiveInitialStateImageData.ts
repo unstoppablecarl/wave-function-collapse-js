@@ -1,5 +1,5 @@
+import { imageDataToDataUrl } from 'pixel-data-js'
 import { shallowRef, watch } from 'vue'
-import { imageDataToUrlImage } from '../util/ImageData.ts'
 
 export function makeReactiveInitialStateImageData() {
 
@@ -11,7 +11,7 @@ export function makeReactiveInitialStateImageData() {
       initialImageDataUrlImage.value = null
       return
     }
-    initialImageDataUrlImage.value = imageDataToUrlImage(initialImageData.value)
+    initialImageDataUrlImage.value = imageDataToDataUrl(initialImageData.value)
   })
 
   function setInitialImageDataFromFileInput(val: ImageData) {
