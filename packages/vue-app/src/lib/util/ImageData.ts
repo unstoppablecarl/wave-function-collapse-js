@@ -27,13 +27,6 @@ export async function getImgElementImageData(target: HTMLImageElement): Promise<
   return ctx.getImageData(0, 0, w, h)
 }
 
-export function putImageDataScaled(ctx: CanvasRenderingContext2D, imageData: ImageData, scale: number) {
-  const offCanvas = new OffscreenCanvas(imageData.width, imageData.height)
-  const offCtx = offCanvas.getContext('2d')!
-  offCtx.putImageData(imageData, 0, 0)
-  ctx.drawImage(offCanvas, 0, 0, imageData.width * scale, imageData.height * scale)
-}
-
 export async function dataUrlToImageData(url: string): Promise<ImageData> {
   const img = new Image()
   img.src = url
