@@ -18,7 +18,7 @@
     "@unstoppablecarl/wfc-rust": "workspace:*",
     "pinia": "^3.0.4",
     "pinia-simple-persist": "^0.1.0",
-    "pixel-data-js": "^0.38.0",
+    "pixel-data-js": "^0.40.1",
     "pretty-bytes": "^7.1.0",
     "pretty-ms": "^9.3.0",
     "tweakpane": "^4.0.5",
