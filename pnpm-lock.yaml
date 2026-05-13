@@ -15,8 +15,8 @@ importers:
   packages/vue-app:
     dependencies:
       '@knadh/oat':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.6.1
+        version: 0.6.1
       '@tweakpane/core':
         specifier: ^2.0.5
         version: 2.0.5
@@ -434,8 +434,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@knadh/oat@0.2.0':
-    resolution: {integrity: sha512-vVBLJ89x9MlopBVJdbEwrJMcRJEUpD27uvPkZgFPj1qM4EQGXAak3DNI8+X61z6sMzdg1O2MfexspKbNaMcqQw==}
+  '@knadh/oat@0.6.1':
+    resolution: {integrity: sha512-EfGcO5dNQMd0mITBf88Az6W6nyu+Q6xWHEGxvahxd/sLT1l+6wtOI6LQyjubpEuXGBc7EAXHwjt3ed/v6q4ALA==}
 
   '@parcel/watcher-android-arm64@2.5.6':
     resolution: {integrity: sha512-YQxSS34tPF/6ZG7r/Ih9xy+kP/WwediEUsqmtf0cuCV5TPPKw/PQHRhueUo6JdeFJaqV3pyjm0GdYjZotbRt/A==}
@@ -1608,7 +1608,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@knadh/oat@0.2.0': {}
+  '@knadh/oat@0.6.1': {}
 
   '@parcel/watcher-android-arm64@2.5.6':
     optional: true

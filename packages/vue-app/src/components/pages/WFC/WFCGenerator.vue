@@ -122,14 +122,10 @@ const images = computed(() => {
   return TILESET_IMAGES
 })
 
-
 </script>
 <template>
   <div class="row">
     <div class="col-2">
-      <div class="mb-1">
-        <ImageFileInput @imageDataLoaded="store.setSourceImageFromFileInput" />
-      </div>
       <InputImages
         :images="images"
         :scale="scale"
@@ -139,39 +135,36 @@ const images = computed(() => {
     </div>
     <div class="col-3">
       <WfcSettings />
-      <div class="hstack">
+      <div class="hstack mb-1">
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>
       </div>
 
       <div class="mb-1">
-        <label class="form-label">Initial State <span style="opacity: 0.5">(transparent ignored)</span></label>
-        <p>
-          <ImageFileInput @imageDataLoaded="store.setInitialImageData" />
-        </p>
-        <p v-if="store.initialImageDataUrl">
-          <button @click="store.clearInitialImageData" :disabled="running" data-variant="danger" class="small">
-            Clear
-          </button>
-          <PixelImg :src="store.initialImageDataUrl" :scale="scale" />
-        </p>
+        <ImageFileInput
+          @imageDataLoaded="store.setSourceImageFromFileInput"
+          @clear="store.clearSourceImage"
+          :scale="scale"
+          :image-data-url="store.sourceImageDataUrl"
+        >
+          <template #label>
+            Source Image
+          </template>
+        </ImageFileInput>
       </div>
 
-      <div v-if="store.sourceImageDataUrl" class="mb-1">
-        <strong>Target Image: </strong>
-        <p>
-          <PixelImg :src="store.sourceImageDataUrl" :scale="scale" />
-        </p>
-        <div>
-          <strong>Brittleness: </strong>
-          <template v-if="imageDataAnalysis.averageBrittleness.value">
-            {{ formatPercent(imageDataAnalysis.averageBrittleness.value) }}
+      <div class="mb-1">
+        <ImageFileInput
+          @imageDataLoaded="store.setInitialImageData"
+          @clear="store.clearInitialImageData"
+          :scale="scale"
+          :image-data-url="store.initialImageDataUrl"
+        >
+          <template #label>
+            Initial State Image <span style="opacity: 0.5">(transparent ignored)</span>
           </template>
-          <template v-else-if="imageDataAnalysis.running.value">
-            <span role="status" class="spinner small" style="display: inline-block"></span>
-          </template>
-        </div>
+        </ImageFileInput>
       </div>
 
       <p>

@@ -35,9 +35,5 @@ const scaledWidth = computed(() => {
   />
 </template>
 <style>
-.pixel-art {
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  display: block;
-}
+
 </style>

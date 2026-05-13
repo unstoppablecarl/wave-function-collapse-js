@@ -1,7 +1,8 @@
 import { createPinia } from 'pinia'
 import { createPiniaSimplePersist } from 'pinia-simple-persist'
 
-import './style/oat.css'
+import '@knadh/oat/oat.min.css';
+
 import './style/main.scss'
 import { createApp } from 'vue'
 

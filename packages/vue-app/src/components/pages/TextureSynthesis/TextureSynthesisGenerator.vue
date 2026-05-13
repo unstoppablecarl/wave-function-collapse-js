@@ -1,17 +1,15 @@
 <script setup lang="ts">
-
 import { storeToRefs } from 'pinia'
 import prettyMilliseconds from 'pretty-ms'
 import { onUnmounted, ref } from 'vue'
-import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { makeTextureSynthesisController } from '../../../generators/texture-synthesis/TextureSynthesisController.ts'
 import { useTextureSynthesisStore } from '../../../generators/texture-synthesis/TextureSynthesisStore.ts'
+import { SLIDING_WINDOW_IMAGES } from '../../../lib/images.ts'
 import { formatPercent } from '../../../lib/util/misc.ts'
 import { makeCanvasRenderer } from '../../../lib/vue/CanvasRenderer.ts'
 import ImageFileInput from '../../ImageFileInput.vue'
 import InputImages from '../../InputImages.vue'
 import PixelCanvasRender from '../../PixelCanvasRender.vue'
-import PixelImg from '../../PixelImg.vue'
 import TextureSynthesisSettings from './TextureSynthesisSettings.vue'
 
 const store = useTextureSynthesisStore()
@@ -58,9 +56,6 @@ const images = SLIDING_WINDOW_IMAGES
 <template>
   <div class="row">
     <div class="col-2">
-      <div class="mb-1">
-        <ImageFileInput @imageDataLoaded="store.setSourceImageFromFileInput" />
-      </div>
       <InputImages
         :images="images"
         :scale="scale"
@@ -71,30 +66,36 @@ const images = SLIDING_WINDOW_IMAGES
     <div class="col-3">
       <TextureSynthesisSettings />
 
-      <div class="hstack">
+      <div class="hstack mb-1">
         <button @click="controller.run()" :disabled="running" class="ms-auto">
           Generate
         </button>
       </div>
 
       <div class="mb-1">
-        <label class="form-label">Initial State <span style="opacity: 0.5">(transparent ignored)</span></label>
-        <p>
-          <ImageFileInput @imageDataLoaded="store.setInitialImageData" />
-        </p>
-        <p v-if="store.initialImageDataUrl">
-          <button @click="store.clearInitialImageData" :disabled="running" data-variant="danger" class="small">
-            Clear
-          </button>
-          <PixelImg :src="store.initialImageDataUrl" :scale="scale" />
-        </p>
+        <ImageFileInput
+          @imageDataLoaded="store.setSourceImageFromFileInput"
+          @clear="store.clearSourceImage"
+          :scale="scale"
+          :image-data-url="store.sourceImageDataUrl"
+        >
+          <template #label>
+            Source Image
+          </template>
+        </ImageFileInput>
       </div>
 
-      <div v-if="store.sourceImageDataUrl" class="mb-1">
-        <strong>Target Image: </strong>
-        <p>
-          <PixelImg :src="store.sourceImageDataUrl" :scale="scale" />
-        </p>
+      <div class="mb-1">
+        <ImageFileInput
+          @imageDataLoaded="store.setInitialImageData"
+          @clear="store.clearInitialImageData"
+          :scale="scale"
+          :image-data-url="store.initialImageDataUrl"
+        >
+          <template #label>
+            Initial State Image <span style="opacity: 0.5">(transparent ignored)</span>
+          </template>
+        </ImageFileInput>
       </div>
     </div>
     <div class="col-3">

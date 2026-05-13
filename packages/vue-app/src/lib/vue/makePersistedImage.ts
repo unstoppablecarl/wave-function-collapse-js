@@ -1,7 +1,11 @@
-import { imageDataToDataUrl, type IndexedImage } from 'pixel-data-js'
-import { makeIndexedImageFromImageData } from 'pixel-data-js'
+import {
+  dataUrlToImageData,
+  imageDataToDataUrl,
+  imageElementToImageData,
+  type IndexedImage,
+  makeIndexedImageFromImageData,
+} from 'pixel-data-js'
 import { computed, type Ref, shallowRef, watch } from 'vue'
-import { dataUrlToImageData, getImgElementImageData } from '../util/ImageData.ts'
 
 export function makePersistedSourceImageData(
   sourceImageDataUrl: Ref<string | null>,
@@ -23,7 +27,7 @@ export function makePersistedSourceImageData(
     // Normalize to path-only so it matches the relative src from import.meta.glob
     sourceImagePresetSrc.value = new URL(target.src, location.origin).pathname
       + new URL(target.src, location.origin).search
-    setSourceImage(await getImgElementImageData(target))
+    setSourceImage(await imageElementToImageData(target))
     sourceImageId.value = id
   }
 
